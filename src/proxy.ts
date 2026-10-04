@@ -20,6 +20,17 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // Jika user mengakses /dashboard root, arahkan langsung ke dashboard sesuai role
+    if (pathname === "/dashboard" || pathname === "/dashboard/") {
+      if (role === "ADMIN") {
+        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
+      }
+      if (role === "TEACHER") {
+        return NextResponse.redirect(new URL("/dashboard/teacher", request.url));
+      }
+      return NextResponse.redirect(new URL("/dashboard/student", request.url));
+    }
+
     if (pathname.startsWith("/dashboard/admin") && role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard/student", request.url));
     }
