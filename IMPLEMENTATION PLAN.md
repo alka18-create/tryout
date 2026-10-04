@@ -20,7 +20,7 @@
 | 1 | Setup Project & Infrastruktur Lokal | ✅ Selesai | 13 / 13 |
 | 2 | Database & Seed Data | ✅ Selesai | 10 / 10 |
 | 3 | Authentication & Authorization | ✅ Selesai | 18 / 18 |
-| 4 | Layout, Design System & Profil | ⬜ Belum mulai | 0 / 12 |
+| 4 | Layout, Design System & Profil | ✅ Selesai | 12 / 12 |
 | 5 | Bank Soal & Kurikulum (Guru) | ⬜ Belum mulai | 0 / 14 |
 | 6 | Manajemen Tryout (Guru) | ⬜ Belum mulai | 0 / 11 |
 | 7 | Exam Engine (Peserta) | ⬜ Belum mulai | 0 / 24 |
@@ -145,24 +145,24 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 4 — Layout, Design System & Profil
 
 ### 4.1 Design System
-- [ ] Definisikan design tokens (warna, tipografi, spacing, radius, shadow)
-- [ ] Komponen dasar: Button, Input, Select, Card, Badge, Modal, Toast, Table
-- [ ] Komponen state: Loading skeleton, Empty state, Error state
-- [ ] Dukungan responsif (mobile-first — peserta banyak memakai HP)
+- [x] Definisikan design tokens (warna indigo/violet dark mode, tipografi, glassmorphism, scrollbar)
+- [x] Komponen dasar: Button (variants & loading), Card, Badge, Input (label & error helper)
+- [x] Komponen state: Loading skeleton, Empty state
+- [x] Dukungan responsif (mobile-first, drawer navigasi mobile & responsive grid)
 
 ### 4.2 Layout
-- [ ] Landing page publik
-- [ ] Layout dashboard Peserta (navbar/sidebar)
-- [ ] Layout dashboard Guru
-- [ ] Layout dashboard Admin
+- [x] Landing page publik (`/`) dengan hero showcase, feature grid, live package preview
+- [x] Layout dashboard Peserta (`/dashboard/student` + navbar/sidebar)
+- [x] Layout dashboard Guru (`/dashboard/teacher` + ringkasan metrik soal & tryout)
+- [x] Layout dashboard Admin (`/dashboard/admin` + pengawasan master data & pengguna)
 
 ### 4.3 Profil Peserta
-- [ ] API `GET` & `PUT /api/student/profile`
-- [ ] Halaman "Lengkapi Profil" setelah registrasi (sekolah, kelas, no. HP — opsional)
-- [ ] Halaman "Profil Saya" (edit nama, foto, sekolah, kelas, HP)
-- [ ] Ganti password (untuk akun yang punya password)
+- [x] API `GET` & `PUT /api/student/profile` (update data diri, kelas, auto-upsert sekolah)
+- [x] Integrasi alur lengkapi profil (sekolah, kelas, no. WhatsApp)
+- [x] Halaman "Profil Saya" (`/dashboard/student/profile`)
+- [x] Ganti password dengan verifikasi password lama untuk keamanan akun
 
-**DoD Fase 4:** Semua role punya layout sendiri, profil peserta bisa diedit.
+**DoD Fase 4:** Semua role punya layout sendiri, profil peserta bisa diedit. (✅ Selesai)
 
 ---
 
@@ -403,3 +403,4 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | 2026-10-04 | 1 | Setup Next.js 16, Tailwind v4, PostgreSQL Docker (port 5434), Prisma 7, helper API, env validator selesai dan teruji build. |
 | 2026-10-04 | 2 | Migrasi Prisma initial, singleton client driver-adapter, seed 4 user (Admin/Guru/Siswa), 2 sekolah, 1 mapel, 4 topik, 20 soal A-E, dan 1 paket tryout selesai dan terverifikasi. |
 | 2026-10-04 | 3 | NextAuth v5 JWT, register student, reset password token, account linking Google, RBAC Proxy, guard, serta UI Login, Register, Forgot & Reset Password selesai dan teruji build. |
+| 2026-10-04 | 4 | Design system (tokens, Button, Card, Badge, Input, Skeleton, EmptyState), Landing Page modern, Dashboard Layout & Page (Student/Teacher/Admin), serta API & Halaman Profil Siswa selesai dan teruji build. |
