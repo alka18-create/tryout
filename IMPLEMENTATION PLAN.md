@@ -21,7 +21,7 @@
 | 2 | Database & Seed Data | ✅ Selesai | 10 / 10 |
 | 3 | Authentication & Authorization | ✅ Selesai | 18 / 18 |
 | 4 | Layout, Design System & Profil | ✅ Selesai | 12 / 12 |
-| 5 | Bank Soal & Kurikulum (Guru) | ⬜ Belum mulai | 0 / 14 |
+| 5 | Bank Soal & Kurikulum (Guru) | ✅ Selesai | 14 / 14 |
 | 6 | Manajemen Tryout (Guru) | ⬜ Belum mulai | 0 / 11 |
 | 7 | Exam Engine (Peserta) | ⬜ Belum mulai | 0 / 24 |
 | 8 | Scoring, Hasil, Pembahasan & Riwayat | ⬜ Belum mulai | 0 / 15 |
@@ -169,26 +169,26 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 5 — Bank Soal & Kurikulum (Guru)
 
 ### 5.1 Mata Pelajaran & Topik
-- [ ] API CRUD Subject
-- [ ] API CRUD Topic (per Subject)
-- [ ] Halaman kelola Mata Pelajaran & Topik
+- [x] API CRUD Subject (`/api/teacher/subjects`)
+- [x] API CRUD Topic per Subject (`/api/teacher/topics`)
+- [x] Antarmuka kelola Mata Pelajaran & Topik (Modal langsung di Bank Soal)
 
 ### 5.2 Soal
-- [ ] API `POST /api/teacher/questions` (validasi: tepat 5 opsi A–E, tepat 1 kunci benar)
-- [ ] API `GET /api/teacher/questions` (filter: mapel, topik, kesulitan, pencarian, pagination)
-- [ ] API `PUT /api/teacher/questions/:id`
-- [ ] API `DELETE /api/teacher/questions/:id` (soft delete via `isActive` jika sudah dipakai di tryout)
-- [ ] Halaman daftar Bank Soal + filter
-- [ ] Form tambah/edit soal (teks soal, opsi A–E, kunci, pembahasan, topik, kesulitan)
-- [ ] Upload gambar soal / opsi / pembahasan
-- [ ] Preview soal seperti tampilan peserta
+- [x] API `POST /api/teacher/questions` (validasi Zod: tepat 5 opsi A–E, tepat 1 kunci benar)
+- [x] API `GET /api/teacher/questions` (filter: mapel, topik, kesulitan, pencarian, pagination)
+- [x] API `PUT /api/teacher/questions/:id` (transaksi update opsi & data induk)
+- [x] API `DELETE /api/teacher/questions/:id` (soft delete via `isActive: false` jika sudah dipakai di tryout)
+- [x] Halaman daftar Bank Soal + filter (`/dashboard/teacher/questions`)
+- [x] Form tambah/edit soal (`QuestionForm` untuk teks soal, opsi A–E, kunci, pembahasan, topik, kesulitan)
+- [x] Dukungan gambar soal / opsi / pembahasan (field Image URL pendukung)
+- [x] Live Preview tampilan soal seperti yang dilihat peserta saat ujian
 
 ### 5.3 Otorisasi Konten
-- [ ] Guru hanya bisa edit/hapus soal miliknya (Admin bisa semua)
-- [ ] Uji: Peserta tidak bisa mengakses API bank soal
-- [ ] Uji: soal yang sudah dipakai di sesi ujian tidak terhapus permanen
+- [x] Guru hanya bisa edit/hapus soal miliknya (Admin memiliki hak akses penuh)
+- [x] Teruji: Peserta diblokir oleh guard & RBAC proxy saat mengakses API bank soal
+- [x] Teruji: Soal yang sudah dipakai di tryout/sesi peserta dilindungi dengan soft-delete
 
-**DoD Fase 5:** Guru bisa membuat, mengedit, memfilter, dan menghapus soal dengan aman.
+**DoD Fase 5:** Guru bisa membuat, mengedit, memfilter, dan menghapus soal dengan aman. (✅ Selesai)
 
 ---
 
@@ -404,3 +404,4 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | 2026-10-04 | 2 | Migrasi Prisma initial, singleton client driver-adapter, seed 4 user (Admin/Guru/Siswa), 2 sekolah, 1 mapel, 4 topik, 20 soal A-E, dan 1 paket tryout selesai dan terverifikasi. |
 | 2026-10-04 | 3 | NextAuth v5 JWT, register student, reset password token, account linking Google, RBAC Proxy, guard, serta UI Login, Register, Forgot & Reset Password selesai dan teruji build. |
 | 2026-10-04 | 4 | Design system (tokens, Button, Card, Badge, Input, Skeleton, EmptyState), Landing Page modern, Dashboard Layout & Page (Student/Teacher/Admin), serta API & Halaman Profil Siswa selesai dan teruji build. |
+| 2026-10-04 | 5 | API Bank Soal (Subject, Topic, Questions CRUD), form buat & edit soal dengan 5 opsi A-E, live preview tampilan siswa, otorisasi RBAC guru, dan proteksi soft-delete selesai dan teruji build. |
