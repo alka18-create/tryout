@@ -17,7 +17,7 @@
 | Fase | Nama | Status | Progres |
 | :--: | :--- | :--- | :--: |
 | 0 | Perencanaan & Dokumentasi | ✅ Selesai | 6 / 6 |
-| 1 | Setup Project & Infrastruktur Lokal | ⬜ Belum mulai | 0 / 13 |
+| 1 | Setup Project & Infrastruktur Lokal | ✅ Selesai | 13 / 13 |
 | 2 | Database & Seed Data | ⬜ Belum mulai | 0 / 10 |
 | 3 | Authentication & Authorization | ⬜ Belum mulai | 0 / 18 |
 | 4 | Layout, Design System & Profil | ⬜ Belum mulai | 0 / 12 |
@@ -44,7 +44,7 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 
 ### Keputusan yang masih terbuka (selesaikan sebelum/selama Fase 1)
 
-- [ ] **Styling:** Tailwind CSS + shadcn/ui *atau* CSS biasa (CSS Modules)
+- [x] **Styling:** Tailwind CSS v4 + shadcn/ui (dipilih)
 - [ ] **Layanan email** (verifikasi & reset password): Resend / Brevo / SMTP sendiri
 - [ ] **Penyimpanan gambar soal:** folder lokal VPS *atau* object storage (Cloudflare R2 / S3)
 - [ ] **Strategi session Auth.js:** JWT (wajib jika memakai Credentials provider) — perlu disesuaikan dengan tabel `sessions` di Blueprint 03
@@ -56,14 +56,14 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 1 — Setup Project & Infrastruktur Lokal
 
 ### 1.1 Inisialisasi Project
-- [ ] Buat project Next.js (App Router, TypeScript, ESLint, `src/` directory)
-- [ ] Inisialisasi Git repository + `.gitignore`
-- [ ] Setup Prettier + aturan lint dasar
-- [ ] Setup styling sesuai keputusan Fase 0
-- [ ] Setup path alias (`@/`)
+- [x] Buat project Next.js (App Router, TypeScript, ESLint, `src/` directory)
+- [x] Inisialisasi Git repository + `.gitignore`
+- [x] Setup Prettier + aturan lint dasar
+- [x] Setup styling sesuai keputusan Fase 0
+- [x] Setup path alias (`@/`)
 
 ### 1.2 Struktur Folder (Modular Monolith)
-- [ ] Buat struktur folder modul:
+- [x] Buat struktur folder modul:
   ```text
   src/
   ├── app/                # routes (pages + api)
@@ -78,17 +78,17 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
   ├── lib/                # prisma client, helpers, response formatter
   └── components/         # UI bersama
   ```
-- [ ] Buat helper response API standar (`{ success, data, message }` / `{ success, error }`)
-- [ ] Buat helper error code (`EXAM_SESSION_EXPIRED`, `EXAM_ALREADY_SUBMITTED`, `DISCUSSION_LOCKED`, dll.)
+- [x] Buat helper response API standar (`{ success, data, message }` / `{ success, error }`)
+- [x] Buat helper error code (`EXAM_SESSION_EXPIRED`, `EXAM_ALREADY_SUBMITTED`, `DISCUSSION_LOCKED`, dll.)
 
 ### 1.3 Environment & Database Lokal
-- [ ] Buat `docker-compose.yml` untuk PostgreSQL lokal
-- [ ] Buat `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `EMAIL_*`, `APP_URL`)
-- [ ] Buat `.env` lokal (tidak di-commit)
-- [ ] Install dependency inti: `prisma`, `@prisma/client`, `next-auth`, `bcryptjs`, `zod`
-- [ ] Setup validasi env saat aplikasi start (zod)
+- [x] Buat `docker-compose.yml` untuk PostgreSQL lokal
+- [x] Buat `.env.example` (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `EMAIL_*`, `APP_URL`)
+- [x] Buat `.env` lokal (tidak di-commit)
+- [x] Install dependency inti: `prisma`, `@prisma/client`, `next-auth`, `bcryptjs`, `zod`
+- [x] Setup validasi env saat aplikasi start (zod)
 
-**DoD Fase 1:** `npm run dev` berjalan, PostgreSQL lokal aktif via Docker, struktur folder siap.
+**DoD Fase 1:** `npm run dev` berjalan, PostgreSQL lokal aktif via Docker, struktur folder siap. (✅ Selesai)
 
 ---
 
@@ -399,3 +399,4 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | Tanggal | Fase | Catatan |
 | :--- | :--- | :--- |
 | 2026-10-04 | 0 | Blueprint 00, 02, 03 dan Implementation Plan selesai disusun. |
+| 2026-10-04 | 1 | Setup Next.js 16, Tailwind v4, PostgreSQL Docker (port 5434), Prisma 7, helper API, env validator selesai dan teruji build. |
