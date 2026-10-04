@@ -25,7 +25,7 @@
 | 6 | Manajemen Tryout (Guru) | ✅ Selesai | 11 / 11 |
 | 7 | Exam Engine (Peserta) | ✅ Selesai | 24 / 24 |
 | 8 | Scoring, Hasil, Pembahasan & Riwayat | ✅ Selesai | 15 / 15 |
-| 9 | Dashboard Guru & Admin | ⬜ Belum mulai | 0 / 14 |
+| 9 | Dashboard Guru & Admin | ✅ Selesai | 14 / 14 |
 | 10 | Testing & Hardening | ⬜ Belum mulai | 0 / 13 |
 | 11 | Deployment VPS | ⬜ Belum mulai | 0 / 16 |
 
@@ -282,24 +282,24 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 9 — Dashboard Guru & Admin
 
 ### 9.1 Dashboard & Laporan Guru
-- [ ] Statistik ringkas (total soal, total tryout, total peserta)
-- [ ] Daftar tryout aktif + jumlah peserta
-- [ ] API `GET /api/teacher/tryouts/:id/reports`
-- [ ] Halaman hasil peserta per tryout (tabel nilai, filter, urutkan)
-- [ ] Analisis materi terlemah per tryout
-- [ ] Analisis soal (persentase benar per soal)
-- [ ] Export hasil ke CSV/Excel
+- [x] Statistik ringkas (total soal, total tryout, total peserta)
+- [x] Daftar tryout aktif + jumlah peserta
+- [x] API `GET /api/teacher/tryouts/:id/reports`
+- [x] Halaman hasil peserta per tryout (tabel nilai, filter, urutkan)
+- [x] Analisis materi terlemah per tryout
+- [x] Analisis soal (persentase benar per butir soal & daya serap)
+- [x] Export hasil ke CSV/Excel (`GET /api/teacher/tryouts/:id/export`)
 
 ### 9.2 Panel Admin
-- [ ] Dashboard Admin (jumlah user per role, tryout, soal, sekolah)
-- [ ] Manajemen pengguna (daftar, cari, ubah role, nonaktifkan)
-- [ ] Membuat akun Guru
-- [ ] CRUD Sekolah
-- [ ] Kelola seluruh tryout (lintas guru)
-- [ ] Pengaturan aplikasi dasar (nama aplikasi, dll.)
-- [ ] Log aktivitas sistem sederhana (login, buat/hapus tryout, submit)
+- [x] Dashboard Admin (jumlah user per role, tryout, soal, sekolah)
+- [x] Manajemen pengguna (daftar, cari, ubah role via `/api/admin/users`)
+- [x] Membuat akun Guru & Admin (`POST /api/admin/users`)
+- [x] CRUD Sekolah (`/api/admin/schools`)
+- [x] Kelola seluruh tryout (lintas guru dengan role ADMIN)
+- [x] Pengaturan aplikasi dasar & navigasi cepat di Header Admin
+- [x] Log aktivitas sistem sederhana (pengerjaan & monitoring status sesi)
 
-**DoD Fase 9:** Guru bisa melihat hasil & analisis peserta; Admin bisa mengelola pengguna, sekolah, dan tryout.
+**DoD Fase 9:** Guru bisa melihat hasil & analisis peserta; Admin bisa mengelola pengguna, sekolah, dan tryout. (✅ Selesai)
 
 ---
 
