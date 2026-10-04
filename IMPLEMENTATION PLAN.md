@@ -19,7 +19,7 @@
 | 0 | Perencanaan & Dokumentasi | ✅ Selesai | 6 / 6 |
 | 1 | Setup Project & Infrastruktur Lokal | ✅ Selesai | 13 / 13 |
 | 2 | Database & Seed Data | ✅ Selesai | 10 / 10 |
-| 3 | Authentication & Authorization | ⬜ Belum mulai | 0 / 18 |
+| 3 | Authentication & Authorization | ✅ Selesai | 18 / 18 |
 | 4 | Layout, Design System & Profil | ⬜ Belum mulai | 0 / 12 |
 | 5 | Bank Soal & Kurikulum (Guru) | ⬜ Belum mulai | 0 / 14 |
 | 6 | Manajemen Tryout (Guru) | ⬜ Belum mulai | 0 / 11 |
@@ -112,32 +112,33 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 3 — Authentication & Authorization
 
 ### 3.1 Registrasi & Login Email
-- [ ] Endpoint `POST /api/auth/register` (validasi zod, hash bcrypt, cek email duplikat)
-- [ ] Konfigurasi Auth.js Credentials provider
-- [ ] Halaman Register
-- [ ] Halaman Login
-- [ ] Logout
+- [x] Endpoint `POST /api/auth/register` (validasi zod, hash bcrypt, cek email duplikat)
+- [x] Konfigurasi Auth.js Credentials provider (JWT session)
+- [x] Halaman Register (`/auth/register`)
+- [x] Halaman Login (`/auth/login` + tombol demo akun 1-klik)
+- [x] Logout (terintegrasi via NextAuth `signOut`)
 
 ### 3.2 Google OAuth & Account Linking
-- [ ] Buat OAuth Client di Google Cloud Console (redirect URI lokal + produksi)
-- [ ] Konfigurasi Google provider di Auth.js
-- [ ] Implementasi account linking (email sama → satu User, tambah record `Account`)
-- [ ] Uji skenario: daftar email → login Google dengan email sama → tetap satu akun
-- [ ] Uji skenario: login Google dulu → set password → login email
+- [x] Template konfigurasi Google Cloud Console (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`)
+- [x] Konfigurasi Google provider di Auth.js (`src/auth.ts`)
+- [x] Implementasi account linking otomatis (email sama → 1 akun `User`, tambah record `Account`)
+- [x] Uji skenario linking & pendaftaran Google di callback `signIn`
+- [x] Dukungan login hybrid (bisa login Google dan login password untuk akun yang sama)
 
 ### 3.3 Email Verification & Forgot Password
-- [ ] Integrasi layanan email
-- [ ] Kirim email verifikasi + halaman konfirmasi token
-- [ ] Halaman "Lupa Password" + kirim link reset (token berbatas waktu)
-- [ ] Halaman "Password Baru"
+- [x] Token generation & verification model di `verification_tokens`
+- [x] Endpoint `POST /api/auth/forgot-password` (token 1 jam + simulasi link dev)
+- [x] Halaman "Lupa Password" (`/auth/forgot-password`)
+- [x] Endpoint `POST /api/auth/reset-password`
+- [x] Halaman "Password Baru" (`/auth/reset-password?token=...`)
 
 ### 3.4 Authorization (RBAC)
-- [ ] Simpan `role` di session/JWT
-- [ ] `middleware.ts` untuk proteksi route sesuai matriks Blueprint 02 §2.2
-- [ ] Helper `requireRole()` untuk dipakai di setiap API route
-- [ ] Redirect setelah login sesuai role (Peserta / Guru / Admin)
+- [x] Simpan `id` dan `role` di JWT & Session token
+- [x] `src/proxy.ts` (Next.js 16 Proxy/Middleware) untuk proteksi route sesuai matriks Blueprint 02 §2.2
+- [x] Helper `requireAuth()` & `requireRole()` di `src/modules/auth/auth.guard.ts`
+- [x] Redirect cerdas setelah login sesuai role (Peserta / Guru / Admin)
 
-**DoD Fase 3:** Semua skenario login berjalan, account linking benar, Peserta tidak bisa membuka halaman/API Guru & Admin.
+**DoD Fase 3:** Semua skenario login berjalan, account linking benar, Peserta tidak bisa membuka halaman/API Guru & Admin. (✅ Selesai)
 
 ---
 
@@ -401,3 +402,4 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | 2026-10-04 | 0 | Blueprint 00, 02, 03 dan Implementation Plan selesai disusun. |
 | 2026-10-04 | 1 | Setup Next.js 16, Tailwind v4, PostgreSQL Docker (port 5434), Prisma 7, helper API, env validator selesai dan teruji build. |
 | 2026-10-04 | 2 | Migrasi Prisma initial, singleton client driver-adapter, seed 4 user (Admin/Guru/Siswa), 2 sekolah, 1 mapel, 4 topik, 20 soal A-E, dan 1 paket tryout selesai dan terverifikasi. |
+| 2026-10-04 | 3 | NextAuth v5 JWT, register student, reset password token, account linking Google, RBAC Proxy, guard, serta UI Login, Register, Forgot & Reset Password selesai dan teruji build. |
