@@ -18,7 +18,7 @@
 | :--: | :--- | :--- | :--: |
 | 0 | Perencanaan & Dokumentasi | ✅ Selesai | 6 / 6 |
 | 1 | Setup Project & Infrastruktur Lokal | ✅ Selesai | 13 / 13 |
-| 2 | Database & Seed Data | ⬜ Belum mulai | 0 / 10 |
+| 2 | Database & Seed Data | ✅ Selesai | 10 / 10 |
 | 3 | Authentication & Authorization | ⬜ Belum mulai | 0 / 18 |
 | 4 | Layout, Design System & Profil | ⬜ Belum mulai | 0 / 12 |
 | 5 | Bank Soal & Kurikulum (Guru) | ⬜ Belum mulai | 0 / 14 |
@@ -94,18 +94,18 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 
 ## FASE 2 — Database & Seed Data
 
-- [ ] Salin `schema.prisma` dari Blueprint 03 ke `prisma/schema.prisma`
-- [ ] Sesuaikan model `Session` dengan strategi session yang dipilih
-- [ ] Jalankan migrasi awal (`npx prisma migrate dev --name init`)
-- [ ] Buat singleton Prisma Client di `src/lib/prisma.ts`
-- [ ] Buat seed: 1 akun ADMIN, 1 akun GURU, 2 akun PESERTA
-- [ ] Buat seed: data sekolah contoh
-- [ ] Buat seed: mata pelajaran + topik (contoh: Sosiologi → Identitas, Kelompok, Konflik, Perubahan Sosial)
-- [ ] Buat seed: minimal 20 soal pilihan ganda (A–E) lengkap dengan pembahasan
-- [ ] Buat seed: 1 tryout PUBLISHED berisi soal-soal tersebut
-- [ ] Verifikasi data via Prisma Studio
+- [x] Salin `schema.prisma` dari Blueprint 03 ke `prisma/schema.prisma`
+- [x] Sesuaikan model `Session` dengan strategi session yang dipilih
+- [x] Jalankan migrasi awal (`npx prisma migrate dev --name init`)
+- [x] Buat singleton Prisma Client di `src/lib/prisma.ts`
+- [x] Buat seed: 1 akun ADMIN, 1 akun GURU, 2 akun PESERTA
+- [x] Buat seed: data sekolah contoh
+- [x] Buat seed: mata pelajaran + topik (contoh: Sosiologi → Identitas, Kelompok, Konflik, Perubahan Sosial)
+- [x] Buat seed: minimal 20 soal pilihan ganda (A–E) lengkap dengan pembahasan
+- [x] Buat seed: 1 tryout PUBLISHED berisi soal-soal tersebut
+- [x] Verifikasi data via Prisma Studio / query test
 
-**DoD Fase 2:** Database terisi data contoh dan bisa dibuka lewat Prisma Studio.
+**DoD Fase 2:** Database terisi data contoh dan bisa dibuka lewat Prisma Studio. (✅ Selesai)
 
 ---
 
@@ -400,3 +400,4 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | :--- | :--- | :--- |
 | 2026-10-04 | 0 | Blueprint 00, 02, 03 dan Implementation Plan selesai disusun. |
 | 2026-10-04 | 1 | Setup Next.js 16, Tailwind v4, PostgreSQL Docker (port 5434), Prisma 7, helper API, env validator selesai dan teruji build. |
+| 2026-10-04 | 2 | Migrasi Prisma initial, singleton client driver-adapter, seed 4 user (Admin/Guru/Siswa), 2 sekolah, 1 mapel, 4 topik, 20 soal A-E, dan 1 paket tryout selesai dan terverifikasi. |
