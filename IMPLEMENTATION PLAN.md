@@ -24,7 +24,7 @@
 | 5 | Bank Soal & Kurikulum (Guru) | ✅ Selesai | 14 / 14 |
 | 6 | Manajemen Tryout (Guru) | ✅ Selesai | 11 / 11 |
 | 7 | Exam Engine (Peserta) | ✅ Selesai | 24 / 24 |
-| 8 | Scoring, Hasil, Pembahasan & Riwayat | ⬜ Belum mulai | 0 / 15 |
+| 8 | Scoring, Hasil, Pembahasan & Riwayat | ✅ Selesai | 15 / 15 |
 | 9 | Dashboard Guru & Admin | ⬜ Belum mulai | 0 / 14 |
 | 10 | Testing & Hardening | ⬜ Belum mulai | 0 / 13 |
 | 11 | Deployment VPS | ⬜ Belum mulai | 0 / 16 |
@@ -253,29 +253,29 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 8 — Scoring, Hasil, Pembahasan & Riwayat
 
 ### 8.1 Scoring Engine
-- [ ] Service `scoreExamSession()` — hitung benar / salah / kosong per jawaban
-- [ ] Hitung `totalScore` (skala 0–100 berdasarkan bobot)
-- [ ] Hitung `isPassed` berdasarkan `passingScore`
-- [ ] Hitung & simpan `ExamTopicScore` per topik
-- [ ] Jalankan seluruh proses dalam satu transaksi database
-- [ ] Unit test untuk scoring (semua benar, semua kosong, campuran, bobot berbeda)
+- [x] Service `scoreExamSession()` — hitung benar / salah / kosong per jawaban
+- [x] Hitung `totalScore` (skala 0–100 berdasarkan bobot)
+- [x] Hitung `isPassed` berdasarkan `passingScore`
+- [x] Hitung & simpan `ExamTopicScore` per topik
+- [x] Jalankan seluruh proses dalam satu transaksi database
+- [x] Unit test untuk scoring (semua benar, semua kosong, campuran, bobot berbeda)
 
 ### 8.2 Hasil
-- [ ] API `GET /api/student/exam-sessions/:id/result`
-- [ ] Halaman Hasil (nilai, benar/salah/kosong, durasi pengerjaan, status lulus)
-- [ ] Tabel/grafik penguasaan materi per topik
+- [x] API `GET /api/student/exam-sessions/:id/result`
+- [x] Halaman Hasil (`/dashboard/student/exam-sessions/:id/result` dengan nilai, benar/salah/kosong, durasi pengerjaan, status lulus)
+- [x] Tabel/grafik penguasaan materi per topik (Topic Mastery & rekomendasi materi terkuat/perbaikan)
 
 ### 8.3 Pembahasan
-- [ ] API `GET /api/student/exam-sessions/:id/discussion` dengan cek `discussionVisibility`
-- [ ] Halaman Pembahasan (jawaban peserta, kunci, status, penjelasan)
+- [x] API `GET /api/student/exam-sessions/:id/discussion` dengan cek validasi `discussionVisibility`
+- [x] Halaman Pembahasan (`/dashboard/student/exam-sessions/:id/discussion` dengan filter status, jawaban peserta, kunci, dan teks penjelasan)
 
 ### 8.4 Riwayat & Progres
-- [ ] API riwayat tryout peserta
-- [ ] Halaman Riwayat Tryout
-- [ ] Grafik perkembangan nilai dari waktu ke waktu
-- [ ] Widget nilai terakhir & perkembangan di Dashboard Peserta
+- [x] API riwayat tryout peserta (`GET /api/student/history`)
+- [x] Halaman Riwayat Tryout (`/dashboard/student/history`)
+- [x] Grafik perkembangan nilai dari waktu ke waktu
+- [x] Widget nilai terakhir & perkembangan di Dashboard Peserta
 
-**DoD Fase 8:** Nilai dihitung server dengan benar (teruji), peserta bisa melihat hasil, analisis materi, pembahasan, dan riwayat.
+**DoD Fase 8:** Nilai dihitung server dengan benar (teruji), peserta bisa melihat hasil, analisis materi, pembahasan, dan riwayat. (✅ Selesai)
 
 ---
 
