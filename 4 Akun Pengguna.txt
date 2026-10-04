@@ -1,0 +1,5 @@
+4 Akun Pengguna (password hash bcrypt: Password123!):
+Admin: admin@tryoutku.com
+Guru: guru@tryoutku.com
+Siswa 1: ahmad@tryoutku.com
+Siswa 2: citra@tryoutku.com
