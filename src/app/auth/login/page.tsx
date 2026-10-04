@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -10,10 +10,15 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/student";
 
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +52,23 @@ function LoginForm() {
     setErrorMsg("");
   };
 
+  if (!mounted) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50 min-h-[460px] flex flex-col items-center justify-center space-y-4"
+      >
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-400">Menyiapkan formulir masuk...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
+    <div
+      suppressHydrationWarning
+      className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50"
+    >
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-white tracking-tight">Selamat Datang Kembali</h1>
         <p className="text-sm text-slate-400 mt-1">
@@ -194,7 +214,10 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 text-center text-slate-400 text-sm">
+        <div
+          suppressHydrationWarning
+          className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 text-center text-slate-400 text-sm"
+        >
           Memuat formulir masuk...
         </div>
       }

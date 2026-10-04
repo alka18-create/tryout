@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,6 +22,10 @@ export default function RegisterPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +69,23 @@ export default function RegisterPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50 min-h-[500px] flex flex-col items-center justify-center space-y-4"
+      >
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-400">Menyiapkan formulir pendaftaran...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
+    <div
+      suppressHydrationWarning
+      className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50"
+    >
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-white tracking-tight">Daftar Akun Peserta</h1>
         <p className="text-sm text-slate-400 mt-1">

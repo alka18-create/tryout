@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successData, setSuccessData] = useState<{ message: string; token?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +43,23 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50 min-h-[380px] flex flex-col items-center justify-center space-y-4"
+      >
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-400">Menyiapkan formulir pemulihan...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50">
+    <div
+      suppressHydrationWarning
+      className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50"
+    >
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-white tracking-tight">Lupa Password</h1>
         <p className="text-sm text-slate-400 mt-1">
