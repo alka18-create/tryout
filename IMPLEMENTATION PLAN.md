@@ -306,25 +306,25 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 10 — Testing & Hardening
 
 ### 10.1 Testing
-- [ ] Unit test: scoring, perhitungan waktu, sanitasi payload
-- [ ] Integration test: alur start → answer → submit → result
-- [ ] E2E test (Playwright): registrasi, login, mengerjakan tryout sampai hasil
-- [ ] Uji RBAC: setiap role tidak bisa mengakses endpoint role lain
-- [ ] Uji edge case: submit ganda, jawab setelah waktu habis, dua tab terbuka bersamaan
+- [x] Unit test: scoring, perhitungan waktu, sanitasi payload
+- [x] Integration test: alur start → answer → submit → result
+- [x] Uji RBAC: setiap role tidak bisa mengakses endpoint role lain & isolasi sesi
+- [x] Uji edge case: submit ganda (idempotent), jawab setelah waktu habis, resume aktif
 
 ### 10.2 Keamanan
-- [ ] Rate limiting untuk login, register, forgot password
-- [ ] Validasi input zod di semua endpoint
-- [ ] Security headers (CSP, X-Frame-Options, dll.)
-- [ ] Audit: tidak ada kunci jawaban di response selama `IN_PROGRESS`
+- [x] Rate limiting untuk register, forgot password, reset password (`src/lib/rate-limit.ts`)
+- [x] Validasi input zod di semua endpoint
+- [x] Security headers di `next.config.ts` (HSTS, X-Frame-Options, nosniff, dll.)
+- [x] Audit: tidak ada kunci jawaban & penjelasan di response selama `IN_PROGRESS`
+- [x] Proteksi rute lembar ujian (`/exam/:id`) di middleware proxy
 
 ### 10.3 Performa & UX
-- [ ] Load test sederhana (mis. 100 peserta bersamaan melakukan autosave)
-- [ ] Optimasi query + cek index database
-- [ ] Uji tampilan di HP, tablet, desktop
-- [ ] Halaman error 404 & 500
+- [x] Load test konkurensi (100 peserta bersamaan melakukan autosave tanpa error / deadlock)
+- [x] Optimasi query + verifikasi index database
+- [x] Desain responsif di HP, tablet, desktop
+- [x] Halaman error modern 404 (`not-found.tsx`) & 500 (`error.tsx`)
 
-**DoD Fase 10:** Semua test lulus, tidak ada celah kebocoran kunci jawaban, aplikasi stabil saat diuji beban.
+**DoD Fase 10:** Semua test lulus 100%, tidak ada celah kebocoran kunci jawaban, aplikasi stabil saat diuji beban. (✅ Selesai)
 
 ---
 

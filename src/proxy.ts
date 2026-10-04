@@ -12,8 +12,8 @@ export async function proxy(request: NextRequest) {
 
   const role = token?.role as string | undefined;
 
-  // 1. Proteksi Halaman Dashboard Web
-  if (pathname.startsWith("/dashboard")) {
+  // 1. Proteksi Halaman Dashboard Web & Lembar Ujian
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/exam")) {
     if (!token) {
       const url = new URL("/auth/login", request.url);
       url.searchParams.set("callbackUrl", encodeURI(pathname));
@@ -105,6 +105,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/exam/:path*",
     "/api/student/:path*",
     "/api/teacher/:path*",
     "/api/admin/:path*",
