@@ -23,7 +23,7 @@
 | 4 | Layout, Design System & Profil | ✅ Selesai | 12 / 12 |
 | 5 | Bank Soal & Kurikulum (Guru) | ✅ Selesai | 14 / 14 |
 | 6 | Manajemen Tryout (Guru) | ✅ Selesai | 11 / 11 |
-| 7 | Exam Engine (Peserta) | ⬜ Belum mulai | 0 / 24 |
+| 7 | Exam Engine (Peserta) | ✅ Selesai | 24 / 24 |
 | 8 | Scoring, Hasil, Pembahasan & Riwayat | ⬜ Belum mulai | 0 / 15 |
 | 9 | Dashboard Guru & Admin | ⬜ Belum mulai | 0 / 14 |
 | 10 | Testing & Hardening | ⬜ Belum mulai | 0 / 13 |
@@ -213,40 +213,40 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 7 — Exam Engine (Peserta) ⭐ Jantung Aplikasi
 
 ### 7.1 Daftar & Detail Tryout
-- [ ] API `GET /api/student/tryouts` (hanya PUBLISHED & dalam periode aktif, plus status pengerjaan user)
-- [ ] Halaman Dashboard Peserta (sapaan, tryout tersedia, tryout berlangsung, nilai terakhir)
-- [ ] Halaman detail tryout (jumlah soal, durasi, mapel, aturan) + tombol **MULAI**
+- [x] API `GET /api/student/tryouts` (hanya PUBLISHED & dalam periode aktif, plus status pengerjaan user)
+- [x] Halaman Dashboard Peserta (sapaan, tryout tersedia, tryout berlangsung, nilai terakhir)
+- [x] Halaman detail tryout (`/dashboard/student/tryouts/:id` dengan jumlah soal, durasi, mapel, aturan + tombol **MULAI**)
 
 ### 7.2 Memulai Sesi
-- [ ] API `POST /api/student/tryouts/:id/start`
-- [ ] Hitung `expiresAt` di server
-- [ ] Buat baris `ExamAnswer` kosong untuk setiap soal (dalam satu transaksi)
-- [ ] *Idempotent resume*: jika ada sesi `IN_PROGRESS` aktif → kembalikan sesi yang sama
-- [ ] Cegah peserta mengulang tryout yang sudah SUBMITTED (kecuali diatur lain)
+- [x] API `POST /api/student/tryouts/:id/start`
+- [x] Hitung `expiresAt` di server
+- [x] Buat baris `ExamAnswer` kosong untuk setiap soal (dalam satu transaksi)
+- [x] *Idempotent resume*: jika ada sesi `IN_PROGRESS` aktif → kembalikan sesi yang sama
+- [x] Cegah peserta mengulang tryout yang sudah SUBMITTED (kecuali diatur lain)
 
 ### 7.3 Lembar Ujian
-- [ ] API `GET /api/student/exam-sessions/:id` dengan **sanitasi payload** (tanpa `isCorrect` & `explanation`)
-- [ ] Cek kepemilikan sesi (hanya pemilik)
-- [ ] Halaman ujian: teks soal, gambar, opsi A–E
-- [ ] Navigasi Sebelumnya / Lanjut
-- [ ] Grid nomor soal dengan status visual (dijawab / belum / ditandai / aktif)
-- [ ] Tombol "Tandai untuk ditinjau" (ragu-ragu)
-- [ ] Timer tampilan yang disinkronkan dengan `remainingSeconds` dari server
-- [ ] Re-sinkronisasi timer saat tab kembali aktif / setelah refresh
+- [x] API `GET /api/student/exam-sessions/:id` dengan **sanitasi payload** (tanpa `isCorrect` & `explanation`)
+- [x] Cek kepemilikan sesi (hanya pemilik)
+- [x] Halaman ujian: teks soal, gambar, opsi A–E (`/exam/:id`)
+- [x] Navigasi Sebelumnya / Lanjut
+- [x] Grid nomor soal dengan status visual (dijawab / belum / ditandai / aktif)
+- [x] Tombol "Tandai untuk ditinjau" (ragu-ragu)
+- [x] Timer tampilan yang disinkronkan dengan `remainingSeconds` dari server
+- [x] Re-sinkronisasi timer saat tab kembali aktif / setelah refresh
 
 ### 7.4 Autosave
-- [ ] API `PUT /api/student/exam-sessions/:id/answer` (validasi status + grace period 15 detik)
-- [ ] Autosave saat memilih opsi (debounce + retry jika gagal)
-- [ ] Indikator status simpan ("Tersimpan" / "Menyimpan…" / "Gagal, mencoba lagi")
-- [ ] Jawaban tetap ada setelah refresh browser
+- [x] API `PUT /api/student/exam-sessions/:id/answer` (validasi status + grace period 15 detik)
+- [x] Autosave saat memilih opsi (debounce + retry jika gagal)
+- [x] Indikator status simpan ("Tersimpan" / "Menyimpan…" / "Gagal, mencoba lagi")
+- [x] Jawaban tetap ada setelah refresh browser
 
 ### 7.5 Submit
-- [ ] Halaman/Modal review sebelum submit (ringkasan dijawab, kosong, ditandai)
-- [ ] API `POST /api/student/exam-sessions/:id/submit` (idempotent — submit ganda tidak menghitung ulang)
-- [ ] Auto-submit dari client saat timer = 00:00:00
-- [ ] Auto-expire di server: sesi yang lewat `expiresAt` otomatis dinilai saat diakses (lazy evaluation) atau via job terjadwal
+- [x] Halaman/Modal review sebelum submit (ringkasan dijawab, kosong, ditandai)
+- [x] API `POST /api/student/exam-sessions/:id/submit` (idempotent — submit ganda tidak menghitung ulang)
+- [x] Auto-submit dari client saat timer = 00:00:00
+- [x] Auto-expire di server: sesi yang lewat `expiresAt` otomatis dinilai saat diakses (lazy evaluation) atau via job terjadwal
 
-**DoD Fase 7:** Peserta bisa mengerjakan tryout dari awal sampai submit; refresh tidak menghilangkan jawaban; kunci jawaban tidak terlihat di Network tab; waktu tidak bisa dimanipulasi dari browser.
+**DoD Fase 7:** Peserta bisa mengerjakan tryout dari awal sampai submit; refresh tidak menghilangkan jawaban; kunci jawaban tidak terlihat di Network tab; waktu tidak bisa dimanipulasi dari browser. (✅ Selesai)
 
 ---
 

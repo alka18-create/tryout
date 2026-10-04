@@ -45,7 +45,7 @@ export default async function StudentDashboardPage() {
   const averageScore =
     completedCount > 0
       ? Math.round(
-          (recentSessions.reduce((acc, s) => acc + s.totalScore, 0) / completedCount) * 10,
+          (recentSessions.reduce((acc, s) => acc + (s.totalScore ?? 0), 0) / completedCount) * 10,
         ) / 10
       : 0;
 
