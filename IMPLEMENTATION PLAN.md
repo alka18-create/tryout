@@ -22,7 +22,7 @@
 | 3 | Authentication & Authorization | ✅ Selesai | 18 / 18 |
 | 4 | Layout, Design System & Profil | ✅ Selesai | 12 / 12 |
 | 5 | Bank Soal & Kurikulum (Guru) | ✅ Selesai | 14 / 14 |
-| 6 | Manajemen Tryout (Guru) | ⬜ Belum mulai | 0 / 11 |
+| 6 | Manajemen Tryout (Guru) | ✅ Selesai | 11 / 11 |
 | 7 | Exam Engine (Peserta) | ⬜ Belum mulai | 0 / 24 |
 | 8 | Scoring, Hasil, Pembahasan & Riwayat | ⬜ Belum mulai | 0 / 15 |
 | 9 | Dashboard Guru & Admin | ⬜ Belum mulai | 0 / 14 |
@@ -194,19 +194,19 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 
 ## FASE 6 — Manajemen Tryout (Guru)
 
-- [ ] API `POST /api/teacher/tryouts` (judul, deskripsi, mapel, durasi, KKM, periode, visibilitas pembahasan)
-- [ ] API `GET /api/teacher/tryouts` & `PUT /api/teacher/tryouts/:id`
-- [ ] API `PUT /api/teacher/tryouts/:id/questions` (pilih soal + urutan nomor + bobot)
-- [ ] Halaman daftar tryout milik guru
-- [ ] Form buat/edit tryout
-- [ ] UI pemilih soal dari Bank Soal (filter + checklist)
-- [ ] UI pengaturan urutan soal (drag & drop atau tombol naik/turun)
-- [ ] Aksi ubah status: DRAFT → PUBLISHED → ARCHIVED
-- [ ] Validasi publish: minimal 1 soal, durasi > 0
-- [ ] Kunci perubahan soal jika tryout sudah memiliki sesi peserta
-- [ ] Preview tryout sebagai peserta
+- [x] API `POST /api/teacher/tryouts` (judul, deskripsi, mapel, durasi, KKM, periode, visibilitas pembahasan)
+- [x] API `GET /api/teacher/tryouts` & `PUT /api/teacher/tryouts/:id`
+- [x] API `PUT /api/teacher/tryouts/:id/questions` (pilih soal + urutan nomor + bobot)
+- [x] Halaman daftar tryout milik guru (`/dashboard/teacher/tryouts`)
+- [x] Form buat/edit tryout (`TryoutForm`, `/dashboard/teacher/tryouts/new`, `/dashboard/teacher/tryouts/:id/edit`)
+- [x] UI pemilih soal dari Bank Soal (filter topik/kesulitan, search + checklist)
+- [x] UI pengaturan urutan soal (tombol naik ▲ / turun ▼ + input bobot dinamis)
+- [x] Aksi ubah status: DRAFT → PUBLISHED → ARCHIVED
+- [x] Validasi publish: minimal 1 soal, durasi > 0
+- [x] Kunci perubahan soal jika tryout sudah memiliki sesi peserta (Locked state & warning banner)
+- [x] Preview tryout sebagai peserta (Simulasi soal 1-N, opsi A-E, kunci, navigasi nomor)
 
-**DoD Fase 6:** Guru bisa membuat tryout lengkap dan mempublikasikannya.
+**DoD Fase 6:** Guru bisa membuat tryout lengkap dan mempublikasikannya. (✅ Selesai)
 
 ---
 
