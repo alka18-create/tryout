@@ -12,13 +12,41 @@ export class QuestionBankService {
   // ─── 1. SUBJECTS ──────────────────────────────────────────────────────────
 
   static async listSubjects() {
-    return prisma.subject.findMany({
+    const subjects = await prisma.subject.findMany({
       include: {
+        topics: {
+          select: {
+            id: true,
+            _count: {
+              select: { questions: { where: { isActive: true } } },
+            },
+          },
+        },
         _count: {
           select: { topics: true, tryouts: true },
         },
       },
       orderBy: { name: "asc" },
+    });
+
+    return subjects.map((sub) => {
+      const questionCount = sub.topics.reduce(
+        (acc, t) => acc + (t._count?.questions || 0),
+        0,
+      );
+      return {
+        id: sub.id,
+        name: sub.name,
+        code: sub.code,
+        description: sub.description,
+        createdAt: sub.createdAt,
+        updatedAt: sub.updatedAt,
+        _count: {
+          topics: sub._count.topics,
+          tryouts: sub._count.tryouts,
+          questions: questionCount,
+        },
+      };
     });
   }
 
