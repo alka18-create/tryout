@@ -81,27 +81,37 @@ export function DashboardLayout({
         : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2 font-bold text-white tracking-tight">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-black shadow-md shadow-indigo-600/30">
             TK
           </div>
           <span>TryoutKu</span>
         </Link>
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded-lg bg-slate-800 text-slate-300"
+          className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+          aria-label="Toggle menu navigasi"
         >
           {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
+      {/* Mobile Menu Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Tutup menu navigasi"
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 border-r border-slate-800/80 bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between z-30 transition-transform md:translate-x-0 ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed md:sticky top-0 left-0 h-screen w-72 max-w-[85vw] border-r border-slate-800/80 bg-slate-900/95 md:bg-slate-900/80 backdrop-blur-xl flex flex-col justify-between z-50 md:z-30 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0 shadow-2xl shadow-black" : "-translate-x-full"
         }`}
       >
         <div className="p-5 flex flex-col flex-1 overflow-y-auto">
@@ -163,7 +173,7 @@ export function DashboardLayout({
 
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
-            className="w-full py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-slate-400 text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-slate-400 text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Keluar (Logout)</span>
@@ -172,8 +182,8 @@ export function DashboardLayout({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <div className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">{children}</div>
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">{children}</div>
       </main>
     </div>
   );
