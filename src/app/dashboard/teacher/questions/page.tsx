@@ -15,12 +15,14 @@ import {
   Eye,
   AlertCircle,
   FolderPlus,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { QuestionImportModal } from "@/components/teacher/question-import-modal";
 
 interface Option {
   id: string;
@@ -79,6 +81,9 @@ export default function TeacherQuestionsPage() {
   const [newTopicName, setNewTopicName] = useState("");
   const [newTopicSubjectId, setNewTopicSubjectId] = useState("");
   const [topicModalMsg, setTopicModalMsg] = useState("");
+
+  // Import Excel Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -197,7 +202,17 @@ export default function TeacherQuestionsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setIsImportModalOpen(true)}
+            className="gap-2 border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+            <span>Import Excel</span>
+          </Button>
+
           <Button
             variant="outline"
             size="md"
@@ -484,6 +499,19 @@ export default function TeacherQuestionsPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Import Soal Excel */}
+      <QuestionImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          loadQuestions();
+          setFeedback({
+            type: "success",
+            text: "Soal dari Excel berhasil diimpor dan diperbarui di daftar.",
+          });
+        }}
+      />
     </div>
   );
 }

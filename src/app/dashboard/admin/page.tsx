@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Users, GraduationCap, Building2, BookOpen, Shield, Settings, CheckCircle2 } from "lucide-react";
+import { Users, GraduationCap, Building2, BookOpen, Shield, Settings, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,13 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link href="/dashboard/teacher/questions">
+            <Button variant="outline" size="md" className="gap-2 text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10">
+              <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+              <span>Bank Soal & Import</span>
+            </Button>
+          </Link>
           <Link href="/dashboard/admin/users">
             <Button variant="secondary" size="md" className="gap-2 text-xs">
               <Users className="w-4 h-4" />
