@@ -61,9 +61,11 @@ export function DashboardLayout({
 
   const adminNav: NavItem[] = [
     { label: "Dashboard Admin", href: "/dashboard/admin", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { label: "Bank Soal & Import", href: "/dashboard/teacher/questions", icon: <FileQuestion className="w-4 h-4" /> },
+    { label: "Manajemen Tryout", href: "/dashboard/teacher/tryouts", icon: <FileSpreadsheet className="w-4 h-4" /> },
+    { label: "Laporan & Nilai", href: "/dashboard/teacher/reports", icon: <BarChart3 className="w-4 h-4" /> },
     { label: "Kelola Pengguna", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" /> },
     { label: "Master Sekolah", href: "/dashboard/admin/schools", icon: <Building2 className="w-4 h-4" /> },
-    { label: "Pengaturan Sistem", href: "/dashboard/admin/settings", icon: <Settings className="w-4 h-4" /> },
   ];
 
   const navItems = role === "ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;

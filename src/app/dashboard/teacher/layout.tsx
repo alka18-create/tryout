@@ -20,8 +20,8 @@ export default async function TeacherLayout({
 
   return (
     <DashboardLayout
-      role="TEACHER"
-      userName={session.user.name || "Guru"}
+      role={session.user.role as "ADMIN" | "TEACHER"}
+      userName={session.user.name || (session.user.role === "ADMIN" ? "Administrator" : "Guru")}
       userEmail={session.user.email || ""}
       userImage={session.user.image}
     >

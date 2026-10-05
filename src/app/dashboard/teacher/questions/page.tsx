@@ -195,7 +195,7 @@ export default function TeacherQuestionsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
             <FileQuestion className="w-8 h-8 text-amber-400" />
-            <span>Bank Soal Guru</span>
+            <span>Bank Soal</span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Kelola repositori bank soal pilihan ganda, kunci jawaban, dan pembahasan materi
