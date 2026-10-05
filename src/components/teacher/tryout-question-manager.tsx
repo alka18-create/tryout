@@ -95,13 +95,18 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     setIsBankModalOpen(true);
     setIsFetchingBank(true);
     try {
-      const res = await fetch(`/api/teacher/questions?subjectId=${tryout.subjectId}&limit=100`);
+      const res = await fetch(`/api/teacher/questions?subjectId=${tryout.subjectId}&limit=200`);
       const json = await res.json();
       if (json.success && json.data) {
         // Filter out questions that are already in this tryout
         const existingIds = new Set(questions.map((q) => q.questionId));
-        const filtered = (json.data as Question[]).filter((q) => !existingIds.has(q.id));
+        const questionsList: Question[] = Array.isArray(json.data)
+          ? json.data
+          : (json.data.questions || []);
+        const filtered = questionsList.filter((q) => !existingIds.has(q.id));
         setAvailableQuestions(filtered);
+      } else {
+        setFeedback({ type: "error", text: json.error?.message || "Gagal mengambil bank soal." });
       }
     } catch {
       setFeedback({ type: "error", text: "Gagal mengambil bank soal." });
@@ -234,6 +239,21 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     const matchesDiff = selectedDifficulty === "ALL" || q.difficulty === selectedDifficulty;
     return matchesSearch && matchesTopic && matchesDiff;
   });
+
+  const handleSelectAllBank = () => {
+    const allFilteredIds = filteredBankQuestions.map((q) => q.id);
+    const isAllSelected =
+      allFilteredIds.length > 0 &&
+      allFilteredIds.every((id) => selectedQuestionIds.has(id));
+
+    const newSet = new Set(selectedQuestionIds);
+    if (isAllSelected) {
+      allFilteredIds.forEach((id) => newSet.delete(id));
+    } else {
+      allFilteredIds.forEach((id) => newSet.add(id));
+    }
+    setSelectedQuestionIds(newSet);
+  };
 
   return (
     <div className="space-y-6">
@@ -533,7 +553,7 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
             </div>
 
             {/* Filter Controls */}
-            <div className="p-4 bg-slate-950/40 border-b border-slate-800 flex flex-wrap gap-3">
+            <div className="p-4 bg-slate-950/40 border-b border-slate-800 flex flex-wrap items-center gap-3">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -550,7 +570,7 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                 onChange={(e) => setSelectedTopic(e.target.value)}
                 className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 outline-none"
               >
-                <option value="ALL">Semua Topik</option>
+                <option value="ALL">Semua Topik ({availableTopics.length})</option>
                 {availableTopics.map((top) => (
                   <option key={top} value={top}>
                     {top}
@@ -568,6 +588,20 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                 <option value="MEDIUM">Sedang (MEDIUM)</option>
                 <option value="HARD">Sulit (HARD)</option>
               </select>
+
+              {filteredBankQuestions.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllBank}
+                  className="text-xs whitespace-nowrap"
+                >
+                  {filteredBankQuestions.length > 0 &&
+                  filteredBankQuestions.every((q) => selectedQuestionIds.has(q.id))
+                    ? "Batal Pilih Semua"
+                    : `Pilih Semua (${filteredBankQuestions.length})`}
+                </Button>
+              )}
             </div>
 
             {/* Modal Body: Available Questions List */}
@@ -577,8 +611,15 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                   Memuat data bank soal...
                 </div>
               ) : filteredBankQuestions.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-xs">
-                  Tidak ada soal yang tersedia atau semua soal telah dimasukkan ke tryout ini.
+                <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+                  <p className="font-semibold text-slate-300">
+                    Tidak ada soal yang tersedia untuk mata pelajaran &quot;{tryout.subject.name}&quot;.
+                  </p>
+                  <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                    {availableQuestions.length > 0
+                      ? "Semua soal yang sesuai dengan filter pencarian ini telah dimasukkan ke dalam paket tryout."
+                      : "Pastikan Anda telah menambahkan soal pada mata pelajaran ini di menu Bank Soal, atau periksa filter pencarian Anda."}
+                  </p>
                 </div>
               ) : (
                 filteredBankQuestions.map((q) => {
