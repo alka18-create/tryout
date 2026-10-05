@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { ExamSessionStatus, TryoutStatus } from "@/generated/prisma/client";
 import { SaveAnswerInput } from "./exam.schema";
+import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 
 export class ExamService {
   /**
@@ -333,35 +334,44 @@ export class ExamService {
         ? Math.max(0, Math.floor((expiresAtMs - now) / 1000))
         : 0;
 
-    // Buat map orderNumber dari tryoutQuestions
-    const orderMap = new Map<string, { orderNumber: number; weight: number }>();
+    // Buat map bobot soal dari tryoutQuestions
+    const weightMap = new Map<string, number>();
     session.tryout.tryoutQuestions.forEach((tq) => {
-      orderMap.set(tq.questionId, { orderNumber: tq.orderNumber, weight: tq.weight });
+      weightMap.set(tq.questionId, tq.weight);
     });
 
-    // Sanitasi payload soal
-    const sanitizedQuestions = session.answers
-      .map((ans) => {
-        const orderInfo = orderMap.get(ans.questionId) || { orderNumber: 1, weight: 1 };
-        return {
-          orderNumber: orderInfo.orderNumber,
-          weight: orderInfo.weight,
-          questionId: ans.questionId,
-          content: ans.question.content,
-          imageUrl: ans.question.imageUrl,
-          options: ans.question.options.map((opt) => ({
-            id: opt.id,
-            label: opt.label,
-            content: opt.content,
-            imageUrl: opt.imageUrl,
-            // STRICT SECURITY: isCorrect DIHAPUS DARI PAYLOAD
-          })),
-          selectedOptionId: ans.selectedOptionId,
-          isFlagged: ans.isFlagged,
-          // STRICT SECURITY: explanation DIHAPUS SELAMA UJIAN
-        };
-      })
-      .sort((a, b) => a.orderNumber - b.orderNumber);
+    // 1. Acak urutan butir soal secara unik & konsisten untuk sesi ini (Seeded PRNG)
+    const questionSeed = `${session.id}:questions`;
+    const shuffledAnswers = shuffleArrayWithSeed(session.answers, questionSeed);
+
+    // 2. Sanitasi payload & acak urutan opsi jawaban (A–E) secara unik untuk tiap butir soal
+    const sanitizedQuestions = shuffledAnswers.map((ans, index) => {
+      const weight = weightMap.get(ans.questionId) || 1.0;
+      const optionSeed = `${session.id}:question:${ans.questionId}:options`;
+
+      const rawOptions = ans.question.options.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        content: opt.content,
+        imageUrl: opt.imageUrl,
+        // STRICT SECURITY: isCorrect DIHAPUS DARI PAYLOAD
+      }));
+
+      // Acak opsi jawaban dan berikan label A–E baru sesuai urutan acak
+      const shuffledOptions = shuffleQuestionOptions(rawOptions, optionSeed);
+
+      return {
+        orderNumber: index + 1, // Nomor 1 .. N teracak untuk siswa ini
+        weight,
+        questionId: ans.questionId,
+        content: ans.question.content,
+        imageUrl: ans.question.imageUrl,
+        options: shuffledOptions,
+        selectedOptionId: ans.selectedOptionId,
+        isFlagged: ans.isFlagged,
+        // STRICT SECURITY: explanation DIHAPUS SELAMA UJIAN
+      };
+    });
 
     return {
       id: session.id,

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { ExamSessionStatus, DiscussionVisibility } from "@/generated/prisma/client";
+import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 
 export class ScoringService {
   /**
@@ -146,47 +147,56 @@ export class ScoringService {
       }
     }
 
-    // Urutkan soal sesuai tryoutQuestions order
-    const orderMap = new Map<string, { orderNumber: number; weight: number }>();
+    // 1. Acak urutan butir soal dengan seed yang sama persis seperti saat ujian berlangsung
+    const questionSeed = `${session.id}:questions`;
+    const shuffledAnswers = shuffleArrayWithSeed(session.answers, questionSeed);
+
+    const weightMap = new Map<string, number>();
     session.tryout.tryoutQuestions.forEach((tq) => {
-      orderMap.set(tq.questionId, { orderNumber: tq.orderNumber, weight: tq.weight });
+      weightMap.set(tq.questionId, tq.weight);
     });
 
-    const discussionQuestions = session.answers
-      .map((ans) => {
-        const orderInfo = orderMap.get(ans.questionId) || { orderNumber: 1, weight: 1 };
-        const correctOption = ans.question.options.find((o) => o.isCorrect);
+    const discussionQuestions = shuffledAnswers.map((ans, index) => {
+      const weight = weightMap.get(ans.questionId) || 1.0;
+      const optionSeed = `${session.id}:question:${ans.questionId}:options`;
 
-        let answerStatus: "CORRECT" | "WRONG" | "EMPTY" = "EMPTY";
-        if (ans.selectedOptionId) {
-          answerStatus = ans.isCorrect ? "CORRECT" : "WRONG";
-        }
+      const rawOptions = ans.question.options.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        content: opt.content,
+        imageUrl: opt.imageUrl,
+        isCorrect: opt.isCorrect,
+      }));
 
-        return {
-          orderNumber: orderInfo.orderNumber,
-          weight: orderInfo.weight,
-          questionId: ans.questionId,
-          topicName: ans.question.topic.name,
-          difficulty: ans.question.difficulty,
-          content: ans.question.content,
-          imageUrl: ans.question.imageUrl,
-          options: ans.question.options.map((opt) => ({
-            id: opt.id,
-            label: opt.label,
-            content: opt.content,
-            imageUrl: opt.imageUrl,
-            isCorrect: opt.isCorrect,
-          })),
-          selectedOptionId: ans.selectedOptionId,
-          correctOptionId: correctOption?.id || null,
-          correctLabel: correctOption?.label || "-",
-          answerStatus,
-          isFlagged: ans.isFlagged,
-          scoreObtained: ans.scoreObtained,
-          explanation: ans.question.explanation,
-        };
-      })
-      .sort((a, b) => a.orderNumber - b.orderNumber);
+      // Acak opsi jawaban dengan seed yang sama persis
+      const shuffledOptions = shuffleQuestionOptions(rawOptions, optionSeed);
+
+      // Cari opsi yang benar di dalam urutan yang sudah teracak
+      const correctOption = shuffledOptions.find((o) => o.isCorrect);
+
+      let answerStatus: "CORRECT" | "WRONG" | "EMPTY" = "EMPTY";
+      if (ans.selectedOptionId) {
+        answerStatus = ans.isCorrect ? "CORRECT" : "WRONG";
+      }
+
+      return {
+        orderNumber: index + 1, // Nomor 1 .. N persis sama dengan tampilan lembar ujian siswa
+        weight,
+        questionId: ans.questionId,
+        topicName: ans.question.topic.name,
+        difficulty: ans.question.difficulty,
+        content: ans.question.content,
+        imageUrl: ans.question.imageUrl,
+        options: shuffledOptions,
+        selectedOptionId: ans.selectedOptionId,
+        correctOptionId: correctOption?.id || null,
+        correctLabel: correctOption?.label || "-", // Huruf kunci jawaban teracak sesuai posisi opsi bagi siswa ini
+        answerStatus,
+        isFlagged: ans.isFlagged,
+        scoreObtained: ans.scoreObtained,
+        explanation: ans.question.explanation,
+      };
+    });
 
     return {
       sessionId: session.id,
