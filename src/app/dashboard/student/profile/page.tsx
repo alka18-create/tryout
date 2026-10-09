@@ -126,8 +126,8 @@ export default function StudentProfilePage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight">Pengaturan Profil</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Pengaturan Profil</h1>
+        <p className="text-sm text-slate-500 mt-1">
           Kelola informasi data diri, sekolah, dan keamanan kata sandi akun Anda
         </p>
       </div>
@@ -136,34 +136,34 @@ export default function StudentProfilePage() {
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-3 border ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
           )}
-          <span>{feedback.text}</span>
+          <span className="font-medium">{feedback.text}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Data Diri */}
-        <Card>
-          <CardHeader>
+        <Card className="bg-white border-slate-200/90 shadow-xs">
+          <CardHeader className="border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/60">
                 <User className="w-4 h-4" />
               </div>
               <div>
-                <CardTitle>Informasi Pengguna</CardTitle>
-                <CardDescription>Data identitas utama yang terdaftar pada sistem</CardDescription>
+                <CardTitle className="text-slate-900">Informasi Pengguna</CardTitle>
+                <CardDescription className="text-slate-500">Data identitas utama yang terdaftar pada sistem</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Nama Lengkap"
@@ -190,19 +190,19 @@ export default function StudentProfilePage() {
         </Card>
 
         {/* Asal Sekolah & Akademik */}
-        <Card>
-          <CardHeader>
+        <Card className="bg-white border-slate-200/90 shadow-xs">
+          <CardHeader className="border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400">
+              <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200/60">
                 <School className="w-4 h-4" />
               </div>
               <div>
-                <CardTitle>Data Akademik</CardTitle>
-                <CardDescription>Informasi asal sekolah dan tingkatan kelas</CardDescription>
+                <CardTitle className="text-slate-900">Data Akademik</CardTitle>
+                <CardDescription className="text-slate-500">Informasi asal sekolah dan tingkatan kelas</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Asal Sekolah"
@@ -221,21 +221,21 @@ export default function StudentProfilePage() {
         </Card>
 
         {/* Keamanan & Password */}
-        <Card>
-          <CardHeader>
+        <Card className="bg-white border-slate-200/90 shadow-xs">
+          <CardHeader className="border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+              <div className="p-2 rounded-lg bg-amber-50 text-amber-600 border border-amber-200/60">
                 <Lock className="w-4 h-4" />
               </div>
               <div>
-                <CardTitle>Keamanan Kata Sandi</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-900">Keamanan Kata Sandi</CardTitle>
+                <CardDescription className="text-slate-500">
                   Kosongkan bagian ini jika Anda tidak bermaksud mengganti password
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             {profile?.hasPassword && (
               <Input
                 label="Password Saat Ini"
@@ -268,7 +268,7 @@ export default function StudentProfilePage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg" isLoading={isSaving} className="gap-2">
+          <Button type="submit" size="lg" isLoading={isSaving} className="gap-2 shadow-xs">
             <Save className="w-4 h-4" />
             <span>Simpan Perubahan Profil</span>
           </Button>

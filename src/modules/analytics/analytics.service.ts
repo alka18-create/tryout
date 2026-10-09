@@ -59,9 +59,50 @@ export class AnalyticsService {
       orderBy: { totalScore: "desc" },
     });
 
-    const totalParticipants = sessions.length;
+    // Kelompokkan sesi per siswa untuk mengambil sesi dengan nilai tertinggi (Best Attempt)
+    const studentSessionsMap = new Map<
+      string,
+      {
+        bestSession: (typeof sessions)[0];
+        allSessions: typeof sessions;
+        totalAttempts: number;
+      }
+    >();
 
-    // 1. Ringkasan Metrik
+    sessions.forEach((s) => {
+      const existing = studentSessionsMap.get(s.userId);
+      if (!existing) {
+        studentSessionsMap.set(s.userId, {
+          bestSession: s,
+          allSessions: [s],
+          totalAttempts: 1,
+        });
+      } else {
+        existing.allSessions.push(s);
+        existing.totalAttempts += 1;
+        // Ambil sesi dengan skor tertinggi, jika seri ambil yang attemptNumber lebih baru
+        if (
+          s.totalScore > existing.bestSession.totalScore ||
+          (s.totalScore === existing.bestSession.totalScore && s.attemptNumber > existing.bestSession.attemptNumber)
+        ) {
+          existing.bestSession = s;
+        }
+      }
+    });
+
+    const studentBestList = Array.from(studentSessionsMap.values());
+    const totalParticipants = studentBestList.length;
+
+    // Urutkan siswa berdasarkan skor tertinggi
+    const sortedBestParticipants = studentBestList
+      .map((item) => ({
+        ...item.bestSession,
+        bestAttemptNumber: item.bestSession.attemptNumber,
+        totalAttempts: item.totalAttempts,
+      }))
+      .sort((a, b) => b.totalScore - a.totalScore);
+
+    // 1. Ringkasan Metrik (berdasarkan nilai tertinggi setiap siswa)
     let averageScore = 0;
     let highestScore = 0;
     let lowestScore = 100;
@@ -69,10 +110,10 @@ export class AnalyticsService {
 
     if (totalParticipants > 0) {
       let scoreSum = 0;
-      highestScore = sessions[0].totalScore;
-      lowestScore = sessions[sessions.length - 1].totalScore;
+      highestScore = sortedBestParticipants[0].totalScore;
+      lowestScore = sortedBestParticipants[sortedBestParticipants.length - 1].totalScore;
 
-      sessions.forEach((s) => {
+      sortedBestParticipants.forEach((s) => {
         scoreSum += s.totalScore;
         if (s.isPassed) passedCount++;
         if (s.totalScore > highestScore) highestScore = s.totalScore;
@@ -87,8 +128,8 @@ export class AnalyticsService {
     const passingRate =
       totalParticipants > 0 ? Math.round((passedCount / totalParticipants) * 100) : 0;
 
-    // 2. Daftar Peserta
-    const participants = sessions.map((s, index) => {
+    // 2. Daftar Peserta (Peringkat Berdasarkan Skor Tertinggi)
+    const participants = sortedBestParticipants.map((s, index) => {
       const startTime = s.startedAt.getTime();
       const endTime = s.submittedAt ? s.submittedAt.getTime() : s.expiresAt.getTime();
       const durationSpentMinutes = Math.max(1, Math.round((endTime - startTime) / 60000));
@@ -101,6 +142,8 @@ export class AnalyticsService {
         email: s.user.email,
         schoolName: s.user.school?.name || "-",
         schoolClass: s.user.schoolClass || "-",
+        attemptNumber: s.bestAttemptNumber,
+        totalAttempts: s.totalAttempts,
         totalScore: s.totalScore,
         isPassed: s.isPassed,
         correctCount: s.correctCount,
@@ -111,13 +154,13 @@ export class AnalyticsService {
       };
     });
 
-    // 3. Analisis Topik Terlemah (Rata-rata persentase per topik dari seluruh sesi)
+    // 3. Analisis Topik Terlemah (Rata-rata persentase per topik dari sesi terbaik masing-masing siswa)
     const topicAggMap = new Map<
       string,
       { topicId: string; topicName: string; totalSum: number; count: number }
     >();
 
-    sessions.forEach((s) => {
+    sortedBestParticipants.forEach((s) => {
       s.topicScores.forEach((ts) => {
         if (!topicAggMap.has(ts.topicId)) {
           topicAggMap.set(ts.topicId, {
@@ -142,13 +185,13 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.averagePercentage - b.averagePercentage); // Terendah (terlemah) lebih dulu
 
-    // 4. Analisis Butir Soal (% benar per nomor soal)
+    // 4. Analisis Butir Soal (% benar per nomor soal dari sesi terbaik masing-masing siswa)
     const questionStatsMap = new Map<
       string,
       { correctCount: number; answeredCount: number }
     >();
 
-    sessions.forEach((s) => {
+    sortedBestParticipants.forEach((s) => {
       s.answers.forEach((ans) => {
         if (!questionStatsMap.has(ans.questionId)) {
           questionStatsMap.set(ans.questionId, { correctCount: 0, answeredCount: 0 });
@@ -231,6 +274,7 @@ export class AnalyticsService {
             status: { in: [ExamSessionStatus.SUBMITTED, ExamSessionStatus.EXPIRED] },
           },
           select: {
+            userId: true,
             totalScore: true,
             isPassed: true,
           },
@@ -240,19 +284,28 @@ export class AnalyticsService {
     });
 
     return tryouts.map((t) => {
-      const completedSessions = t.examSessions;
-      const completedCount = completedSessions.length;
+      // Kelompokkan per siswa dan ambil nilai tertinggi
+      const studentBestScores = new Map<string, { totalScore: number; isPassed: boolean }>();
+      t.examSessions.forEach((s) => {
+        const existing = studentBestScores.get(s.userId);
+        if (!existing || s.totalScore > existing.totalScore) {
+          studentBestScores.set(s.userId, { totalScore: s.totalScore, isPassed: s.isPassed });
+        }
+      });
+
+      const uniqueStudents = Array.from(studentBestScores.values());
+      const participantCount = uniqueStudents.length;
 
       let avgScore = 0;
       let passedCount = 0;
 
-      if (completedCount > 0) {
-        const sum = completedSessions.reduce((acc, s) => acc + s.totalScore, 0);
-        avgScore = Math.round((sum / completedCount) * 10) / 10;
-        passedCount = completedSessions.filter((s) => s.isPassed).length;
+      if (participantCount > 0) {
+        const sum = uniqueStudents.reduce((acc, s) => acc + s.totalScore, 0);
+        avgScore = Math.round((sum / participantCount) * 10) / 10;
+        passedCount = uniqueStudents.filter((s) => s.isPassed).length;
       }
 
-      const passingRate = completedCount > 0 ? Math.round((passedCount / completedCount) * 100) : 0;
+      const passingRate = participantCount > 0 ? Math.round((passedCount / participantCount) * 100) : 0;
 
       return {
         id: t.id,
@@ -264,7 +317,7 @@ export class AnalyticsService {
         passingScore: t.passingScore,
         questionCount: t._count.tryoutQuestions,
         totalSessions: t._count.examSessions,
-        completedCount,
+        completedCount: participantCount,
         averageScore: avgScore,
         passingRate,
         createdAt: t.createdAt.toISOString(),
@@ -284,7 +337,9 @@ export class AnalyticsService {
       "Email",
       "Sekolah",
       "Kelas",
-      "Skor Ujian",
+      "Skor Ujian (Tertinggi)",
+      "Percobaan Terbaik",
+      "Total Percobaan",
       "KKM",
       "Status",
       "Benar",
@@ -301,6 +356,8 @@ export class AnalyticsService {
       `"${p.schoolName.replace(/"/g, '""')}"`,
       `"${p.schoolClass.replace(/"/g, '""')}"`,
       p.totalScore,
+      `"Percobaan ke-${p.attemptNumber}"`,
+      `"${p.totalAttempts}x"`,
       report.tryout.passingScore,
       p.isPassed ? "LULUS" : "BELUM LULUS",
       p.correctCount,

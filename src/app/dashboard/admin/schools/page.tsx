@@ -143,20 +143,20 @@ export default function AdminSchoolsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <Link
             href="/dashboard/admin"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors mb-2"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Panel Admin</span>
           </Link>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-blue-600" />
             Manajemen Sekolah & Instansi
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-500 mt-0.5">
             Daftar data master sekolah asal peserta didik dan instansi penyelenggara tryout.
           </p>
         </div>
@@ -172,16 +172,16 @@ export default function AdminSchoolsPage() {
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-3 border ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
           )}
-          <span>{feedback.text}</span>
+          <span className="font-medium">{feedback.text}</span>
         </div>
       )}
 
@@ -193,7 +193,7 @@ export default function AdminSchoolsPage() {
           placeholder="Cari nama sekolah, kota, atau NPSN..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs transition-colors"
         />
       </div>
 
@@ -202,7 +202,7 @@ export default function AdminSchoolsPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="py-3 px-4">Nama Sekolah</th>
                   <th className="py-3 px-4 text-center">NPSN</th>
@@ -211,35 +211,35 @@ export default function AdminSchoolsPage() {
                   <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
+              <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    <td colSpan={5} className="py-8 text-center text-slate-500 text-xs">
                       Memuat data sekolah...
                     </td>
                   </tr>
                 ) : filteredSchools.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    <td colSpan={5} className="py-8 text-center text-slate-500 text-xs">
                       Tidak ada sekolah yang ditemukan.
                     </td>
                   </tr>
                 ) : (
                   filteredSchools.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-white">{s.name}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-400 font-mono text-[11px]">
+                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-900">{s.name}</td>
+                      <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[11px]">
                         {s.npsn || "—"}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-300">{s.city || "—"}</td>
-                      <td className="py-3.5 px-4 text-center text-slate-300">
-                        <span className="font-bold text-indigo-400">{s._count.users}</span> Siswa/Guru
+                      <td className="py-3.5 px-4 text-slate-600">{s.city || "—"}</td>
+                      <td className="py-3.5 px-4 text-center text-slate-600">
+                        <span className="font-bold text-blue-600">{s._count.users}</span> Siswa/Guru
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEditModal(s)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                             title="Edit Sekolah"
                           >
                             <Edit className="w-4 h-4" />
@@ -247,7 +247,7 @@ export default function AdminSchoolsPage() {
                           <button
                             onClick={() => handleDelete(s.id, s.name)}
                             disabled={s._count.users > 0}
-                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                             title={s._count.users > 0 ? "Tidak bisa dihapus (memiliki siswa)" : "Hapus Sekolah"}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -265,16 +265,16 @@ export default function AdminSchoolsPage() {
 
       {/* Modal: Tambah / Edit Sekolah */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
                 {editingId ? "Edit Data Sekolah" : "Tambah Sekolah Baru"}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700"
               >
                 ✕
               </button>

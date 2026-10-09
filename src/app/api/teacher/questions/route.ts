@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       search: searchParams.get("search") || undefined,
       subjectId: searchParams.get("subjectId") || undefined,
       topicId: searchParams.get("topicId") || undefined,
+      type: searchParams.get("type") || undefined,
       difficulty: searchParams.get("difficulty") || undefined,
       page: searchParams.get("page") || 1,
       limit: searchParams.get("limit") || 20,

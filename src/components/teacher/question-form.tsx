@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ImageUploader } from "./image-uploader";
 
 interface Subject {
   id: string;
@@ -24,13 +25,14 @@ interface QuestionFormProps {
   initialData?: {
     id?: string;
     topicId: string;
+    type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
     difficulty: "EASY" | "MEDIUM" | "HARD";
     content: string;
     imageUrl?: string | null;
     explanation?: string | null;
     explanationImageUrl?: string | null;
     options: Array<{
-      label: "A" | "B" | "C" | "D" | "E";
+      label: string;
       content: string;
       imageUrl?: string | null;
       isCorrect: boolean;
@@ -48,6 +50,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
 
   const [formData, setFormData] = useState({
     topicId: initialData?.topicId || "",
+    type: initialData?.type || "SINGLE_CHOICE",
     difficulty: initialData?.difficulty || "MEDIUM",
     content: initialData?.content || "",
     imageUrl: initialData?.imageUrl || "",
@@ -97,6 +100,53 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
     ? topics.filter((t) => t.subjectId === selectedSubjectId)
     : topics;
 
+  const handleTypeChange = (newType: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE") => {
+    let newOptions = [...formData.options];
+
+    if (newType === "TRUE_FALSE") {
+      newOptions = [
+        { label: "A", content: "Benar", isCorrect: true, imageUrl: "" },
+        { label: "B", content: "Salah", isCorrect: false, imageUrl: "" },
+      ];
+    } else if (newType === "SINGLE_CHOICE") {
+      if (newOptions.length !== 5) {
+        newOptions = [
+          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "" },
+          { label: "B", content: newOptions[1]?.content || "", isCorrect: false, imageUrl: newOptions[1]?.imageUrl || "" },
+          { label: "C", content: "", isCorrect: false, imageUrl: "" },
+          { label: "D", content: "", isCorrect: false, imageUrl: "" },
+          { label: "E", content: "", isCorrect: false, imageUrl: "" },
+        ];
+      } else {
+        let found = false;
+        newOptions = newOptions.map((o) => {
+          if (o.isCorrect && !found) {
+            found = true;
+            return o;
+          }
+          return { ...o, isCorrect: false };
+        });
+        if (!found) newOptions[0].isCorrect = true;
+      }
+    } else if (newType === "MULTIPLE_CHOICE") {
+      if (newOptions.length !== 5) {
+        newOptions = [
+          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "" },
+          { label: "B", content: newOptions[1]?.content || "", isCorrect: true, imageUrl: newOptions[1]?.imageUrl || "" },
+          { label: "C", content: "", isCorrect: false, imageUrl: "" },
+          { label: "D", content: "", isCorrect: false, imageUrl: "" },
+          { label: "E", content: "", isCorrect: false, imageUrl: "" },
+        ];
+      }
+    }
+
+    setFormData({
+      ...formData,
+      type: newType,
+      options: newOptions,
+    });
+  };
+
   const handleOptionChange = (index: number, content: string) => {
     const newOptions = [...formData.options];
     newOptions[index].content = content;
@@ -108,6 +158,18 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
       ...opt,
       isCorrect: i === index,
     }));
+    setFormData({ ...formData, options: newOptions });
+  };
+
+  const handleToggleMultipleCorrectOption = (index: number) => {
+    const newOptions = [...formData.options];
+    newOptions[index].isCorrect = !newOptions[index].isCorrect;
+    setFormData({ ...formData, options: newOptions });
+  };
+
+  const handleOptionImageChange = (index: number, imageUrl: string) => {
+    const newOptions = [...formData.options];
+    newOptions[index].imageUrl = imageUrl;
     setFormData({ ...formData, options: newOptions });
   };
 
@@ -124,6 +186,23 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
     if (emptyOption) {
       setFeedback({ type: "error", text: `Opsi ${emptyOption.label} tidak boleh kosong.` });
       return;
+    }
+
+    // Validasi kunci jawaban berdasarkan tipe soal
+    const correctCount = formData.options.filter((opt) => opt.isCorrect).length;
+    if (formData.type === "SINGLE_CHOICE" || formData.type === "TRUE_FALSE") {
+      if (correctCount !== 1) {
+        setFeedback({ type: "error", text: "Tepat satu opsi harus ditandai sebagai kunci jawaban benar." });
+        return;
+      }
+    } else if (formData.type === "MULTIPLE_CHOICE") {
+      if (correctCount < 2) {
+        setFeedback({
+          type: "error",
+          text: "Pilihan ganda kompleks wajib memiliki minimal 2 kunci jawaban benar.",
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -171,7 +250,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
       <div className="flex items-center justify-between">
         <Link
           href="/dashboard/teacher/questions"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Bank Soal</span>
@@ -189,12 +268,12 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         </Button>
       </div>
 
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             {isEditing ? "Edit Soal Pilihan Ganda" : "Tambah Soal ke Bank Soal"}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Lengkapi pertanyaan, 5 pilihan jawaban (A–E), kunci jawaban, dan pembahasan soal
           </p>
         </div>
@@ -204,16 +283,16 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-3 border ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
           )}
-          <span>{feedback.text}</span>
+          <span className="font-medium">{feedback.text}</span>
         </div>
       )}
 
@@ -230,7 +309,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Mata Pelajaran
                   </label>
                   <select
@@ -239,7 +318,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       setSelectedSubjectId(e.target.value);
                       setFormData({ ...formData, topicId: "" });
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
                   >
                     {subjects.map((sub) => (
                       <option key={sub.id} value={sub.id}>
@@ -250,14 +329,14 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Topik / Materi Pokok <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Topik / Materi Pokok <span className="text-rose-500">*</span>
                   </label>
                   <select
                     required
                     value={formData.topicId}
                     onChange={(e) => setFormData({ ...formData, topicId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
                   >
                     <option value="">-- Pilih Topik --</option>
                     {filteredTopics.map((top) => (
@@ -269,15 +348,55 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 </div>
               </div>
 
+              {/* Tipe Soal */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Tipe / Format Soal
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      val: "SINGLE_CHOICE",
+                      title: "Pilihan Ganda",
+                      desc: "1 Kunci Benar (A–E)",
+                    },
+                    {
+                      val: "MULTIPLE_CHOICE",
+                      title: "PG Kompleks",
+                      desc: "≥ 2 Kunci Benar (Centang)",
+                    },
+                    {
+                      val: "TRUE_FALSE",
+                      title: "Benar / Salah",
+                      desc: "2 Opsi (Benar vs Salah)",
+                    },
+                  ].map((t) => (
+                    <button
+                      key={t.val}
+                      type="button"
+                      onClick={() => handleTypeChange(t.val as any)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        formData.type === t.val
+                          ? "border-blue-600 bg-blue-50/80 text-blue-900 shadow-xs ring-1 ring-blue-500"
+                          : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-slate-900">{t.title}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Tingkat Kesulitan
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { val: "EASY", label: "Mudah", color: "text-emerald-400" },
-                    { val: "MEDIUM", label: "Sedang", color: "text-amber-400" },
-                    { val: "HARD", label: "Sulit", color: "text-rose-400" },
+                    { val: "EASY", label: "Mudah", color: "text-emerald-600" },
+                    { val: "MEDIUM", label: "Sedang", color: "text-amber-600" },
+                    { val: "HARD", label: "Sulit", color: "text-rose-600" },
                   ].map((d) => (
                     <button
                       key={d.val}
@@ -285,8 +404,8 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       onClick={() => setFormData({ ...formData, difficulty: d.val as any })}
                       className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
                         formData.difficulty === d.val
-                          ? "border-indigo-500 bg-indigo-500/10 text-white"
-                          : "border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700"
+                          ? "border-blue-600 bg-blue-50 text-blue-700 shadow-xs"
+                          : "border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
                       <span className={d.color}>●</span> {d.label}
@@ -311,27 +430,37 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Tuliskan teks pertanyaan di sini..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none resize-y"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none resize-y shadow-xs transition-colors"
                 />
               </div>
 
-              <Input
-                label="URL Gambar Pendukung (Opsional)"
-                value={formData.imageUrl || ""}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/gambar-soal.jpg"
+              <ImageUploader
+                label="Lampiran Gambar Soal (Opsional)"
+                description="Unggah diagram, kurva, atau ilustrasi soal (Maksimal 1 MB)"
+                value={formData.imageUrl}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
               />
             </CardContent>
           </Card>
 
-          {/* Opsi Pilihan Ganda (A - E) */}
+          {/* Opsi Pilihan Jawaban */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Pilihan Jawaban (A - E)</CardTitle>
+                  <CardTitle>
+                    {formData.type === "TRUE_FALSE"
+                      ? "Pilihan Jawaban (Benar / Salah)"
+                      : formData.type === "MULTIPLE_CHOICE"
+                      ? "Pilihan Jawaban Kompleks (Centang Jawaban Benar)"
+                      : "Pilihan Jawaban (A - E)"}
+                  </CardTitle>
                   <CardDescription>
-                    Pilih radio button untuk menandai satu kunci jawaban yang benar
+                    {formData.type === "MULTIPLE_CHOICE"
+                      ? "Centang kotak untuk menandai semua opsi yang merupakan kunci jawaban benar (minimal 2 kunci benar)."
+                      : formData.type === "TRUE_FALSE"
+                      ? "Pilih radio button untuk menentukan apakah pernyataan soal bernilai Benar atau Salah."
+                      : "Pilih radio button untuk menandai satu kunci jawaban yang benar."}
                   </CardDescription>
                 </div>
               </div>
@@ -342,37 +471,65 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   key={opt.label}
                   className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
                     opt.isCorrect
-                      ? "border-emerald-500/50 bg-emerald-500/5 shadow-sm shadow-emerald-500/10"
-                      : "border-slate-800 bg-slate-950/40"
+                      ? "border-emerald-400 bg-emerald-50/70 shadow-xs"
+                      : "border-slate-200 bg-slate-50/50 hover:bg-slate-50"
                   }`}
                 >
                   <div className="pt-2">
-                    <input
-                      type="radio"
-                      name="correctOption"
-                      checked={opt.isCorrect}
-                      onChange={() => handleSetCorrectOption(index)}
-                      className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 bg-slate-900 border-slate-700 cursor-pointer"
-                    />
+                    {formData.type === "MULTIPLE_CHOICE" ? (
+                      <input
+                        type="checkbox"
+                        checked={opt.isCorrect}
+                        onChange={() => handleToggleMultipleCorrectOption(index)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-white border-slate-300 cursor-pointer"
+                        title="Tandai opsi ini sebagai salah satu kunci benar"
+                      />
+                    ) : (
+                      <input
+                        type="radio"
+                        name="correctOption"
+                        checked={opt.isCorrect}
+                        onChange={() => handleSetCorrectOption(index)}
+                        className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 bg-white border-slate-300 cursor-pointer"
+                        title="Tandai opsi ini sebagai kunci benar"
+                      />
+                    )}
                   </div>
 
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs shrink-0 text-white">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                    opt.isCorrect
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-white border border-slate-200 text-slate-700 shadow-xs"
+                  }`}>
                     {opt.label}
                   </div>
 
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
                     <input
                       type="text"
                       required
                       value={opt.content}
                       onChange={(e) => handleOptionChange(index, e.target.value)}
-                      placeholder={`Pilihan jawaban ${opt.label}...`}
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 focus:border-indigo-500 text-sm text-slate-100 outline-none"
+                      placeholder={
+                        formData.type === "TRUE_FALSE"
+                          ? opt.label === "A" ? "Benar" : "Salah"
+                          : `Pilihan jawaban ${opt.label}...`
+                      }
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-sm text-slate-900 outline-none shadow-xs transition-colors"
                     />
+
+                    {/* Lampiran Gambar Opsi (Maks 1 MB) */}
+                    {formData.type !== "TRUE_FALSE" && (
+                      <ImageUploader
+                        compact
+                        value={opt.imageUrl}
+                        onChange={(url) => handleOptionImageChange(index, url)}
+                      />
+                    )}
                   </div>
 
                   {opt.isCorrect && (
-                    <Badge variant="success" className="shrink-0 self-center">
+                    <Badge variant={formData.type === "MULTIPLE_CHOICE" ? "info" : "success"} className="shrink-0 self-start mt-1">
                       Kunci Benar
                     </Badge>
                   )}
@@ -395,7 +552,14 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 value={formData.explanation || ""}
                 onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
                 placeholder="Tuliskan alasan mengapa jawaban tersebut benar dan konsep terkait..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none resize-y"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none resize-y shadow-xs transition-colors"
+              />
+
+              <ImageUploader
+                label="Lampiran Gambar Pembahasan (Opsional)"
+                description="Unggah diagram solusi atau langkah kerja pembahasan (Maksimal 1 MB)"
+                value={formData.explanationImageUrl}
+                onChange={(url) => setFormData({ ...formData, explanationImageUrl: url })}
               />
             </CardContent>
           </Card>
@@ -416,27 +580,42 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         {/* Kolom Live Preview (Tampilan Siswa) */}
         {showPreview && (
           <div className="sticky top-6 self-start space-y-4">
-            <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between">
-              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
                 <Eye className="w-4 h-4" /> Preview Tampilan Siswa
               </span>
-              <Badge variant="outline">Simulasi</Badge>
+              <Badge variant="info">Simulasi</Badge>
             </div>
 
-            <Card className="p-6 space-y-4">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="font-bold text-indigo-400">Soal Contoh #01</span>
-                <Badge variant={formData.difficulty === "HARD" ? "danger" : formData.difficulty === "MEDIUM" ? "warning" : "success"}>
-                  {formData.difficulty}
-                </Badge>
+            <Card className="p-6 space-y-4 shadow-sm border-slate-200">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span className="font-bold text-blue-600">Soal Contoh #01</span>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline">
+                    {formData.type === "MULTIPLE_CHOICE"
+                      ? "PG Kompleks"
+                      : formData.type === "TRUE_FALSE"
+                      ? "Benar / Salah"
+                      : "Pilihan Ganda"}
+                  </Badge>
+                  <Badge variant={formData.difficulty === "HARD" ? "danger" : formData.difficulty === "MEDIUM" ? "warning" : "success"}>
+                    {formData.difficulty}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="text-sm text-slate-200 font-medium leading-relaxed">
+              {formData.type === "MULTIPLE_CHOICE" && (
+                <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
+                  ℹ Pilihan Ganda Kompleks: Anda dapat memilih lebih dari satu jawaban.
+                </div>
+              )}
+
+              <div className="text-sm text-slate-800 font-medium leading-relaxed">
                 {formData.content || "(Teks pertanyaan belum diisi...)"}
               </div>
 
               {formData.imageUrl && (
-                <div className="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
                   <img src={formData.imageUrl} alt="Gambar Soal" className="max-h-48 rounded-lg object-contain mx-auto" />
                 </div>
               )}
@@ -445,20 +624,42 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 {formData.options.map((opt) => (
                   <div
                     key={opt.label}
-                    className="p-3 rounded-xl border border-slate-800 bg-slate-950/60 flex items-center gap-3 text-xs"
+                    className="p-3 rounded-xl border border-slate-200 bg-white flex items-start gap-3 text-xs shadow-xs"
                   >
-                    <div className="w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center font-bold text-white shrink-0">
+                    <div className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 shrink-0 mt-0.5">
                       {opt.label}
                     </div>
-                    <span className="text-slate-300 flex-1">{opt.content || `(Opsi ${opt.label})`}</span>
+                    <div className="flex-1 space-y-1.5">
+                      <span className="text-slate-800 block">{opt.content || `(Opsi ${opt.label})`}</span>
+                      {opt.imageUrl && (
+                        <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs">
+                          <img
+                            src={opt.imageUrl}
+                            alt={`Opsi ${opt.label}`}
+                            className="max-h-28 object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
 
-              {formData.explanation && (
-                <div className="mt-4 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                  <span className="font-bold text-indigo-400">Preview Pembahasan:</span>
-                  <p className="text-slate-400 mt-1">{formData.explanation}</p>
+              {(formData.explanation || formData.explanationImageUrl) && (
+                <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                  <span className="font-bold text-blue-600 block">Preview Pembahasan:</span>
+                  {formData.explanation && (
+                    <p className="text-slate-600">{formData.explanation}</p>
+                  )}
+                  {formData.explanationImageUrl && (
+                    <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs">
+                      <img
+                        src={formData.explanationImageUrl}
+                        alt="Pembahasan"
+                        className="max-h-36 object-contain"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

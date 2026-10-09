@@ -21,6 +21,7 @@ interface TryoutFormProps {
     subjectId: string;
     durationMinutes: number;
     passingScore: number;
+    maxAttempts?: number;
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     discussionVisibility: "ALWAYS" | "AFTER_SUBMIT" | "AFTER_TRYOUT_CLOSED" | "NEVER";
     startDate?: string | null;
@@ -39,6 +40,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
     subjectId: initialData?.subjectId || "",
     durationMinutes: initialData?.durationMinutes || 60,
     passingScore: initialData?.passingScore || 75,
+    maxAttempts: initialData?.maxAttempts ?? 3,
     status: initialData?.status || "DRAFT",
     discussionVisibility: initialData?.discussionVisibility || "AFTER_SUBMIT",
     startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : "",
@@ -85,6 +87,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
           ...formData,
           durationMinutes: Number(formData.durationMinutes),
           passingScore: Number(formData.passingScore),
+          maxAttempts: Number(formData.maxAttempts),
           startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
           endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
         }),
@@ -124,17 +127,17 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
     <div className="space-y-6 max-w-3xl">
       <Link
         href="/dashboard/teacher/tryouts"
-        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Kembali ke Daftar Tryout</span>
       </Link>
 
-      <div className="pb-4 border-b border-slate-800">
-        <h1 className="text-2xl font-extrabold text-white tracking-tight">
+      <div className="pb-4 border-b border-slate-200">
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           {isEditing ? "Edit Pengaturan Tryout" : "Buat Paket Tryout Baru"}
         </h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-slate-500 mt-1">
           Tentukan judul, durasi pengerjaan, KKM, dan kebijakan visibilitas pembahasan
         </p>
       </div>
@@ -143,16 +146,16 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-3 border ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
           )}
-          <span>{feedback.text}</span>
+          <span className="font-medium">{feedback.text}</span>
         </div>
       )}
 
@@ -172,14 +175,14 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
             />
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Mata Pelajaran
               </label>
               <select
                 required
                 value={formData.subjectId}
                 onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
               >
                 <option value="">-- Pilih Mata Pelajaran --</option>
                 {subjects.map((sub) => (
@@ -191,7 +194,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Deskripsi & Petunjuk Pengerjaan
               </label>
               <textarea
@@ -199,7 +202,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Petunjuk khusus atau cakupan materi yang diujikan..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none resize-y"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none resize-y shadow-xs transition-colors"
               />
             </div>
           </CardContent>
@@ -211,7 +214,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
             <CardDescription>Aturan timer server dan ambang batas nilai kelulusan (KKM)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Input
                 label="Durasi Pengerjaan (Menit)"
                 type="number"
@@ -224,25 +227,36 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
               />
 
               <Input
-                label="KKM / Nilai Kelulusan (0 - 100)"
+                label="KKM / Kelulusan (0 - 100)"
                 type="number"
                 min={0}
                 max={100}
                 required
                 value={formData.passingScore}
                 onChange={(e) => setFormData({ ...formData, passingScore: Number(e.target.value) })}
-                helperText="Standar kelulusan minimum peserta"
+                helperText="Nilai minimum kelulusan"
+              />
+
+              <Input
+                label="Batas Percobaan Siswa"
+                type="number"
+                min={1}
+                max={10}
+                required
+                value={formData.maxAttempts}
+                onChange={(e) => setFormData({ ...formData, maxAttempts: Number(e.target.value) })}
+                helperText="Maksimal ujian (diambil nilai tertinggi)"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Kebijakan Tampilan Pembahasan Soal
               </label>
               <select
                 value={formData.discussionVisibility}
                 onChange={(e) => setFormData({ ...formData, discussionVisibility: e.target.value as any })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 text-slate-100 text-sm outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
               >
                 <option value="AFTER_SUBMIT">Langsung Tampil Setelah Siswa Submit Ujian</option>
                 <option value="ALWAYS">Selalu Dapat Dilihat (Kapan Saja)</option>

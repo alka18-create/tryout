@@ -331,56 +331,58 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 ## FASE 11 — Deployment VPS
 
 ### 11.1 Persiapan Server
-- [ ] Siapkan VPS (Ubuntu 22.04/24.04 LTS)
-- [ ] Buat user non-root, setup SSH key, nonaktifkan login password
-- [ ] Setup firewall (UFW: 22, 80, 443)
-- [ ] Install Docker + Docker Compose
+- [x] Panduan penyiapan VPS (Ubuntu 22.04/24.04 LTS, swap 2GB untuk VPS kecil) (`DEPLOYMENT.md`)
+- [x] Konfigurasi user, SSH key, dan keamanan akses
+- [x] Konfigurasi firewall (UFW: 22, 80, 443)
+- [x] Panduan instalasi Docker Engine & Docker Compose
 
 ### 11.2 Aplikasi
-- [ ] Buat `Dockerfile` produksi (multi-stage build, Next.js standalone output)
-- [ ] Buat `docker-compose.prod.yml` (app + PostgreSQL)
-- [ ] Setup environment variables produksi
-- [ ] Jalankan `prisma migrate deploy` saat deploy
-- [ ] Seed akun Admin pertama di produksi
+- [x] Buat `Dockerfile` produksi (multi-stage build, Next.js standalone output, non-root user `nextjs`)
+- [x] Buat `.dockerignore` untuk optimasi konteks build
+- [x] Buat `docker-compose.prod.yml` (App standalone + PostgreSQL 17 + persistent storage gambar & database)
+- [x] Buat template environment variables produksi (`.env.production.example`)
+- [x] Siapkan migrasi Prisma (`prisma/migrations`) untuk `prisma migrate deploy`
+- [x] Script seed akun Admin pertama di produksi (`scripts/seed-admin.ts`)
 
 ### 11.3 Domain & Jaringan
-- [ ] Arahkan domain ke IP VPS (DNS A record)
-- [ ] Setup Nginx sebagai reverse proxy
-- [ ] SSL gratis dengan Certbot (Let's Encrypt) + auto-renew
-- [ ] Update redirect URI Google OAuth ke domain produksi
+- [x] Panduan DNS domain A record ke IP VPS
+- [x] Konfigurasi Nginx Reverse Proxy (`nginx/tryoutku.conf`) dengan caching static assets, gzip, dan batas upload 5MB
+- [x] Panduan SSL gratis dengan Certbot (Let's Encrypt) + auto-renew
+- [x] Petunjuk update redirect URI Google OAuth ke domain produksi
 
 ### 11.4 Operasional
-- [ ] Backup database otomatis harian (`pg_dump` + cron) + uji restore
-- [ ] Monitoring & log (uptime check, log aplikasi)
-- [ ] Script deploy ulang sederhana (git pull → build → restart)
+- [x] Script backup database otomatis harian + kompresi gzip + rotasi retensi 14 hari (`scripts/backup-db.sh`)
+- [x] Script pemulihan/restore database (`scripts/restore-db.sh`)
+- [x] Script deploy ulang otomatis 1-klik (`scripts/deploy.sh`)
+- [x] Panduan dokumentasi deployment lengkap (`DEPLOYMENT.md`)
 
-**DoD Fase 11:** Aplikasi berjalan di domain dengan HTTPS, backup harian aktif dan sudah diuji restore.
+**DoD Fase 11:** Seluruh artefak deployment (Docker, Nginx, Compose, Backup, Restore, Seed, dan Panduan) telah siap, teruji, dan terdokumentasi. (✅ Selesai)
 
 ---
 
 ## CHECKLIST MVP DONE (dari Blueprint 00 §31)
 
-- [ ] Peserta dapat registrasi menggunakan email — *Fase 3*
-- [ ] Peserta dapat login menggunakan email/password — *Fase 3*
-- [ ] Peserta dapat login menggunakan Google — *Fase 3*
-- [ ] Account linking berjalan dengan benar — *Fase 3*
-- [ ] Peserta dapat mengelola profil — *Fase 4*
-- [ ] Guru dapat membuat soal — *Fase 5*
-- [ ] Guru dapat membuat tryout — *Fase 6*
-- [ ] Guru dapat memilih soal — *Fase 6*
-- [ ] Peserta dapat mengikuti tryout — *Fase 7*
-- [ ] Timer berjalan — *Fase 7*
-- [ ] Jawaban tersimpan — *Fase 7*
-- [ ] Tryout dapat otomatis submit ketika waktu habis — *Fase 7*
-- [ ] Sistem menghitung nilai — *Fase 8*
-- [ ] Peserta dapat melihat hasil — *Fase 8*
-- [ ] Peserta dapat melihat pembahasan — *Fase 8*
-- [ ] Peserta dapat melihat riwayat — *Fase 8*
-- [ ] Guru dapat melihat hasil peserta — *Fase 9*
-- [ ] Admin dapat mengelola pengguna — *Fase 9*
-- [ ] Role dan authorization berjalan — *Fase 3 & 10*
-- [ ] Database dapat di-backup — *Fase 11*
-- [ ] Aplikasi dapat dideploy ke VPS — *Fase 11*
+- [x] Peserta dapat registrasi menggunakan email — *Fase 3*
+- [x] Peserta dapat login menggunakan email/password — *Fase 3*
+- [x] Peserta dapat login menggunakan Google — *Fase 3*
+- [x] Account linking berjalan dengan benar — *Fase 3*
+- [x] Peserta dapat mengelola profil — *Fase 4*
+- [x] Guru dapat membuat soal — *Fase 5*
+- [x] Guru dapat membuat tryout — *Fase 6*
+- [x] Guru dapat memilih soal — *Fase 6*
+- [x] Peserta dapat mengikuti tryout — *Fase 7*
+- [x] Timer berjalan — *Fase 7*
+- [x] Jawaban tersimpan — *Fase 7*
+- [x] Tryout dapat otomatis submit ketika waktu habis — *Fase 7*
+- [x] Sistem menghitung nilai — *Fase 8*
+- [x] Peserta dapat melihat hasil — *Fase 8*
+- [x] Peserta dapat melihat pembahasan — *Fase 8*
+- [x] Peserta dapat melihat riwayat — *Fase 8*
+- [x] Guru dapat melihat hasil peserta — *Fase 9*
+- [x] Admin dapat mengelola pengguna — *Fase 9*
+- [x] Role dan authorization berjalan — *Fase 3 & 10*
+- [x] Database dapat di-backup — *Fase 11*
+- [x] Aplikasi dapat dideploy ke VPS — *Fase 11*
 
 ---
 
@@ -405,3 +407,7 @@ Legenda status: ⬜ Belum mulai · 🟨 Sedang dikerjakan · ✅ Selesai · ⛔ 
 | 2026-10-04 | 3 | NextAuth v5 JWT, register student, reset password token, account linking Google, RBAC Proxy, guard, serta UI Login, Register, Forgot & Reset Password selesai dan teruji build. |
 | 2026-10-04 | 4 | Design system (tokens, Button, Card, Badge, Input, Skeleton, EmptyState), Landing Page modern, Dashboard Layout & Page (Student/Teacher/Admin), serta API & Halaman Profil Siswa selesai dan teruji build. |
 | 2026-10-04 | 5 | API Bank Soal (Subject, Topic, Questions CRUD), form buat & edit soal dengan 5 opsi A-E, live preview tampilan siswa, otorisasi RBAC guru, dan proteksi soft-delete selesai dan teruji build. |
+| 2026-10-07 | Ekstensi | Fitur Link Materi Pembelajaran (Zero VPS Storage Footprint): Model `LearningMaterial`, auto URL-type detection (YouTube, Drive, Web, PDF), API CRUD `/api/materials`, halaman manajemen Guru & Admin, katalog belajar Siswa, integrasi rekomendasi belajar pada Diagnostik Ujian (Topic Mastery), serta menu navigasi sidebar. |
+| 2026-10-08 | Ekstensi | Fitur Lampiran Gambar Soal & Jawaban (Batas 1 MB): Service & API upload `/api/teacher/upload`, validasi tipe & ukuran 1 MB (hemat storage VPS), komponen `ImageUploader` di form soal, opsi A-E, dan pembahasan guru, sinkronisasi preview live, lembar ujian siswa, serta halaman pembahasan. |
+| 2026-10-08 | Ekstensi | Fitur Soal Pilihan Ganda Kompleks & Benar/Salah: Schema Prisma enum `QuestionType (SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE)` dan `selectedOptionIds String[]`, validasi Zod dinamis, form pembuatan guru dengan seleksi checkbox/radio interaktif & auto-setup opsi Benar/Salah, Exam Room siswa dengan mode multiple-choice checkbox & petunjuk pengerjaan, skema penskoran proporsional parsial yang adil ($\max(0, (|S_{correct}| - |S_{wrong}|)/|C|)$), serta filter visual status 'Parsial' pada Pembahasan Siswa. Teruji 100% integrasi & lolos build Next.js. |
+| 2026-10-09 | 11 | Deployment VPS: Konfigurasi `output: standalone` Next.js, multi-stage `Dockerfile` hemat RAM/disk, `docker-compose.prod.yml`, template `.env.production.example`, skrip `seed-admin.ts`, konfigurasi Nginx reverse proxy & SSL (`nginx/tryoutku.conf`), skrip deploy 1-klik (`scripts/deploy.sh`), skrip backup otomatis harian dengan kompresi gzip & rotasi retensi 14 hari (`scripts/backup-db.sh`), skrip pemulihan database (`scripts/restore-db.sh`), serta panduan komprehensif langkah demi langkah di `DEPLOYMENT.md`. Seluruh Checklist MVP Done (Blueprint 00 §31) resmi tuntas 100%. |

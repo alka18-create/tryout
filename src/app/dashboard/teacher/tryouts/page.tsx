@@ -141,18 +141,18 @@ export default function TeacherTryoutsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-blue-600" />
             Manajemen Paket Tryout
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Kelola paket ujian, atur susunan soal, dan publikasikan tryout ke peserta didik.
           </p>
         </div>
         <Link href="/dashboard/teacher/tryouts/new">
-          <Button variant="primary" className="gap-2 shrink-0">
+          <Button variant="primary" className="gap-2 shrink-0 shadow-xs">
             <Plus className="w-4 h-4" />
             <span>Buat Tryout Baru</span>
           </Button>
@@ -164,16 +164,16 @@ export default function TeacherTryoutsPage() {
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-3 border ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle className="w-5 h-5 shrink-0" />
+            <CheckCircle className="w-5 h-5 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
           )}
-          <span>{feedback.text}</span>
+          <span className="font-medium">{feedback.text}</span>
         </div>
       )}
 
@@ -186,7 +186,7 @@ export default function TeacherTryoutsPage() {
             placeholder="Cari judul tryout..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs"
           />
         </div>
 
@@ -195,10 +195,10 @@ export default function TeacherTryoutsPage() {
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shadow-xs ${
                 statusFilter === st
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
               }`}
             >
               {st === "ALL" ? "Semua Status" : st}
@@ -213,22 +213,22 @@ export default function TeacherTryoutsPage() {
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 animate-pulse space-y-3"
+              className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs animate-pulse space-y-3"
             >
-              <div className="h-5 bg-slate-800 rounded w-3/4" />
-              <div className="h-4 bg-slate-800 rounded w-1/2" />
-              <div className="h-10 bg-slate-800 rounded" />
+              <div className="h-5 bg-slate-200 rounded w-3/4" />
+              <div className="h-4 bg-slate-200 rounded w-1/2" />
+              <div className="h-10 bg-slate-200 rounded" />
             </div>
           ))}
         </div>
       ) : tryouts.length === 0 ? (
         <EmptyState
-          icon={<FileQuestion className="w-10 h-10 text-slate-500" />}
+          icon={<FileQuestion className="w-10 h-10 text-slate-400" />}
           title="Belum Ada Paket Tryout"
           description="Anda belum membuat paket tryout atau tidak ada tryout yang cocok dengan filter pencarian saat ini."
           action={
             <Link href="/dashboard/teacher/tryouts/new">
-              <Button variant="primary">Buat Tryout Baru</Button>
+              <Button variant="primary" className="shadow-xs">Buat Tryout Baru</Button>
             </Link>
           }
         />
@@ -239,7 +239,7 @@ export default function TeacherTryoutsPage() {
             return (
               <Card
                 key={tryout.id}
-                className="flex flex-col justify-between hover:border-slate-700 transition-colors"
+                className="flex flex-col justify-between bg-white border-slate-200/90 hover:border-blue-300 transition-all shadow-xs"
               >
                 <div className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
@@ -258,68 +258,68 @@ export default function TeacherTryoutsPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-lg text-white group-hover:text-indigo-400 transition-colors line-clamp-2">
+                    <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                       {tryout.title}
                     </h3>
                     {tryout.description && (
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                         {tryout.description}
                       </p>
                     )}
                   </div>
 
                   {/* Meta Specs */}
-                  <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-800/80 text-center">
+                  <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 text-center">
                     <div>
-                      <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-500" />
+                      <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1 font-medium">
+                        <Clock className="w-3 h-3 text-slate-400" />
                         Durasi
                       </div>
-                      <div className="text-xs font-bold text-slate-200 mt-0.5">
+                      <div className="text-xs font-bold text-slate-800 mt-0.5">
                         {tryout.durationMinutes} mnt
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-                        <HelpCircle className="w-3 h-3 text-slate-500" />
+                      <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1 font-medium">
+                        <HelpCircle className="w-3 h-3 text-slate-400" />
                         Soal
                       </div>
-                      <div className="text-xs font-bold text-slate-200 mt-0.5">
+                      <div className="text-xs font-bold text-slate-800 mt-0.5">
                         {tryout._count.tryoutQuestions} butir
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
+                      <div className="text-[11px] text-slate-500 flex items-center justify-center gap-1 font-medium">
                         Peserta
                       </div>
-                      <div className="text-xs font-bold text-indigo-300 mt-0.5">
+                      <div className="text-xs font-bold text-blue-600 mt-0.5">
                         {tryout._count.examSessions} sesi
                       </div>
                     </div>
                   </div>
 
                   {hasSessions && (
-                    <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-2">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Sudah ada peserta yang mengerjakan (Soal terkunci).</span>
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                      <span className="font-medium">Sudah ada peserta yang mengerjakan (Soal terkunci).</span>
                     </div>
                   )}
                 </div>
 
                 {/* Actions Footer */}
-                <div className="p-4 bg-slate-950/40 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     {/* Kelola Soal */}
                     <Link href={`/dashboard/teacher/tryouts/${tryout.id}/questions`}>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="text-xs gap-1.5 hover:border-indigo-500/50"
+                        className="text-xs gap-1.5 shadow-xs"
                         title="Susun Soal Tryout"
                       >
-                        <ListOrdered className="w-3.5 h-3.5 text-indigo-400" />
+                        <ListOrdered className="w-3.5 h-3.5 text-blue-600" />
                         <span>Kelola Soal</span>
                       </Button>
                     </Link>
@@ -329,7 +329,7 @@ export default function TeacherTryoutsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setPreviewTryout(tryout)}
-                      className="text-xs text-slate-400 hover:text-white"
+                      className="text-xs text-slate-500 hover:text-slate-900"
                       title="Preview Tryout"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -343,7 +343,7 @@ export default function TeacherTryoutsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleStatusChange(tryout.id, "PUBLISHED")}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                        className="text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-medium"
                         title="Publikasikan Tryout"
                       >
                         <CheckCircle className="w-3.5 h-3.5" />
@@ -354,7 +354,7 @@ export default function TeacherTryoutsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleStatusChange(tryout.id, "DRAFT")}
-                        className="text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                        className="text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50 font-medium"
                         title="Tarik kembali ke Draft"
                       >
                         Unpublish
@@ -366,7 +366,7 @@ export default function TeacherTryoutsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-slate-400 hover:text-white p-2"
+                        className="text-xs text-slate-500 hover:text-slate-900 p-2"
                         title="Edit Info Tryout"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -378,7 +378,7 @@ export default function TeacherTryoutsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(tryout.id, tryout.title)}
-                      className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2"
+                      className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 p-2"
                       title={hasSessions ? "Arsipkan Tryout" : "Hapus Tryout"}
                     >
                       {hasSessions ? (
@@ -397,14 +397,14 @@ export default function TeacherTryoutsPage() {
 
       {/* Modal Preview Tryout */}
       {previewTryout && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between">
               <div>
                 <Badge variant="info" className="mb-2">
                   {previewTryout.subject.name}
                 </Badge>
-                <h3 className="text-xl font-bold text-white">{previewTryout.title}</h3>
+                <h3 className="text-xl font-bold text-slate-900">{previewTryout.title}</h3>
               </div>
               <Badge
                 variant={
@@ -419,28 +419,28 @@ export default function TeacherTryoutsPage() {
               </Badge>
             </div>
 
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed">
               {previewTryout.description || "Tidak ada deskripsi/petunjuk pengerjaan khusus."}
             </p>
 
-            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-sm">
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm">
               <div>
-                <span className="text-slate-400 text-xs">Durasi Ujian:</span>
-                <p className="font-semibold text-white">{previewTryout.durationMinutes} Menit</p>
+                <span className="text-slate-500 text-xs">Durasi Ujian:</span>
+                <p className="font-semibold text-slate-900">{previewTryout.durationMinutes} Menit</p>
               </div>
               <div>
-                <span className="text-slate-400 text-xs">Standar KKM:</span>
-                <p className="font-semibold text-emerald-400">{previewTryout.passingScore} / 100</p>
+                <span className="text-slate-500 text-xs">Standar KKM:</span>
+                <p className="font-semibold text-emerald-600">{previewTryout.passingScore} / 100</p>
               </div>
               <div>
-                <span className="text-slate-400 text-xs">Jumlah Butir Soal:</span>
-                <p className="font-semibold text-white">
+                <span className="text-slate-500 text-xs">Jumlah Butir Soal:</span>
+                <p className="font-semibold text-slate-900">
                   {previewTryout._count.tryoutQuestions} Butir Soal
                 </p>
               </div>
               <div>
-                <span className="text-slate-400 text-xs">Pembahasan:</span>
-                <p className="font-semibold text-indigo-300">
+                <span className="text-slate-500 text-xs">Pembahasan:</span>
+                <p className="font-semibold text-blue-600">
                   {previewTryout.discussionVisibility === "AFTER_SUBMIT"
                     ? "Setelah Submit"
                     : previewTryout.discussionVisibility}
@@ -450,8 +450,8 @@ export default function TeacherTryoutsPage() {
 
             <div className="flex items-center justify-between pt-2">
               <Link href={`/dashboard/teacher/tryouts/${previewTryout.id}/questions`}>
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <ListOrdered className="w-4 h-4" />
+                <Button variant="secondary" size="sm" className="gap-2 shadow-xs">
+                  <ListOrdered className="w-4 h-4 text-blue-600" />
                   <span>Lihat Detail Soal</span>
                 </Button>
               </Link>

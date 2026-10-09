@@ -26,11 +26,12 @@ export default function RootLayout({
   return (
     <html
       lang="id"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body
-        className="min-h-full flex flex-col bg-slate-950 text-slate-100"
+        className="min-h-full flex flex-col bg-slate-50 text-slate-900"
         suppressHydrationWarning
       >
         {children}

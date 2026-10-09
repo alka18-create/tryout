@@ -14,10 +14,15 @@ function createPrismaClient() {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+// In development, ensure new models like learningMaterial are available even if the server started earlier
+if (
+  !globalForPrisma.prisma ||
+  (env.NODE_ENV === "development" &&
+    !("learningMaterial" in (globalForPrisma.prisma as object)))
+) {
+  globalForPrisma.prisma = createPrismaClient();
 }
+
+export const prisma = globalForPrisma.prisma;
 
 export * from "@/generated/prisma/client";

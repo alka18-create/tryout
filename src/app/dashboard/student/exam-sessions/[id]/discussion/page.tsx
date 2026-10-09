@@ -46,14 +46,14 @@ export default async function ExamDiscussionPage({ params }: DiscussionPageProps
       {/* Back Link */}
       <Link
         href={`/dashboard/student/exam-sessions/${sessionId}/result`}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Kembali ke Ringkasan Nilai</span>
       </Link>
 
       {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="info">{discussion.subjectName}</Badge>
@@ -61,10 +61,10 @@ export default async function ExamDiscussionPage({ params }: DiscussionPageProps
               Skor: {discussion.totalScore}
             </Badge>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             Pembahasan: {discussion.tryoutTitle}
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Pelajari konsep dan alasan jawaban yang benar pada {discussion.totalQuestions} butir soal berikut.
           </p>
         </div>

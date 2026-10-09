@@ -38,13 +38,13 @@ export default async function TeacherReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-blue-600" />
             Laporan & Analisis Tryout
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Pantau hasil pengerjaan peserta, analisis butir soal, dan pemetaan materi yang memerlukan penguatan.
           </p>
         </div>
@@ -53,12 +53,12 @@ export default async function TeacherReportsPage() {
       {/* Grid Tryout Cards */}
       {tryouts.length === 0 ? (
         <EmptyState
-          icon={<BookOpen className="w-10 h-10 text-slate-500" />}
+          icon={<BookOpen className="w-10 h-10 text-slate-400" />}
           title="Belum Ada Paket Tryout"
           description="Anda belum memiliki paket tryout untuk dianalisis. Buat paket tryout dan publikasikan ke peserta terlebih dahulu."
           action={
             <Link href="/dashboard/teacher/tryouts/new">
-              <Button variant="primary">Buat Tryout Baru</Button>
+              <Button variant="primary" className="shadow-xs">Buat Tryout Baru</Button>
             </Link>
           }
         />
@@ -67,7 +67,7 @@ export default async function TeacherReportsPage() {
           {tryouts.map((tryout) => (
             <Card
               key={tryout.id}
-              className="flex flex-col justify-between hover:border-slate-700 transition-colors"
+              className="flex flex-col justify-between bg-white border-slate-200/90 hover:border-blue-300 transition-all shadow-xs"
             >
               <div className="p-5 space-y-4">
                 <div className="flex items-center justify-between gap-2">
@@ -78,31 +78,31 @@ export default async function TeacherReportsPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-lg text-white line-clamp-2">{tryout.title}</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 className="font-bold text-lg text-slate-900 line-clamp-2">{tryout.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1">
                     {tryout.questionCount} Butir Soal • Durasi {tryout.durationMinutes} Menit • KKM {tryout.passingScore}
                   </p>
                 </div>
 
                 {/* 3 Metrik Kunci */}
-                <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-800/80 text-center">
+                <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 text-center">
                   <div>
-                    <span className="text-[11px] text-slate-400 block">Peserta</span>
-                    <span className="text-xs font-bold text-white mt-0.5 block">
+                    <span className="text-[11px] text-slate-500 font-medium block">Peserta</span>
+                    <span className="text-xs font-bold text-slate-900 mt-0.5 block">
                       {tryout.completedCount} Sesi
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-400 block">Rata-rata</span>
-                    <span className="text-xs font-bold text-indigo-400 mt-0.5 block">
+                    <span className="text-[11px] text-slate-500 font-medium block">Rata-rata</span>
+                    <span className="text-xs font-bold text-blue-600 mt-0.5 block">
                       {tryout.completedCount > 0 ? tryout.averageScore : "—"}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-400 block">Kelulusan</span>
-                    <span className="text-xs font-bold text-emerald-400 mt-0.5 block">
+                    <span className="text-[11px] text-slate-500 font-medium block">Kelulusan</span>
+                    <span className="text-xs font-bold text-emerald-600 mt-0.5 block">
                       {tryout.completedCount > 0 ? `${tryout.passingRate}%` : "—"}
                     </span>
                   </div>
@@ -110,15 +110,15 @@ export default async function TeacherReportsPage() {
               </div>
 
               {/* Action Footer */}
-              <div className="p-4 bg-slate-950/40 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">
+              <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-500 font-medium">
                   {tryout.completedCount === 0 ? "Belum ada pengerjaan" : "Data pengerjaan aktif"}
                 </span>
 
                 <Link href={`/dashboard/teacher/tryouts/${tryout.id}/reports`}>
-                  <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
+                  <Button variant="secondary" size="sm" className="gap-1.5 text-xs shadow-xs">
                     <span>Lihat Laporan Lengkap</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
                   </Button>
                 </Link>
               </div>

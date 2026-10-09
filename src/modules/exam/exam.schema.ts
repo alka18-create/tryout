@@ -7,6 +7,7 @@ export const startExamSchema = z.object({
 export const saveAnswerSchema = z.object({
   questionId: z.string().min(1, "ID Soal wajib diisi"),
   selectedOptionId: z.string().nullable().optional(),
+  selectedOptionIds: z.array(z.string()).optional(),
   isFlagged: z.boolean().default(false),
 });
 

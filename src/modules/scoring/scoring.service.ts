@@ -58,11 +58,55 @@ export class ScoringService {
     const strongestTopics = sortedTopics.filter((t) => t.percentage >= 75);
     const improvementTopics = sortedTopics.filter((t) => t.percentage < 70);
 
+    // Ambil seluruh percobaan siswa pada paket tryout ini
+    const allAttempts = await prisma.examSession.findMany({
+      where: {
+        tryoutId: session.tryoutId,
+        userId: studentId,
+        status: { in: [ExamSessionStatus.SUBMITTED, ExamSessionStatus.EXPIRED] },
+      },
+      orderBy: { attemptNumber: "asc" },
+      select: {
+        id: true,
+        attemptNumber: true,
+        totalScore: true,
+        isPassed: true,
+        submittedAt: true,
+      },
+    });
+
+    const maxAttempts = session.tryout.maxAttempts ?? 3;
+    const scores = allAttempts.map((a) => a.totalScore);
+    const highestScore = scores.length > 0 ? Math.max(...scores) : (session.totalScore ?? 0);
+    const isHighestScore = session.totalScore === highestScore;
+    const attemptsUsed = allAttempts.length;
+    const attemptsRemaining = Math.max(0, maxAttempts - attemptsUsed);
+
+    const now = Date.now();
+    const isStarted = !session.tryout.startDate || new Date(session.tryout.startDate).getTime() <= now;
+    const isEnded = session.tryout.endDate && new Date(session.tryout.endDate).getTime() < now;
+    const canRetake = attemptsRemaining > 0 && isStarted && !isEnded;
+
     return {
       sessionId: session.id,
       tryoutId: session.tryoutId,
       tryoutTitle: session.tryout.title,
       subjectName: session.tryout.subject.name,
+      attemptNumber: session.attemptNumber,
+      maxAttempts,
+      attemptsUsed,
+      attemptsRemaining,
+      canRetake,
+      highestScore,
+      isHighestScore,
+      allAttempts: allAttempts.map((a) => ({
+        id: a.id,
+        attemptNumber: a.attemptNumber,
+        totalScore: a.totalScore,
+        isPassed: a.isPassed,
+        submittedAt: (a.submittedAt || new Date()).toISOString(),
+        isHighestScore: a.totalScore === highestScore,
+      })),
       totalScore: session.totalScore,
       passingScore: session.tryout.passingScore,
       isPassed: session.isPassed,
@@ -171,30 +215,46 @@ export class ScoringService {
       // Acak opsi jawaban dengan seed yang sama persis
       const shuffledOptions = shuffleQuestionOptions(rawOptions, optionSeed);
 
-      // Cari opsi yang benar di dalam urutan yang sudah teracak
-      const correctOption = shuffledOptions.find((o) => o.isCorrect);
+      // Cari seluruh opsi yang benar di dalam urutan yang sudah teracak
+      const correctOptions = shuffledOptions.filter((o) => o.isCorrect);
+      const correctLabels = correctOptions.map((o) => o.label).join(", ");
+      const correctOptionIds = correctOptions.map((o) => o.id);
 
-      let answerStatus: "CORRECT" | "WRONG" | "EMPTY" = "EMPTY";
-      if (ans.selectedOptionId) {
-        answerStatus = ans.isCorrect ? "CORRECT" : "WRONG";
+      const selectedIds = ans.selectedOptionIds && ans.selectedOptionIds.length > 0
+        ? ans.selectedOptionIds
+        : (ans.selectedOptionId ? [ans.selectedOptionId] : []);
+
+      let answerStatus: "CORRECT" | "PARTIAL" | "WRONG" | "EMPTY" = "EMPTY";
+      if (selectedIds.length > 0) {
+        if (ans.isCorrect) {
+          answerStatus = "CORRECT";
+        } else if (ans.scoreObtained > 0) {
+          answerStatus = "PARTIAL";
+        } else {
+          answerStatus = "WRONG";
+        }
       }
 
       return {
         orderNumber: index + 1, // Nomor 1 .. N persis sama dengan tampilan lembar ujian siswa
         weight,
         questionId: ans.questionId,
+        type: ans.question.type,
         topicName: ans.question.topic.name,
         difficulty: ans.question.difficulty,
         content: ans.question.content,
         imageUrl: ans.question.imageUrl,
         options: shuffledOptions,
         selectedOptionId: ans.selectedOptionId,
-        correctOptionId: correctOption?.id || null,
-        correctLabel: correctOption?.label || "-", // Huruf kunci jawaban teracak sesuai posisi opsi bagi siswa ini
+        selectedOptionIds: selectedIds,
+        correctOptionId: correctOptions[0]?.id || null,
+        correctOptionIds,
+        correctLabel: correctLabels || "-", // Huruf kunci jawaban (misal "B, D" atau "A")
         answerStatus,
         isFlagged: ans.isFlagged,
         scoreObtained: ans.scoreObtained,
         explanation: ans.question.explanation,
+        explanationImageUrl: ans.question.explanationImageUrl,
       };
     });
 
@@ -230,13 +290,27 @@ export class ScoringService {
       orderBy: { submittedAt: "desc" },
     });
 
-    const totalCompleted = sessions.length;
-    let totalScoreSum = 0;
-    let passedCount = 0;
+    // Temukan nilai tertinggi per paket tryout
+    const bestPerTryout = new Map<
+      string,
+      { highestScore: number; isPassed: boolean; tryoutTitle: string; submittedAt: string }
+    >();
+
+    sessions.forEach((s) => {
+      const current = bestPerTryout.get(s.tryoutId);
+      if (!current || s.totalScore > current.highestScore) {
+        bestPerTryout.set(s.tryoutId, {
+          highestScore: s.totalScore,
+          isPassed: s.isPassed,
+          tryoutTitle: s.tryout.title,
+          submittedAt: (s.submittedAt || s.expiresAt).toISOString(),
+        });
+      }
+    });
 
     const historyItems = sessions.map((s) => {
-      totalScoreSum += s.totalScore;
-      if (s.isPassed) passedCount++;
+      const best = bestPerTryout.get(s.tryoutId);
+      const isHighestScore = best ? s.totalScore === best.highestScore : true;
 
       const startTime = s.startedAt.getTime();
       const endTime = s.submittedAt ? s.submittedAt.getTime() : s.expiresAt.getTime();
@@ -248,7 +322,11 @@ export class ScoringService {
         tryoutTitle: s.tryout.title,
         subjectId: s.tryout.subjectId,
         subjectName: s.tryout.subject.name,
+        attemptNumber: s.attemptNumber,
+        maxAttempts: s.tryout.maxAttempts ?? 3,
+        isHighestScore,
         totalScore: s.totalScore,
+        highestScore: best?.highestScore ?? s.totalScore,
         passingScore: s.tryout.passingScore,
         isPassed: s.isPassed,
         correctCount: s.correctCount,
@@ -260,17 +338,24 @@ export class ScoringService {
       };
     });
 
+    // Metrik ringkasan didasarkan pada nilai tertinggi per paket tryout
+    const uniqueTryouts = Array.from(bestPerTryout.values());
+    const totalUniqueTryouts = uniqueTryouts.length;
+    const totalBestScoreSum = uniqueTryouts.reduce((sum, item) => sum + item.highestScore, 0);
+    const passedTryoutsCount = uniqueTryouts.filter((item) => item.isPassed).length;
+
     const averageScore =
-      totalCompleted > 0 ? Math.round((totalScoreSum / totalCompleted) * 10) / 10 : 0;
+      totalUniqueTryouts > 0 ? Math.round((totalBestScoreSum / totalUniqueTryouts) * 10) / 10 : 0;
     const passingRate =
-      totalCompleted > 0 ? Math.round((passedCount / totalCompleted) * 100) : 0;
+      totalUniqueTryouts > 0 ? Math.round((passedTryoutsCount / totalUniqueTryouts) * 100) : 0;
+    const totalCompleted = totalUniqueTryouts;
 
     // Data tren perkembangan (urutan kronologis terlama ke terbaru)
     const scoreTrend = [...historyItems]
       .reverse()
       .map((item, index) => ({
         index: index + 1,
-        title: item.tryoutTitle,
+        title: `${item.tryoutTitle} (Ke-${item.attemptNumber})`,
         score: item.totalScore,
         date: new Date(item.submittedAt).toLocaleDateString("id-ID", {
           day: "numeric",

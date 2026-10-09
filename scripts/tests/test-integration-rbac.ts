@@ -7,6 +7,7 @@
 import { prisma } from "../../src/lib/prisma";
 import { ExamService } from "../../src/modules/exam/exam.service";
 import { ScoringService } from "../../src/modules/scoring/scoring.service";
+import { AnalyticsService } from "../../src/modules/analytics/analytics.service";
 import { AppError } from "../../src/lib/errors";
 
 interface Assertion {
@@ -157,20 +158,49 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
   assert("Hasil ujian memuat analisis penguasaan materi (Topic Mastery)", Array.isArray(examResult.topicMastery));
 
   // ---------------------------------------------------------------------------
-  // 2. EDGE CASES: Retake & Expired Answering Guard
+  // 2. EDGE CASES: Multi-Attempts (Maks 3x), Seleksi Nilai Tertinggi & Expired Guard
   // ---------------------------------------------------------------------------
-  console.log("\n[2] Menguji Proteksi Edge Cases (Cegah Retake & Expired Guard)...");
+  console.log("\n[2] Menguji Batas 3x Percobaan Tryout & Pemilihan Nilai Tertinggi...");
 
-  // Edge Case A: Mencoba memulai sesi baru pada tryout yang sudah pernah di-SUBMIT
+  // Siswa B telah menyelesaikan attempt 1.
+  // Uji Percobaan ke-2
+  const session2 = await ExamService.startOrResumeExamSession(studentB.id, tryout.id);
+  assert("Siswa dapat memulai percobaan ke-2", Boolean(session2.sessionId));
+  assert("Percobaan ke-2 memiliki attemptNumber = 2", session2.attemptNumber === 2);
+  const submitResult2 = await ExamService.submitExamSession(studentB.id, session2.sessionId);
+  assert("Percobaan ke-2 berhasil disubmit", submitResult2.status === "SUBMITTED");
+
+  // Uji Percobaan ke-3
+  const session3 = await ExamService.startOrResumeExamSession(studentB.id, tryout.id);
+  assert("Siswa dapat memulai percobaan ke-3", Boolean(session3.sessionId));
+  assert("Percobaan ke-3 memiliki attemptNumber = 3", session3.attemptNumber === 3);
+  const submitResult3 = await ExamService.submitExamSession(studentB.id, session3.sessionId);
+  assert("Percobaan ke-3 berhasil disubmit", submitResult3.status === "SUBMITTED");
+
+  // Uji Percobaan ke-4 (Harus diblokir karena batas 3x tercapai)
   try {
     await ExamService.startOrResumeExamSession(studentB.id, tryout.id);
-    assert("Cegah retake tryout yang sudah selesai", false, "Harusnya melempar EXAM_ALREADY_SUBMITTED");
+    assert("Percobaan ke-4 diblokir", false, "Harusnya melempar EXAM_ALREADY_SUBMITTED");
   } catch (err: any) {
     assert(
-      "Mencoba retake tryout selesai ditolak dengan EXAM_ALREADY_SUBMITTED",
+      "Mencoba retake ke-4 ditolak dengan EXAM_ALREADY_SUBMITTED",
       err.code === "EXAM_ALREADY_SUBMITTED",
     );
   }
+
+  // Verifikasi evaluasi nilai tertinggi pada detail siswa
+  const detail = await ExamService.getTryoutDetailForStudent(studentB.id, tryout.id);
+  assert("Detail tryout mencatat total 3x percobaan", detail.attemptsUsed === 3);
+  assert("Detail tryout mencatat sisa 0 percobaan", detail.attemptsRemaining === 0);
+  assert("Detail tryout mencatat canRetake = false", detail.canRetake === false);
+  const maxScore = Math.max(submitResult.totalScore, submitResult2.totalScore, submitResult3.totalScore);
+  assert("Detail tryout mengambil skor tertinggi dari seluruh percobaan", detail.highestScore === maxScore);
+
+  // Verifikasi Laporan Guru: mencatat siswa dengan skor tertinggi & total 3x percobaan
+  const report = await AnalyticsService.getTryoutReport(tryout.id, teacher.id, teacher.role);
+  const participantB = report.participants.find((p: any) => p.userId === studentB.id);
+  assert("Laporan guru menampilkan skor tertinggi siswa", participantB?.totalScore === maxScore);
+  assert("Laporan guru mencatat total percobaan = 3", participantB?.totalAttempts === 3);
 
   // Edge Case B: Sesi yang telah lewat batas waktu (Expired) ditolak saat menjawab
   // Buat sesi uji expired buatan
@@ -233,10 +263,13 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
     );
   }
 
-  // Bersihkan data siswa B setelah pengujian selesai
-  await prisma.examTopicScore.deleteMany({ where: { examSessionId: session.sessionId } });
-  await prisma.examAnswer.deleteMany({ where: { examSessionId: session.sessionId } });
-  await prisma.examSession.delete({ where: { id: session.sessionId } });
+  // Bersihkan data seluruh sesi siswa B setelah pengujian selesai
+  const studentBSessions = await prisma.examSession.findMany({ where: { userId: studentB.id } });
+  for (const s of studentBSessions) {
+    await prisma.examTopicScore.deleteMany({ where: { examSessionId: s.id } });
+    await prisma.examAnswer.deleteMany({ where: { examSessionId: s.id } });
+    await prisma.examSession.delete({ where: { id: s.id } });
+  }
   await prisma.user.delete({ where: { id: studentB.id } });
 
   const allPassed = results.every((r) => r.pass);

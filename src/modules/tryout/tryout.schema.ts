@@ -14,6 +14,12 @@ export const createTryoutSchema = z.object({
     .min(0, "Nilai KKM minimal 0")
     .max(100, "Nilai KKM maksimal 100")
     .default(75),
+  maxAttempts: z.coerce
+    .number()
+    .int()
+    .min(1, "Minimal 1 kali percobaan")
+    .max(10, "Maksimal 10 kali percobaan")
+    .optional(),
   status: z.nativeEnum(TryoutStatus).default(TryoutStatus.DRAFT),
   discussionVisibility: z
     .nativeEnum(DiscussionVisibility)

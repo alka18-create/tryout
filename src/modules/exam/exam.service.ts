@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { ExamSessionStatus, TryoutStatus } from "@/generated/prisma/client";
+import { ExamSessionStatus, TryoutStatus, QuestionType } from "@/generated/prisma/client";
 import { SaveAnswerInput } from "./exam.schema";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 
@@ -29,10 +29,10 @@ export class ExamService {
         },
         examSessions: {
           where: { userId: studentId },
-          orderBy: { startedAt: "desc" },
-          take: 1,
+          orderBy: { attemptNumber: "asc" },
           select: {
             id: true,
+            attemptNumber: true,
             status: true,
             startedAt: true,
             expiresAt: true,
@@ -48,7 +48,13 @@ export class ExamService {
     const now = Date.now();
 
     return tryouts.map((t) => {
-      const latestSession = t.examSessions[0] || null;
+      const maxAttempts = t.maxAttempts ?? 3;
+      const completedSessions = t.examSessions.filter(
+        (s) => s.status === ExamSessionStatus.SUBMITTED || s.status === ExamSessionStatus.EXPIRED
+      );
+      const activeSession = t.examSessions.find(
+        (s) => s.status === ExamSessionStatus.IN_PROGRESS
+      );
 
       // Cek apakah tryout berada dalam periode aktif
       const isStarted = !t.startDate || new Date(t.startDate).getTime() <= now;
@@ -56,22 +62,40 @@ export class ExamService {
 
       let participationStatus: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "EXPIRED" = "NOT_STARTED";
       let remainingSeconds = 0;
+      let currentSessionId: string | null = null;
 
-      if (latestSession) {
-        if (latestSession.status === ExamSessionStatus.IN_PROGRESS) {
-          const expiresAtMs = new Date(latestSession.expiresAt).getTime();
-          if (now <= expiresAtMs + 15000) {
-            participationStatus = "IN_PROGRESS";
-            remainingSeconds = Math.max(0, Math.floor((expiresAtMs - now) / 1000));
-          } else {
-            participationStatus = "EXPIRED";
-          }
-        } else if (latestSession.status === ExamSessionStatus.SUBMITTED) {
-          participationStatus = "SUBMITTED";
+      if (activeSession) {
+        const expiresAtMs = new Date(activeSession.expiresAt).getTime();
+        if (now <= expiresAtMs + 15000) {
+          participationStatus = "IN_PROGRESS";
+          remainingSeconds = Math.max(0, Math.floor((expiresAtMs - now) / 1000));
+          currentSessionId = activeSession.id;
         } else {
-          participationStatus = "EXPIRED";
+          participationStatus = completedSessions.length > 0 ? "SUBMITTED" : "EXPIRED";
         }
+      } else if (completedSessions.length > 0) {
+        participationStatus = "SUBMITTED";
       }
+
+      // Ambil nilai tertinggi dari sesi yang telah selesai
+      let highestScore: number | null = null;
+      let bestSessionId: string | null = null;
+      let isPassed: boolean | null = null;
+
+      if (completedSessions.length > 0) {
+        const sortedByScore = [...completedSessions].sort((a, b) => {
+          if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+          return b.attemptNumber - a.attemptNumber;
+        });
+        highestScore = sortedByScore[0].totalScore;
+        bestSessionId = sortedByScore[0].id;
+        isPassed = sortedByScore[0].isPassed;
+      }
+
+      const latestCompleted = completedSessions[completedSessions.length - 1] || null;
+      const attemptsUsed = completedSessions.length + (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0);
+      const attemptsRemaining = Math.max(0, maxAttempts - completedSessions.length - (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0));
+      const canRetake = !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
 
       return {
         id: t.id,
@@ -81,14 +105,20 @@ export class ExamService {
         durationMinutes: t.durationMinutes,
         passingScore: t.passingScore,
         questionCount: t._count.tryoutQuestions,
+        maxAttempts,
+        attemptsUsed,
+        attemptsRemaining,
+        canRetake,
         startDate: t.startDate,
         endDate: t.endDate,
         isPeriodActive: isStarted && !isEnded,
         participationStatus,
         remainingSeconds,
-        latestSessionId: latestSession?.id || null,
-        latestScore: latestSession?.totalScore ?? null,
-        isPassed: latestSession?.isPassed ?? null,
+        latestSessionId: currentSessionId || bestSessionId || latestCompleted?.id || null,
+        latestScore: latestCompleted?.totalScore ?? null,
+        highestScore,
+        bestSessionId,
+        isPassed,
       };
     });
   }
@@ -106,8 +136,20 @@ export class ExamService {
         },
         examSessions: {
           where: { userId: studentId },
-          orderBy: { startedAt: "desc" },
-          take: 1,
+          orderBy: { attemptNumber: "asc" },
+          select: {
+            id: true,
+            attemptNumber: true,
+            status: true,
+            startedAt: true,
+            expiresAt: true,
+            submittedAt: true,
+            totalScore: true,
+            isPassed: true,
+            correctCount: true,
+            wrongCount: true,
+            unansweredCount: true,
+          },
         },
       },
     });
@@ -120,25 +162,62 @@ export class ExamService {
     const isStarted = !tryout.startDate || new Date(tryout.startDate).getTime() <= now;
     const isEnded = tryout.endDate && new Date(tryout.endDate).getTime() < now;
 
-    const latestSession = tryout.examSessions[0] || null;
+    const maxAttempts = tryout.maxAttempts ?? 3;
+    const completedSessions = tryout.examSessions.filter(
+      (s) => s.status === ExamSessionStatus.SUBMITTED || s.status === ExamSessionStatus.EXPIRED
+    );
+    const activeSession = tryout.examSessions.find(
+      (s) => s.status === ExamSessionStatus.IN_PROGRESS
+    );
+
     let participationStatus: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "EXPIRED" = "NOT_STARTED";
     let remainingSeconds = 0;
+    let currentSessionId: string | null = null;
 
-    if (latestSession) {
-      if (latestSession.status === ExamSessionStatus.IN_PROGRESS) {
-        const expiresAtMs = new Date(latestSession.expiresAt).getTime();
-        if (now <= expiresAtMs + 15000) {
-          participationStatus = "IN_PROGRESS";
-          remainingSeconds = Math.max(0, Math.floor((expiresAtMs - now) / 1000));
-        } else {
-          participationStatus = "EXPIRED";
-        }
-      } else if (latestSession.status === ExamSessionStatus.SUBMITTED) {
-        participationStatus = "SUBMITTED";
+    if (activeSession) {
+      const expiresAtMs = new Date(activeSession.expiresAt).getTime();
+      if (now <= expiresAtMs + 15000) {
+        participationStatus = "IN_PROGRESS";
+        remainingSeconds = Math.max(0, Math.floor((expiresAtMs - now) / 1000));
+        currentSessionId = activeSession.id;
       } else {
-        participationStatus = "EXPIRED";
+        participationStatus = completedSessions.length > 0 ? "SUBMITTED" : "EXPIRED";
       }
+    } else if (completedSessions.length > 0) {
+      participationStatus = "SUBMITTED";
     }
+
+    // Hitung skor tertinggi
+    let highestScore: number | null = null;
+    let bestSessionId: string | null = null;
+    let isPassed: boolean | null = null;
+
+    if (completedSessions.length > 0) {
+      const sortedByScore = [...completedSessions].sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        return b.attemptNumber - a.attemptNumber;
+      });
+      highestScore = sortedByScore[0].totalScore;
+      bestSessionId = sortedByScore[0].id;
+      isPassed = sortedByScore[0].isPassed;
+    }
+
+    const latestCompleted = completedSessions[completedSessions.length - 1] || null;
+    const attemptsUsed = completedSessions.length + (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0);
+    const attemptsRemaining = Math.max(0, maxAttempts - completedSessions.length - (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0));
+    const canRetake = !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
+
+    const attemptsHistory = completedSessions.map((s) => ({
+      sessionId: s.id,
+      attemptNumber: s.attemptNumber,
+      totalScore: s.totalScore,
+      isPassed: s.isPassed,
+      correctCount: s.correctCount,
+      wrongCount: s.wrongCount,
+      unansweredCount: s.unansweredCount,
+      submittedAt: (s.submittedAt || s.expiresAt).toISOString(),
+      isHighestScore: s.totalScore === highestScore,
+    }));
 
     return {
       id: tryout.id,
@@ -149,14 +228,21 @@ export class ExamService {
       passingScore: tryout.passingScore,
       questionCount: tryout._count.tryoutQuestions,
       discussionVisibility: tryout.discussionVisibility,
+      maxAttempts,
+      attemptsUsed,
+      attemptsRemaining,
+      canRetake,
       startDate: tryout.startDate,
       endDate: tryout.endDate,
       isPeriodActive: isStarted && !isEnded,
       participationStatus,
       remainingSeconds,
-      activeSessionId: latestSession?.id || null,
-      latestScore: latestSession?.totalScore ?? null,
-      isPassed: latestSession?.isPassed ?? null,
+      activeSessionId: currentSessionId,
+      bestSessionId,
+      highestScore,
+      latestScore: latestCompleted?.totalScore ?? null,
+      isPassed,
+      attemptsHistory,
     };
   }
 
@@ -191,6 +277,8 @@ export class ExamService {
       throw new AppError("VALIDATION_ERROR", "Periode pengerjaan tryout ini telah berakhir.");
     }
 
+    const maxAttempts = tryout.maxAttempts ?? 3;
+
     // 1. Cek sesi IN_PROGRESS yang masih aktif (Idempotent Resume)
     const activeSession = await prisma.examSession.findFirst({
       where: {
@@ -210,6 +298,8 @@ export class ExamService {
         return {
           sessionId: activeSession.id,
           tryoutId: activeSession.tryoutId,
+          attemptNumber: activeSession.attemptNumber,
+          maxAttempts,
           startedAt: activeSession.startedAt.toISOString(),
           expiresAt: activeSession.expiresAt.toISOString(),
           remainingSeconds,
@@ -218,28 +308,27 @@ export class ExamService {
       } else {
         // Otomatis submit karena waktu sudah habis
         await this.submitExamSession(studentId, activeSession.id, true);
-        throw new AppError(
-          "EXAM_SESSION_EXPIRED",
-          "Waktu pengerjaan tryout Anda telah habis dan sesi telah diselesaikan otomatis.",
-        );
       }
     }
 
-    // 2. Cek apakah sudah pernah menyelesaikan tryout ini sebelumnya
-    const finishedSession = await prisma.examSession.findFirst({
+    // 2. Cek apakah sudah pernah menyelesaikan tryout dan mencapai batas maksimal percobaan
+    const completedSessions = await prisma.examSession.findMany({
       where: {
         tryoutId,
         userId: studentId,
         status: { in: [ExamSessionStatus.SUBMITTED, ExamSessionStatus.EXPIRED] },
       },
+      orderBy: { attemptNumber: "asc" },
     });
 
-    if (finishedSession) {
+    if (completedSessions.length >= maxAttempts) {
       throw new AppError(
         "EXAM_ALREADY_SUBMITTED",
-        "Anda telah menyelesaikan tryout ini dan tidak dapat mengulanginya lagi.",
+        `Anda telah mencapai batas maksimal (${maxAttempts}x) percobaan untuk tryout ini.`,
       );
     }
+
+    const attemptNumber = completedSessions.length + 1;
 
     // 3. Buat sesi ujian baru dalam 1 transaksi
     const startedAt = new Date();
@@ -250,6 +339,7 @@ export class ExamService {
         data: {
           tryoutId,
           userId: studentId,
+          attemptNumber,
           startedAt,
           expiresAt,
           status: ExamSessionStatus.IN_PROGRESS,
@@ -275,6 +365,8 @@ export class ExamService {
     return {
       sessionId: newSession.id,
       tryoutId: newSession.tryoutId,
+      attemptNumber,
+      maxAttempts,
       startedAt: newSession.startedAt.toISOString(),
       expiresAt: newSession.expiresAt.toISOString(),
       remainingSeconds,
@@ -364,10 +456,12 @@ export class ExamService {
         orderNumber: index + 1, // Nomor 1 .. N teracak untuk siswa ini
         weight,
         questionId: ans.questionId,
+        type: ans.question.type,
         content: ans.question.content,
         imageUrl: ans.question.imageUrl,
         options: shuffledOptions,
         selectedOptionId: ans.selectedOptionId,
+        selectedOptionIds: ans.selectedOptionIds || (ans.selectedOptionId ? [ans.selectedOptionId] : []),
         isFlagged: ans.isFlagged,
         // STRICT SECURITY: explanation DIHAPUS SELAMA UJIAN
       };
@@ -378,6 +472,8 @@ export class ExamService {
       tryoutId: session.tryoutId,
       tryoutTitle: session.tryout.title,
       subjectName: session.tryout.subject.name,
+      attemptNumber: session.attemptNumber,
+      maxAttempts: session.tryout.maxAttempts ?? 3,
       status: session.status,
       durationMinutes: session.tryout.durationMinutes,
       startedAt: session.startedAt.toISOString(),
@@ -423,19 +519,30 @@ export class ExamService {
       );
     }
 
+    // Resolusi daftar opsi yang dipilih (mendukung single choice dan multiple choice)
+    let resolvedOptionIds: string[] = [];
+    if (input.selectedOptionIds && Array.isArray(input.selectedOptionIds)) {
+      resolvedOptionIds = input.selectedOptionIds;
+    } else if (input.selectedOptionId) {
+      resolvedOptionIds = [input.selectedOptionId];
+    }
+
     // Validasi apakah opsi yang dipilih benar-benar milik soal tersebut
-    if (input.selectedOptionId) {
-      const validOption = await prisma.questionOption.findFirst({
+    if (resolvedOptionIds.length > 0) {
+      const validCount = await prisma.questionOption.count({
         where: {
-          id: input.selectedOptionId,
+          id: { in: resolvedOptionIds },
           questionId: input.questionId,
         },
       });
 
-      if (!validOption) {
+      if (validCount !== resolvedOptionIds.length) {
         throw new AppError("VALIDATION_ERROR", "Pilihan opsi tidak valid untuk soal ini.");
       }
     }
+
+    const hasAnswer = resolvedOptionIds.length > 0;
+    const primarySelectedId = input.selectedOptionId || (resolvedOptionIds.length > 0 ? resolvedOptionIds[0] : null);
 
     // Update baris jawaban pada database
     const updatedAnswer = await prisma.examAnswer.update({
@@ -446,15 +553,17 @@ export class ExamService {
         },
       },
       data: {
-        selectedOptionId: input.selectedOptionId || null,
+        selectedOptionId: primarySelectedId,
+        selectedOptionIds: resolvedOptionIds,
         isFlagged: input.isFlagged,
-        answeredAt: input.selectedOptionId ? new Date() : null,
+        answeredAt: hasAnswer ? new Date() : null,
       },
     });
 
     return {
       questionId: updatedAnswer.questionId,
       selectedOptionId: updatedAnswer.selectedOptionId,
+      selectedOptionIds: updatedAnswer.selectedOptionIds,
       isFlagged: updatedAnswer.isFlagged,
       savedAt: updatedAnswer.answeredAt ? updatedAnswer.answeredAt.toISOString() : new Date().toISOString(),
     };
@@ -536,6 +645,7 @@ export class ExamService {
     for (const ans of session.answers) {
       const qWeight = weightMap.get(ans.questionId) || 1.0;
       const topicId = ans.question.topicId;
+      const qType = ans.question.type;
 
       if (!topicStats.has(topicId)) {
         topicStats.set(topicId, { total: 0, correct: 0, wrong: 0 });
@@ -543,16 +653,66 @@ export class ExamService {
       const stat = topicStats.get(topicId)!;
       stat.total += 1;
 
-      if (!ans.selectedOptionId) {
-        // Kosong
+      // Ambil opsi yang dipilih siswa (bisa dari selectedOptionIds atau fallback selectedOptionId)
+      const selectedIds = ans.selectedOptionIds && ans.selectedOptionIds.length > 0
+        ? ans.selectedOptionIds
+        : (ans.selectedOptionId ? [ans.selectedOptionId] : []);
+
+      if (selectedIds.length === 0) {
+        // Kosong / Tidak Dijawab
         unansweredCount++;
         answerUpdates.push({
           id: ans.id,
           isCorrect: false,
           score: 0,
         });
+      } else if (qType === QuestionType.MULTIPLE_CHOICE) {
+        // Pilihan Ganda Kompleks: Skor Parsial Proporsional
+        const correctOptions = ans.question.options.filter((o) => o.isCorrect);
+        const correctOptionIds = new Set(correctOptions.map((o) => o.id));
+        const totalCorrectRequired = correctOptions.length;
+
+        let numCorrectChosen = 0;
+        let numWrongChosen = 0;
+
+        for (const sId of selectedIds) {
+          if (correctOptionIds.has(sId)) {
+            numCorrectChosen++;
+          } else {
+            numWrongChosen++;
+          }
+        }
+
+        // Rasio proporsional dengan penalti opsi salah:
+        // rasio = max(0, (numCorrectChosen - numWrongChosen) / totalCorrectRequired)
+        const ratio = totalCorrectRequired > 0
+          ? Math.max(0, (numCorrectChosen - numWrongChosen) / totalCorrectRequired)
+          : 0;
+
+        const earnedScore = Math.round(ratio * qWeight * 100) / 100;
+        totalEarnedScore += earnedScore;
+
+        const isFullyCorrect = ratio === 1.0;
+        if (isFullyCorrect) {
+          correctCount++;
+          stat.correct += 1;
+        } else {
+          wrongCount++;
+          stat.wrong += 1;
+          // Akumulasi penguasaan materi proporsional
+          if (ratio > 0) {
+            stat.correct += ratio;
+          }
+        }
+
+        answerUpdates.push({
+          id: ans.id,
+          isCorrect: isFullyCorrect,
+          score: earnedScore,
+        });
       } else {
-        const chosenOpt = ans.question.options.find((o) => o.id === ans.selectedOptionId);
+        // SINGLE_CHOICE & TRUE_FALSE
+        const chosenOpt = ans.question.options.find((o) => o.id === selectedIds[0]);
         if (chosenOpt && chosenOpt.isCorrect) {
           // Benar
           correctCount++;

@@ -130,6 +130,10 @@ export class QuestionBankService {
       where.difficulty = difficulty;
     }
 
+    if (filter.type) {
+      where.type = filter.type;
+    }
+
     if (search && search.trim().length > 0) {
       where.OR = [
         { content: { contains: search.trim(), mode: "insensitive" } },
@@ -207,6 +211,7 @@ export class QuestionBankService {
       data: {
         topicId: input.topicId,
         createdById: teacherId,
+        type: input.type,
         content: input.content.trim(),
         difficulty: input.difficulty,
         imageUrl: input.imageUrl || null,
@@ -258,6 +263,7 @@ export class QuestionBankService {
         where: { id: questionId },
         data: {
           topicId: input.topicId,
+          type: input.type,
           content: input.content.trim(),
           difficulty: input.difficulty,
           imageUrl: input.imageUrl || null,
@@ -266,7 +272,16 @@ export class QuestionBankService {
         },
       });
 
-      // 2. Update opsi jawaban (upsert per label A-E)
+      // 2. Hapus opsi yang tidak lagi digunakan jika jumlah opsi berkurang (misal beralih ke Benar/Salah)
+      const activeLabels = input.options.map((opt) => opt.label);
+      await tx.questionOption.deleteMany({
+        where: {
+          questionId,
+          label: { notIn: activeLabels },
+        },
+      });
+
+      // 3. Update opsi jawaban (upsert per label)
       for (const opt of input.options) {
         await tx.questionOption.upsert({
           where: {

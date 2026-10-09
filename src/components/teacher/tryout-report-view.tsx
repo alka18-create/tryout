@@ -28,6 +28,8 @@ interface ParticipantItem {
   email: string;
   schoolName: string;
   schoolClass: string;
+  attemptNumber?: number;
+  totalAttempts?: number;
   totalScore: number;
   isPassed: boolean;
   correctCount: number;
@@ -99,30 +101,30 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="space-y-1">
           <Link
             href="/dashboard/teacher/reports"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Laporan Tryout</span>
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               Laporan: {data.tryout.title}
             </h1>
             <Badge variant="info">{data.tryout.subjectName}</Badge>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             {data.tryout.questionCount} Butir Soal • Durasi {data.tryout.durationMinutes} Menit • Standar KKM {data.tryout.passingScore}
           </p>
         </div>
 
         {/* Download CSV Button */}
         <a href={`/api/teacher/tryouts/${data.tryout.id}/export`} download>
-          <Button variant="outline" size="sm" className="gap-2 text-xs shrink-0">
-            <Download className="w-4 h-4 text-emerald-400" />
+          <Button variant="outline" size="sm" className="gap-2 text-xs shrink-0 shadow-xs">
+            <Download className="w-4 h-4 text-emerald-600" />
             <span>Export Nilai (.CSV)</span>
           </Button>
         </a>
@@ -131,39 +133,39 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
       {/* 5 Metrik Ringkas Ujian */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="p-4 text-center">
-          <span className="text-[11px] text-slate-400 font-medium block">Total Peserta</span>
-          <p className="text-2xl font-black text-white mt-1">{data.summary.totalParticipants}</p>
+          <span className="text-[11px] text-slate-500 font-medium block">Total Peserta</span>
+          <p className="text-2xl font-black text-slate-900 mt-1">{data.summary.totalParticipants}</p>
         </Card>
 
         <Card className="p-4 text-center">
-          <span className="text-[11px] text-slate-400 font-medium block">Rata-rata Skor</span>
-          <p className="text-2xl font-black text-indigo-400 mt-1">{data.summary.averageScore}</p>
+          <span className="text-[11px] text-slate-500 font-medium block">Rata-rata Skor</span>
+          <p className="text-2xl font-black text-blue-600 mt-1">{data.summary.averageScore}</p>
         </Card>
 
         <Card className="p-4 text-center">
-          <span className="text-[11px] text-slate-400 font-medium block">Nilai Tertinggi</span>
-          <p className="text-2xl font-black text-emerald-400 mt-1">{data.summary.highestScore}</p>
+          <span className="text-[11px] text-slate-500 font-medium block">Nilai Tertinggi</span>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{data.summary.highestScore}</p>
         </Card>
 
         <Card className="p-4 text-center">
-          <span className="text-[11px] text-slate-400 font-medium block">Nilai Terendah</span>
-          <p className="text-2xl font-black text-rose-400 mt-1">{data.summary.lowestScore}</p>
+          <span className="text-[11px] text-slate-500 font-medium block">Nilai Terendah</span>
+          <p className="text-2xl font-black text-rose-600 mt-1">{data.summary.lowestScore}</p>
         </Card>
 
         <Card className="p-4 text-center col-span-2 sm:col-span-1">
-          <span className="text-[11px] text-slate-400 font-medium block">Tingkat Kelulusan</span>
-          <p className="text-2xl font-black text-amber-400 mt-1">{data.summary.passingRate}%</p>
+          <span className="text-[11px] text-slate-500 font-medium block">Tingkat Kelulusan</span>
+          <p className="text-2xl font-black text-amber-600 mt-1">{data.summary.passingRate}%</p>
         </Card>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab("participants")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
             activeTab === "participants"
-              ? "bg-indigo-600 text-white"
-              : "text-slate-400 hover:text-white"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
           <Users className="w-4 h-4" />
@@ -174,11 +176,11 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
           onClick={() => setActiveTab("topics")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
             activeTab === "topics"
-              ? "bg-indigo-600 text-white"
-              : "text-slate-400 hover:text-white"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <TrendingDown className="w-4 h-4 text-amber-400" />
+          <TrendingDown className="w-4 h-4 text-amber-500" />
           <span>Analisis Materi Terlemah ({data.topicAnalysis.length})</span>
         </button>
 
@@ -186,8 +188,8 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
           onClick={() => setActiveTab("items")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
             activeTab === "items"
-              ? "bg-indigo-600 text-white"
-              : "text-slate-400 hover:text-white"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
           <FileQuestion className="w-4 h-4" />
@@ -215,14 +217,14 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                   placeholder="Cari siswa/sekolah..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  className="pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs"
                 />
               </div>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 outline-none"
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 outline-none shadow-xs"
               >
                 <option value="ALL">Semua Status</option>
                 <option value="PASSED">Lulus KKM</option>
@@ -233,55 +235,60 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
 
           <CardContent>
             {filteredParticipants.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-slate-500">
                 Tidak ada data peserta yang cocok dengan filter pencarian.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="py-3 px-4 text-center">Rank</th>
                       <th className="py-3 px-4">Nama Siswa</th>
                       <th className="py-3 px-4">Asal Sekolah</th>
-                      <th className="py-3 px-4 text-center">Skor</th>
+                      <th className="py-3 px-4 text-center">Skor Tertinggi</th>
                       <th className="py-3 px-4 text-center">Status</th>
                       <th className="py-3 px-4 text-center">B / S / K</th>
                       <th className="py-3 px-4 text-center">Durasi</th>
                       <th className="py-3 px-4 text-right">Tanggal Selesai</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/80">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredParticipants.map((p) => (
-                      <tr key={p.sessionId} className="hover:bg-slate-900/40 transition-colors">
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-400">
+                      <tr key={p.sessionId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-600">
                           #{p.rank}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-white block">{p.name}</span>
+                          <span className="font-bold text-slate-900 block">{p.name}</span>
                           <span className="text-[11px] text-slate-500">{p.email}</span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-slate-300 block">{p.schoolName}</span>
+                          <span className="text-slate-700 block font-medium">{p.schoolName}</span>
                           <span className="text-[11px] text-slate-500">Kelas: {p.schoolClass}</span>
                         </td>
-                        <td className="py-3.5 px-4 text-center font-black text-sm text-white">
-                          {p.totalScore}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="font-black text-sm text-slate-900 block">{p.totalScore}</span>
+                          {p.attemptNumber && (
+                            <span className="text-[10px] text-blue-600 font-semibold block mt-0.5">
+                              Percobaan #{p.attemptNumber} {p.totalAttempts ? `(${p.totalAttempts}x)` : ""}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <Badge variant={p.isPassed ? "success" : "danger"} className="text-[10px]">
                             {p.isPassed ? "LULUS" : "REMIDI"}
                           </Badge>
                         </td>
-                        <td className="py-3.5 px-4 text-center text-slate-300 font-mono">
-                          <span className="text-emerald-400 font-bold">{p.correctCount}</span> /{" "}
-                          <span className="text-rose-400">{p.wrongCount}</span> /{" "}
-                          <span className="text-slate-500">{p.unansweredCount}</span>
+                        <td className="py-3.5 px-4 text-center text-slate-700 font-mono">
+                          <span className="text-emerald-600 font-bold">{p.correctCount}</span> /{" "}
+                          <span className="text-rose-600">{p.wrongCount}</span> /{" "}
+                          <span className="text-slate-400">{p.unansweredCount}</span>
                         </td>
-                        <td className="py-3.5 px-4 text-center text-slate-400">
+                        <td className="py-3.5 px-4 text-center text-slate-600">
                           {p.durationSpentMinutes} mnt
                         </td>
-                        <td className="py-3.5 px-4 text-right text-slate-400 text-[11px]">
+                        <td className="py-3.5 px-4 text-right text-slate-500 text-[11px]">
                           {new Date(p.submittedAt).toLocaleDateString("id-ID", {
                             day: "numeric",
                             month: "short",
@@ -304,7 +311,7 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
         <Card className="space-y-4">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingDown className="w-5 h-5 text-amber-400" />
+              <TrendingDown className="w-5 h-5 text-amber-500" />
               Peringkat Topik Materi yang Perlu Penguatan
             </CardTitle>
             <CardDescription>
@@ -314,7 +321,7 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
 
           <CardContent className="space-y-4">
             {data.topicAnalysis.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-slate-500">
                 Belum ada data pengerjaan untuk dianalisis.
               </div>
             ) : (
@@ -325,18 +332,18 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                 return (
                   <div
                     key={item.topicId}
-                    className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2"
+                    className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-2"
                   >
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2.5">
-                        <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 font-bold flex items-center justify-center text-xs">
+                        <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs shadow-xs">
                           {idx + 1}
                         </span>
                         <div>
-                          <span className="font-bold text-white text-sm block">
+                          <span className="font-bold text-slate-900 text-sm block">
                             {item.topicName}
                           </span>
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-slate-500">
                             Diujikan pada {item.testedSessions} sesi pengerjaan siswa
                           </span>
                         </div>
@@ -345,7 +352,7 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                       <div className="text-right">
                         <span
                           className={`text-base font-black ${
-                            isWeak ? "text-rose-400" : isMedium ? "text-amber-400" : "text-emerald-400"
+                            isWeak ? "text-rose-600" : isMedium ? "text-amber-600" : "text-emerald-600"
                           }`}
                         >
                           {item.averagePercentage}%
@@ -355,7 +362,7 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           isWeak ? "bg-rose-500" : isMedium ? "bg-amber-500" : "bg-emerald-500"
@@ -376,7 +383,7 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
         <Card className="space-y-4">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <FileQuestion className="w-5 h-5 text-indigo-400" />
+              <FileQuestion className="w-5 h-5 text-blue-600" />
               Analisis Butir Soal (Item Analysis)
             </CardTitle>
             <CardDescription>
@@ -386,13 +393,13 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
 
           <CardContent>
             {data.itemAnalysis.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-slate-500">
                 Belum ada butir soal dalam paket ini.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="py-3 px-4 text-center">No</th>
                       <th className="py-3 px-4">Potongan Pertanyaan</th>
@@ -403,16 +410,16 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                       <th className="py-3 px-4 text-center">Daya Serap</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/80">
+                  <tbody className="divide-y divide-slate-100">
                     {data.itemAnalysis.map((item) => (
-                      <tr key={item.questionId} className="hover:bg-slate-900/40 transition-colors">
-                        <td className="py-3.5 px-4 text-center font-bold text-white">
+                      <tr key={item.questionId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-900">
                           #{item.orderNumber}
                         </td>
                         <td className="py-3.5 px-4 max-w-xs">
-                          <p className="line-clamp-2 text-slate-200">{item.contentSnippet}...</p>
+                          <p className="line-clamp-2 text-slate-700">{item.contentSnippet}...</p>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-400">{item.topicName}</td>
+                        <td className="py-3.5 px-4 text-slate-600">{item.topicName}</td>
                         <td className="py-3.5 px-4 text-center">
                           <Badge
                             variant={
@@ -427,10 +434,10 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                             {item.difficulty}
                           </Badge>
                         </td>
-                        <td className="py-3.5 px-4 text-center text-slate-300 font-semibold">
+                        <td className="py-3.5 px-4 text-center text-slate-700 font-semibold">
                           {item.correctCount} / {item.totalParticipants}
                         </td>
-                        <td className="py-3.5 px-4 text-center font-bold text-sm text-indigo-400">
+                        <td className="py-3.5 px-4 text-center font-bold text-sm text-blue-600">
                           {item.correctPercentage}%
                         </td>
                         <td className="py-3.5 px-4 text-center">

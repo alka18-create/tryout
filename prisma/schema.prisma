@@ -48,6 +48,12 @@ enum DiscussionVisibility {
   NEVER
 }
 
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
 // -----------------------------------------------------------------------------
 // 1. AUTHENTICATION & USER MANAGEMENT
 // -----------------------------------------------------------------------------
@@ -72,8 +78,9 @@ model User {
   sessions      Session[]
 
   // Author Relations
-  createdQuestions Question[] @relation("TeacherQuestions")
-  createdTryouts   Tryout[]   @relation("TeacherTryouts")
+  createdQuestions Question[]         @relation("TeacherQuestions")
+  createdTryouts   Tryout[]           @relation("TeacherTryouts")
+  createdMaterials LearningMaterial[] @relation("TeacherMaterials")
 
   // Activity Relations
   examSessions  ExamSession[]
@@ -156,6 +163,7 @@ model Subject {
 
   topics      Topic[]
   tryouts     Tryout[]
+  materials   LearningMaterial[]
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -172,6 +180,7 @@ model Topic {
   subject     Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   questions   Question[]
   topicScores ExamTopicScore[]
+  materials   LearningMaterial[]
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -187,6 +196,7 @@ model Question {
   createdById         String          @map("created_by_id")
   content             String          @db.Text // Teks soal (dapat berupa HTML/Markdown)
   imageUrl            String?         @map("image_url")
+  type                QuestionType    @default(SINGLE_CHOICE)
   difficulty          DifficultyLevel @default(MEDIUM)
   explanation         String?         @db.Text // Teks pembahasan soal
   explanationImageUrl String?         @map("explanation_image_url")
@@ -235,6 +245,7 @@ model Tryout {
   createdById          String               @map("created_by_id")
   durationMinutes      Int                  @map("duration_minutes") // contoh: 60
   passingScore         Float                @default(75.0) @map("passing_score")
+  maxAttempts          Int                  @default(3) @map("max_attempts") // batas percobaan tryout (default 3x)
   status               TryoutStatus         @default(DRAFT)
   discussionVisibility DiscussionVisibility @default(AFTER_SUBMIT) @map("discussion_visibility")
   
@@ -281,6 +292,7 @@ model ExamSession {
   userId          String            @map("user_id")
   tryoutId        String            @map("tryout_id")
   status          ExamSessionStatus @default(IN_PROGRESS)
+  attemptNumber   Int               @default(1) @map("attempt_number") // percobaan ke-1, 2, atau 3
   
   // Waktu Otoritas Server
   startedAt       DateTime          @default(now()) @map("started_at")
@@ -304,6 +316,7 @@ model ExamSession {
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   @@index([userId, tryoutId])
+  @@index([userId, tryoutId, attemptNumber])
   @@index([status])
   @@map("exam_sessions")
 }
@@ -313,6 +326,7 @@ model ExamAnswer {
   examSessionId      String          @map("exam_session_id")
   questionId         String          @map("question_id")
   selectedOptionId   String?         @map("selected_option_id") // null jika belum dijawab
+  selectedOptionIds  String[]        @default([]) @map("selected_option_ids") // list opsi terpilih untuk multiple choice
   isFlagged          Boolean         @default(false) @map("is_flagged") // Ragu-ragu
   
   // Evaluasi (Dihitung saat submit)
@@ -347,4 +361,35 @@ model ExamTopicScore {
   @@unique([examSessionId, topicId])
   @@index([examSessionId])
   @@map("exam_topic_scores")
+}
+
+// -----------------------------------------------------------------------------
+// 5. LEARNING MATERIALS (LINK BAHAN MATERI BELAJAR)
+// -----------------------------------------------------------------------------
+
+model LearningMaterial {
+  id          String   @id @default(cuid())
+  title       String   // Judul materi (misal: "Rangkuman Konflik Sosial", "Video Penjelasan Materi")
+  description String?  @db.Text
+  url         String   @db.Text // Tautan eksternal (Google Drive, Docs, YouTube, Notion, dll)
+  type        String   @default("LINK") // "YOUTUBE", "GOOGLE_DRIVE", "DOCUMENT", "ARTICLE", "OTHER"
+
+  subjectId   String   @map("subject_id")
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  topicId     String?  @map("topic_id")
+  topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  createdById String   @map("created_by_id")
+  author      User     @relation("TeacherMaterials", fields: [createdById], references: [id], onDelete: Cascade)
+
+  isActive    Boolean  @default(true) @map("is_active")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([subjectId])
+  @@index([topicId])
+  @@index([createdById])
+  @@map("learning_materials")
 }

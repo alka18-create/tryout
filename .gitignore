@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production.example
 
 # prisma generated client
 /src/generated/
@@ -42,6 +43,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
-
 /src/generated/prisma
+
+# uploads & backups
+/public/uploads/*
+!/public/uploads/.gitkeep
+/uploads/
+/backups/

@@ -295,21 +295,21 @@ function TeacherQuestionsContent() {
         <div
           className={`p-4 rounded-xl text-sm flex items-center justify-between gap-3 border animate-in fade-in duration-200 ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           <div className="flex items-center gap-2.5">
             {feedback.type === "success" ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
             ) : (
-              <AlertCircle className="w-5 h-5 shrink-0" />
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
             )}
-            <span>{feedback.text}</span>
+            <span className="font-medium">{feedback.text}</span>
           </div>
           <button
             onClick={() => setFeedback(null)}
-            className="text-xs text-slate-400 hover:text-white"
+            className="text-xs text-slate-400 hover:text-slate-600 font-bold"
           >
             ✕
           </button>
@@ -322,13 +322,13 @@ function TeacherQuestionsContent() {
       {!selectedSubject ? (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Header Katalog Mapel */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-                <BookOpen className="w-8 h-8 text-amber-400" />
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+                <BookOpen className="w-8 h-8 text-blue-600" />
                 <span>Bank Soal & Materi</span>
               </h1>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 Pilih mata pelajaran di bawah untuk melihat dan mengelola kumpulan butir soal, atau gunakan tombol import untuk memasukkan soal sekaligus via Excel.
               </p>
             </div>
@@ -338,9 +338,9 @@ function TeacherQuestionsContent() {
                 variant="outline"
                 size="md"
                 onClick={() => setIsImportModalOpen(true)}
-                className="gap-2 border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50"
+                className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 shadow-xs"
               >
-                <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                 <span>Import Excel</span>
               </Button>
 
@@ -348,7 +348,7 @@ function TeacherQuestionsContent() {
                 variant="outline"
                 size="md"
                 onClick={() => setIsSubjectModalOpen(true)}
-                className="gap-2"
+                className="gap-2 shadow-xs"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>+ Mata Pelajaran</span>
@@ -361,7 +361,7 @@ function TeacherQuestionsContent() {
                   setNewTopicSubjectId(subjects[0]?.id || "");
                   setIsTopicModalOpen(true);
                 }}
-                className="gap-2"
+                className="gap-2 shadow-xs"
               >
                 <FolderPlus className="w-4 h-4" />
                 <span>+ Topik Materi</span>
@@ -372,17 +372,17 @@ function TeacherQuestionsContent() {
           {/* Search Bar Mapel */}
           <div className="flex items-center justify-between gap-4">
             <div className="relative w-full max-w-md">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={subjectSearch}
                 onChange={(e) => setSubjectSearch(e.target.value)}
                 placeholder="Cari nama atau kode mata pelajaran..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-blue-600 shadow-xs transition-colors"
               />
             </div>
-            <div className="text-xs text-slate-400 font-medium shrink-0">
-              Total: <strong className="text-white">{filteredSubjects.length}</strong> Mata Pelajaran
+            <div className="text-xs text-slate-500 font-medium shrink-0">
+              Total: <strong className="text-slate-900">{filteredSubjects.length}</strong> Mata Pelajaran
             </div>
           </div>
 
@@ -395,7 +395,7 @@ function TeacherQuestionsContent() {
             </div>
           ) : filteredSubjects.length === 0 ? (
             <EmptyState
-              icon={<BookOpen className="w-12 h-12 text-slate-600" />}
+              icon={<BookOpen className="w-12 h-12 text-slate-400" />}
               title="Mata Pelajaran Tidak Ditemukan"
               description={
                 subjectSearch
@@ -407,7 +407,7 @@ function TeacherQuestionsContent() {
                   size="sm"
                   variant="primary"
                   onClick={() => setIsSubjectModalOpen(true)}
-                  className="gap-2"
+                  className="gap-2 shadow-xs"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Tambah Mata Pelajaran Pertama</span>
@@ -424,16 +424,16 @@ function TeacherQuestionsContent() {
                 return (
                   <Card
                     key={sub.id}
-                    className="p-5 flex flex-col justify-between bg-slate-900/60 border-slate-800/80 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-200 group shadow-lg hover:shadow-indigo-950/20"
+                    className="p-5 flex flex-col justify-between bg-white border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200 group shadow-xs"
                   >
                     <div className="space-y-3.5">
                       {/* Top Header Card */}
                       <div className="flex items-start justify-between gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-600/25 group-hover:scale-105 transition-transform">
+                        <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
                           <BookOpen className="w-5 h-5" />
                         </div>
                         {sub.code && (
-                          <Badge variant="outline" className="font-mono font-bold text-indigo-300 border-indigo-500/30">
+                          <Badge variant="outline" className="font-mono font-bold text-blue-700 border-blue-200 bg-blue-50/50">
                             {sub.code}
                           </Badge>
                         )}
@@ -441,27 +441,27 @@ function TeacherQuestionsContent() {
 
                       {/* Title & Description */}
                       <div>
-                        <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                           {sub.name}
                         </h3>
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                           {sub.description || "Mata pelajaran kurikulum TryoutKu."}
                         </p>
                       </div>
 
                       {/* Stat Counters */}
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/70 text-center">
-                        <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/60">
-                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Soal</p>
-                          <p className="text-sm font-black text-amber-400 mt-0.5">{questionCount}</p>
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200/70">
+                          <p className="text-[10px] text-slate-500 uppercase font-semibold">Soal</p>
+                          <p className="text-sm font-black text-blue-600 mt-0.5">{questionCount}</p>
                         </div>
-                        <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/60">
-                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Topik</p>
-                          <p className="text-sm font-black text-indigo-400 mt-0.5">{topicCount}</p>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200/70">
+                          <p className="text-[10px] text-slate-500 uppercase font-semibold">Topik</p>
+                          <p className="text-sm font-black text-indigo-600 mt-0.5">{topicCount}</p>
                         </div>
-                        <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/60">
-                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Tryout</p>
-                          <p className="text-sm font-black text-slate-300 mt-0.5">{tryoutCount}</p>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200/70">
+                          <p className="text-[10px] text-slate-500 uppercase font-semibold">Tryout</p>
+                          <p className="text-sm font-black text-slate-700 mt-0.5">{tryoutCount}</p>
                         </div>
                       </div>
                     </div>
@@ -472,7 +472,7 @@ function TeacherQuestionsContent() {
                         variant="primary"
                         size="md"
                         onClick={() => handleSelectSubject(sub.id)}
-                        className="w-full justify-between group-hover:bg-indigo-500 text-xs font-semibold"
+                        className="w-full justify-between text-xs font-semibold shadow-xs"
                       >
                         <span>Buka Kumpulan Soal</span>
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -493,7 +493,7 @@ function TeacherQuestionsContent() {
           <div>
             <button
               onClick={handleBackToSubjects}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-4 transition-colors group cursor-pointer"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline underline-offset-4 transition-colors group cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
               <span>Kembali ke Daftar Mata Pelajaran</span>
@@ -501,20 +501,20 @@ function TeacherQuestionsContent() {
           </div>
 
           {/* Header Mapel Terpilih */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-                  <FileQuestion className="w-8 h-8 text-amber-400" />
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+                  <FileQuestion className="w-8 h-8 text-blue-600" />
                   <span>Bank Soal: {currentSubject?.name || "Mata Pelajaran"}</span>
                 </h1>
                 {currentSubject?.code && (
-                  <Badge variant="outline" className="font-mono font-bold text-indigo-300 border-indigo-500/30">
+                  <Badge variant="outline" className="font-mono font-bold text-blue-700 border-blue-200 bg-blue-50/50">
                     {currentSubject.code}
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 Koleksi butir soal pilihan ganda, kunci jawaban, dan pembahasan materi pada mata pelajaran ini.
               </p>
             </div>
@@ -524,9 +524,9 @@ function TeacherQuestionsContent() {
                 variant="outline"
                 size="md"
                 onClick={() => setIsImportModalOpen(true)}
-                className="gap-2 border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50"
+                className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 shadow-xs"
               >
-                <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                 <span>Import Excel</span>
               </Button>
 
@@ -537,14 +537,14 @@ function TeacherQuestionsContent() {
                   setNewTopicSubjectId(selectedSubject);
                   setIsTopicModalOpen(true);
                 }}
-                className="gap-2"
+                className="gap-2 shadow-xs"
               >
                 <FolderPlus className="w-4 h-4" />
                 <span>+ Topik Materi</span>
               </Button>
 
               <Link href={`/dashboard/teacher/questions/new`}>
-                <Button variant="primary" size="md" className="gap-2">
+                <Button variant="primary" size="md" className="gap-2 shadow-xs">
                   <PlusCircle className="w-4 h-4" />
                   <span>Buat Soal Baru</span>
                 </Button>
@@ -553,16 +553,16 @@ function TeacherQuestionsContent() {
           </div>
 
           {/* Filter Bar Soal */}
-          <Card className="p-4 bg-slate-900/50 border-slate-800">
+          <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
             <form onSubmit={handleApplyFilter} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="lg:col-span-2 relative">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Cari teks soal atau pembahasan..."
-                  className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500"
+                  className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-blue-600"
                 />
               </div>
 
@@ -570,7 +570,7 @@ function TeacherQuestionsContent() {
                 <select
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200 outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600"
                 >
                   <option value="">Semua Topik {currentSubject ? `(${currentSubject.name})` : ""}</option>
                   {filteredTopics.map((t) => (
@@ -585,7 +585,7 @@ function TeacherQuestionsContent() {
                 <select
                   value={selectedDifficulty}
                   onChange={(e) => setSelectedDifficulty(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200 outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600"
                 >
                   <option value="">Semua Kesulitan</option>
                   <option value="EASY">Mudah</option>
@@ -609,7 +609,7 @@ function TeacherQuestionsContent() {
             </div>
           ) : questions.length === 0 ? (
             <EmptyState
-              icon={<FileQuestion className="w-12 h-12 text-slate-600" />}
+              icon={<FileQuestion className="w-12 h-12 text-slate-400" />}
               title={`Belum Ada Soal pada Mapel ${currentSubject?.name || ""}`}
               description="Buat soal pertama Anda untuk mata pelajaran ini atau impor banyak soal sekaligus dari template Excel."
               action={
@@ -618,13 +618,13 @@ function TeacherQuestionsContent() {
                     size="sm"
                     variant="outline"
                     onClick={() => setIsImportModalOpen(true)}
-                    className="gap-2"
+                    className="gap-2 shadow-xs"
                   >
-                    <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                     <span>Import Excel</span>
                   </Button>
                   <Link href={`/dashboard/teacher/questions/new`}>
-                    <Button size="sm" variant="primary">
+                    <Button size="sm" variant="primary" className="shadow-xs">
                       + Tambah Soal Baru
                     </Button>
                   </Link>
@@ -633,20 +633,20 @@ function TeacherQuestionsContent() {
             />
           ) : (
             <div className="space-y-4">
-              <div className="text-xs text-slate-400 font-medium">
-                Menampilkan <strong className="text-white">{questions.length}</strong> butir soal pada mata pelajaran{" "}
-                <strong className="text-indigo-300">{currentSubject?.name}</strong>:
+              <div className="text-xs text-slate-500 font-medium">
+                Menampilkan <strong className="text-slate-900">{questions.length}</strong> butir soal pada mata pelajaran{" "}
+                <strong className="text-blue-600">{currentSubject?.name}</strong>:
               </div>
 
               {questions.map((q, idx) => (
                 <Card
                   key={q.id}
-                  className="p-5 space-y-4 bg-slate-900/60 border-slate-800/80 hover:border-slate-700/80 transition-all shadow-md"
+                  className="p-5 space-y-4 bg-white border-slate-200/90 hover:border-blue-300 transition-all shadow-xs"
                 >
                   {/* Header Card Soal */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/60">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-bold flex items-center justify-center">
+                      <span className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center justify-center">
                         {idx + 1}
                       </span>
                       <Badge variant="outline" className="text-xs">
@@ -666,18 +666,18 @@ function TeacherQuestionsContent() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-slate-400 font-medium">
                         {q._count.inTryouts > 0 ? `Dipakai di ${q._count.inTryouts} tryout` : "Belum dipakai"}
                       </span>
                       <Link href={`/dashboard/teacher/questions/${q.id}/edit`}>
-                        <Button size="sm" variant="outline" className="px-2.5 py-1 text-xs gap-1">
-                          <Edit3 className="w-3.5 h-3.5" />
+                        <Button size="sm" variant="outline" className="px-2.5 py-1 text-xs gap-1 shadow-xs">
+                          <Edit3 className="w-3.5 h-3.5 text-blue-600" />
                           <span>Edit</span>
                         </Button>
                       </Link>
                       <button
                         onClick={() => handleDelete(q.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Hapus Soal"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -686,14 +686,14 @@ function TeacherQuestionsContent() {
                   </div>
 
                   {/* Isi Pertanyaan */}
-                  <div className="text-sm text-slate-100 font-medium leading-relaxed whitespace-pre-wrap">
+                  <div className="text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
                     {q.content}
                   </div>
 
                   {/* Gambar Soal (Jika Ada) */}
                   {q.imageUrl && (
-                    <div className="max-w-md rounded-xl overflow-hidden border border-slate-800">
-                      <img src={q.imageUrl} alt="Lampiran Soal" className="w-full object-cover" />
+                    <div className="max-w-md rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-1">
+                      <img src={q.imageUrl} alt="Lampiran Soal" className="w-full object-cover rounded-lg" />
                     </div>
                   )}
 
@@ -704,30 +704,30 @@ function TeacherQuestionsContent() {
                         key={opt.id}
                         className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
                           opt.isCorrect
-                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 font-semibold"
-                            : "border-slate-800/80 bg-slate-950/40 text-slate-300"
+                            ? "border-emerald-300 bg-emerald-50/80 text-emerald-950 font-semibold"
+                            : "border-slate-200 bg-slate-50/60 text-slate-700"
                         }`}
                       >
                         <span
                           className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
                             opt.isCorrect
-                              ? "bg-emerald-500 text-slate-950"
-                              : "bg-slate-800 text-slate-300"
+                              ? "bg-emerald-600 text-white"
+                              : "bg-slate-200 text-slate-700"
                           }`}
                         >
                           {opt.label}
                         </span>
                         <span className="flex-1 truncate">{opt.content}</span>
-                        {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                        {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
                       </div>
                     ))}
                   </div>
 
                   {/* Pembahasan Soal */}
                   {q.explanation && (
-                    <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/60 text-xs">
-                      <span className="font-bold text-indigo-400">💡 Pembahasan:</span>
-                      <p className="text-slate-400 mt-1 leading-relaxed">{q.explanation}</p>
+                    <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs">
+                      <span className="font-bold text-blue-900">💡 Pembahasan:</span>
+                      <p className="text-blue-950 mt-1 leading-relaxed">{q.explanation}</p>
                     </div>
                   )}
                 </Card>
@@ -741,27 +741,27 @@ function TeacherQuestionsContent() {
       {/* MODAL 1: TAMBAH MATA PELAJARAN                                            */}
       {/* ========================================================================= */}
       {isSubjectModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600" />
                 <span>Tambah Mata Pelajaran Baru</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Mata pelajaran akan menjadi wadah pengelompokan topik materi dan bank soal.
               </p>
             </div>
 
             {subjectModalMsg && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs">
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
                 {subjectModalMsg}
               </div>
             )}
 
             <form onSubmit={handleCreateSubject} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Nama Mata Pelajaran *
                 </label>
                 <input
@@ -770,12 +770,12 @@ function TeacherQuestionsContent() {
                   value={newSubjectName}
                   onChange={(e) => setNewSubjectName(e.target.value)}
                   placeholder="Contoh: Matematika Wajib, Biologi, Kimia"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 outline-none focus:border-blue-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Kode Mata Pelajaran *
                 </label>
                 <input
@@ -784,12 +784,12 @@ function TeacherQuestionsContent() {
                   value={newSubjectCode}
                   onChange={(e) => setNewSubjectCode(e.target.value.toUpperCase())}
                   placeholder="Contoh: MAT, BIO, KIM"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 outline-none focus:border-blue-600 font-mono shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Deskripsi (Opsional)
                 </label>
                 <textarea
@@ -797,11 +797,11 @@ function TeacherQuestionsContent() {
                   value={newSubjectDesc}
                   onChange={(e) => setNewSubjectDesc(e.target.value)}
                   placeholder="Deskripsi singkat mengenai mata pelajaran ini..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 outline-none focus:border-blue-600 shadow-xs"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800/80">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <Button
                   type="button"
                   variant="outline"
@@ -810,7 +810,7 @@ function TeacherQuestionsContent() {
                 >
                   Batal
                 </Button>
-                <Button type="submit" size="sm" variant="primary">
+                <Button type="submit" size="sm" variant="primary" className="shadow-xs">
                   Simpan Mata Pelajaran
                 </Button>
               </div>
@@ -823,34 +823,34 @@ function TeacherQuestionsContent() {
       {/* MODAL 2: TAMBAH TOPIK MATERI                                              */}
       {/* ========================================================================= */}
       {isTopicModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <FolderPlus className="w-5 h-5 text-amber-400" />
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <FolderPlus className="w-5 h-5 text-blue-600" />
                 <span>Tambah Topik Materi Pokok</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Topik materi digunakan untuk kategorisasi soal dan analitik penguasaan materi (*Topic Mastery*).
               </p>
             </div>
 
             {topicModalMsg && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs">
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
                 {topicModalMsg}
               </div>
             )}
 
             <form onSubmit={handleCreateTopic} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Mata Pelajaran *
                 </label>
                 <select
                   required
                   value={newTopicSubjectId || selectedSubject}
                   onChange={(e) => setNewTopicSubjectId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600 shadow-xs"
                 >
                   <option value="">-- Pilih Mata Pelajaran --</option>
                   {subjects.map((s) => (
@@ -862,7 +862,7 @@ function TeacherQuestionsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Nama Topik / Bab Materi *
                 </label>
                 <input
@@ -871,11 +871,11 @@ function TeacherQuestionsContent() {
                   value={newTopicName}
                   onChange={(e) => setNewTopicName(e.target.value)}
                   placeholder="Contoh: Interaksi Sosial, Aljabar Linear"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 outline-none focus:border-blue-600 shadow-xs"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800/80">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <Button
                   type="button"
                   variant="outline"
@@ -884,7 +884,7 @@ function TeacherQuestionsContent() {
                 >
                   Batal
                 </Button>
-                <Button type="submit" size="sm" variant="primary">
+                <Button type="submit" size="sm" variant="primary" className="shadow-xs">
                   Simpan Topik
                 </Button>
               </div>

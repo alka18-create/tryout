@@ -20,29 +20,29 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]";
+      "inline-flex items-center justify-center font-medium rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98] cursor-pointer";
 
     const sizeStyles = {
-      sm: "px-3 py-1.5 text-xs gap-1.5",
-      md: "px-4 py-2.5 text-sm gap-2",
-      lg: "px-5 py-3 text-base gap-2.5 font-semibold",
+      sm: "px-3 py-1.5 text-xs gap-1.5 font-medium",
+      md: "px-4 py-2 text-sm gap-2 font-semibold",
+      lg: "px-5 py-2.5 text-base gap-2.5 font-semibold",
     };
 
     const variantStyles = {
       primary:
-        "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-md shadow-indigo-500/20",
+        "bg-blue-600 hover:bg-blue-700 text-white shadow-xs shadow-blue-500/20 hover:shadow-sm",
       secondary:
-        "bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700/60 shadow-sm",
+        "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 shadow-xs",
       outline:
-        "border border-slate-700 hover:border-slate-600 bg-transparent hover:bg-slate-800/50 text-slate-200",
+        "border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-xs",
       ghost:
-        "bg-transparent hover:bg-slate-800/60 text-slate-300 hover:text-white",
+        "bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900",
       danger:
-        "bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20",
+        "bg-rose-600 hover:bg-rose-700 text-white shadow-xs shadow-rose-600/20",
       success:
-        "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20",
+        "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-600/20",
       warning:
-        "bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20",
+        "bg-amber-500 hover:bg-amber-600 text-white shadow-xs shadow-amber-500/20",
     };
 
     return (

@@ -73,10 +73,10 @@ export default function RegisterPage() {
     return (
       <div
         suppressHydrationWarning
-        className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50 min-h-[500px] flex flex-col items-center justify-center space-y-4"
+        className="bg-white border border-slate-200/90 rounded-2xl p-7 shadow-xl shadow-slate-200/50 min-h-[500px] flex flex-col items-center justify-center space-y-4"
       >
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-slate-400">Menyiapkan formulir pendaftaran...</p>
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-500">Menyiapkan formulir pendaftaran...</p>
       </div>
     );
   }
@@ -84,24 +84,24 @@ export default function RegisterPage() {
   return (
     <div
       suppressHydrationWarning
-      className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-7 shadow-2xl shadow-black/50"
+      className="bg-white border border-slate-200/90 rounded-2xl p-7 shadow-xl shadow-slate-200/50"
     >
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Daftar Akun Peserta</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Daftar Akun Peserta</h1>
+        <p className="text-sm text-slate-500 mt-1">
           Ikuti tryout, evaluasi kemampuan materi, dan pantau perkembangan belajar
         </p>
       </div>
 
       {errorMsg && (
-        <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-sm flex items-center gap-2">
+        <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
           <span className="font-bold">⚠️</span>
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="mb-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm flex items-center gap-2">
+        <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
           <span className="font-bold">✓</span>
           <span>{successMsg}</span>
         </div>
@@ -109,8 +109,8 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-            Nama Lengkap <span className="text-rose-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Nama Lengkap <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
@@ -118,13 +118,13 @@ export default function RegisterPage() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Ahmad Fauzi"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-            Email <span className="text-rose-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Email <span className="text-rose-500">*</span>
           </label>
           <input
             type="email"
@@ -132,14 +132,14 @@ export default function RegisterPage() {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="nama@email.com"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Password <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Password <span className="text-rose-500">*</span>
             </label>
             <input
               type="password"
@@ -148,12 +148,12 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Konfirmasi <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Konfirmasi <span className="text-rose-500">*</span>
             </label>
             <input
               type="password"
@@ -162,14 +162,14 @@ export default function RegisterPage() {
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
               Asal Sekolah (Opsional)
             </label>
             <input
@@ -177,11 +177,11 @@ export default function RegisterPage() {
               value={formData.schoolName}
               onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
               placeholder="SMA Negeri 1"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
               Kelas (Opsional)
             </label>
             <input
@@ -189,13 +189,13 @@ export default function RegisterPage() {
               value={formData.schoolClass}
               onChange={(e) => setFormData({ ...formData, schoolClass: e.target.value })}
               placeholder="XII IPS 1"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
             No. WhatsApp / HP (Opsional)
           </label>
           <input
@@ -203,7 +203,7 @@ export default function RegisterPage() {
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="08123456789"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder-slate-500 text-sm outline-none transition-all"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder-slate-400 text-sm outline-none transition-all shadow-xs"
           />
         </div>
 
@@ -213,9 +213,9 @@ export default function RegisterPage() {
             id="agree"
             checked={formData.agree}
             onChange={(e) => setFormData({ ...formData, agree: e.target.checked })}
-            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+            className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer"
           />
-          <label htmlFor="agree" className="text-xs text-slate-400">
+          <label htmlFor="agree" className="text-xs text-slate-600 cursor-pointer">
             Saya menyetujui ketentuan dan kebijakan privasi TryoutKu
           </label>
         </div>
@@ -223,7 +223,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>
@@ -236,9 +236,9 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      <div className="mt-6 text-center text-xs text-slate-400">
+      <div className="mt-6 text-center text-xs text-slate-500">
         Sudah memiliki akun?{" "}
-        <Link href="/auth/login" className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-4">
+        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-semibold underline underline-offset-4">
           Masuk di sini
         </Link>
       </div>

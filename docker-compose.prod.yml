@@ -1,0 +1,58 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Database PostgreSQL
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: tryoutku-prod-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tryoutku_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Wajib tentukan POSTGRES_PASSWORD di .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-tryoutku_prod}
+    volumes:
+      - tryoutku_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tryoutku_admin} -d ${POSTGRES_DB:-tryoutku_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - tryoutku_prod_net
+
+  # ---------------------------------------------------------------------------
+  # 2. Aplikasi Web TryoutKu (Next.js Standalone)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tryoutku-prod-app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      # URL Database diarahkan ke container postgres di internal network
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-tryoutku_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tryoutku_prod}?schema=public"
+    volumes:
+      # Persistent storage untuk file gambar yang diupload (aman dari rebuild container)
+      - ./uploads:/app/public/uploads
+    ports:
+      # Bind ke 127.0.0.1 agar hanya bisa diakses melalui Nginx reverse proxy
+      - "127.0.0.1:3000:3000"
+    networks:
+      - tryoutku_prod_net
+
+volumes:
+  tryoutku_prod_pgdata:
+    driver: local
+
+networks:
+  tryoutku_prod_net:
+    driver: bridge
