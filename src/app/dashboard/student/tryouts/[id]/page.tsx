@@ -248,6 +248,8 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
           ) : tryout.canRetake ? (
             <StartTryoutButton
               tryoutId={tryout.id}
+              tryoutTitle={tryout.title}
+              durationMinutes={tryout.durationMinutes}
               questionCount={tryout.questionCount}
               attemptNumber={tryout.attemptsUsed + 1}
               maxAttempts={tryout.maxAttempts}
@@ -260,6 +262,8 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
           ) : (
             <StartTryoutButton
               tryoutId={tryout.id}
+              tryoutTitle={tryout.title}
+              durationMinutes={tryout.durationMinutes}
               questionCount={tryout.questionCount}
               attemptNumber={1}
               maxAttempts={tryout.maxAttempts}
