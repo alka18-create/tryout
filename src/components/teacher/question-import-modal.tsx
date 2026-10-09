@@ -160,7 +160,7 @@ export function QuestionImportModal({
                 Template Resmi Excel (.xlsx)
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Dilengkapi contoh pengisian data valid dan daftar nama topik aktif di database.
+                Mendukung <strong>Pilihan Ganda</strong> (A–E), <strong>PG Kompleks</strong> (multi-kunci), dan <strong>Benar/Salah</strong> beserta daftar topik aktif.
               </p>
             </div>
             <a

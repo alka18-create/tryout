@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { DifficultyLevel } from "@/generated/prisma/client";
+import { DifficultyLevel, QuestionType } from "@/generated/prisma/client";
 
 export interface RowError {
   row: number;
@@ -18,7 +18,8 @@ export interface ImportResult {
 export class QuestionImportService {
   /**
    * Menghasilkan file Excel template untuk import soal lengkap dengan
-   * contoh data valid dan lembar referensi topik materi yang ada di database.
+   * contoh data valid untuk Pilihan Ganda, PG Kompleks, dan Benar/Salah,
+   * serta lembar petunjuk pengisian & referensi topik materi aktif.
    */
   static async generateQuestionExcelTemplate(): Promise<Uint8Array> {
     const subjects = await prisma.subject.findMany({
@@ -37,46 +38,55 @@ export class QuestionImportService {
 
     const sampleRows = [
       {
-        "No": 1,
+        No: 1,
+        "Jenis Soal": "PILIHAN GANDA",
         "Mata Pelajaran": defaultSubject,
         "Topik Materi": defaultTopic,
         "Tingkat Kesulitan": "MUDAH",
-        "Teks Soal": "Identitas diri seseorang yang terbentuk melalui proses interaksi sosial dalam lingkungan keluarga disebut sebagai...",
+        "Teks Soal":
+          "Identitas diri seseorang yang terbentuk melalui proses interaksi sosial dalam lingkungan keluarga disebut sebagai...",
         "Opsi A": "Identitas gender",
         "Opsi B": "Identitas primer",
         "Opsi C": "Identitas sekunder",
         "Opsi D": "Identitas komunal",
         "Opsi E": "Identitas profesional",
         "Kunci Jawaban": "B",
-        "Pembahasan": "Identitas primer merupakan fondasi kepribadian dasar yang pertama kali dibentuk dalam lingkungan sosialisasi primer, yaitu keluarga.",
+        Pembahasan:
+          "Identitas primer merupakan fondasi kepribadian dasar yang pertama kali dibentuk dalam lingkungan sosialisasi primer, yaitu keluarga.",
       },
       {
-        "No": 2,
+        No: 2,
+        "Jenis Soal": "PG KOMPLEKS",
         "Mata Pelajaran": defaultSubject,
         "Topik Materi": secondTopic,
         "Tingkat Kesulitan": "SEDANG",
-        "Teks Soal": "Stratifikasi sosial terbuka memberikan kesempatan bagi setiap anggota masyarakat untuk...",
-        "Opsi A": "Mempertahankan status sosial secara turun-temurun",
-        "Opsi B": "Melakukan mobilitas sosial vertikal naik berdasarkan prestasi",
-        "Opsi C": "Menolak aturan norma hukum yang berlaku",
-        "Opsi D": "Menghapus sepenuhnya diferensiasi pekerjaan",
-        "Opsi E": "Menguasai seluruh sumber daya ekonomi secara monopoli",
-        "Kunci Jawaban": "B",
-        "Pembahasan": "Sistem pelapisan terbuka (open stratification) memungkinkan mobilitas sosial vertikal berdasarkan pencapaian atau usaha individu (achieved status).",
+        "Teks Soal":
+          "Manakah dari pernyataan berikut yang merupakan faktor pendorong terjadinya integrasi sosial? (Pilih minimal 2 jawaban benar)",
+        "Opsi A": "Toleransi terhadap perbedaan kebudayaan",
+        "Opsi B": "Kesempatan yang seimbang dalam bidang ekonomi",
+        "Opsi C": "Sikap etnosentrisme yang berlebihan",
+        "Opsi D": "Sikap saling menghargai orang lain dan kebudayaannya",
+        "Opsi E": "",
+        "Kunci Jawaban": "A, B, D",
+        Pembahasan:
+          "Faktor pendorong integrasi sosial meliputi toleransi budaya, kesempatan ekonomi yang seimbang, dan sikap saling menghargai. Sikap etnosentrisme justru merupakan faktor penghambat integrasi.",
       },
       {
-        "No": 3,
+        No: 3,
+        "Jenis Soal": "BENAR SALAH",
         "Mata Pelajaran": defaultSubject,
         "Topik Materi": secondTopic,
-        "Tingkat Kesulitan": "SULIT",
-        "Teks Soal": "Metode resolusi konflik sosial di mana pihak ketiga berwenang mengambil keputusan yang mengikat para pihak yang bersengketa dinamakan...",
-        "Opsi A": "Mediasi",
-        "Opsi B": "Konsiliasi",
-        "Opsi C": "Arbitrase",
-        "Opsi D": "Ajudikasi",
-        "Opsi E": "Kompromi",
-        "Kunci Jawaban": "C",
-        "Pembahasan": "Dalam proses arbitrase, pihak ketiga (arbiter) memiliki kewenangan untuk memutuskan penyelesaian konflik dan keputusannya bersifat mengikat bagi kedua belah pihak.",
+        "Tingkat Kesulitan": "MUDAH",
+        "Teks Soal":
+          "Konflik sosial selalu membawa dampak negatif dan merusak integrasi dalam masyarakat.",
+        "Opsi A": "Benar",
+        "Opsi B": "Salah",
+        "Opsi C": "",
+        "Opsi D": "",
+        "Opsi E": "",
+        "Kunci Jawaban": "B",
+        Pembahasan:
+          "Pernyataan tersebut Salah. Dalam perspektif sosiologi, konflik sosial tidak selalu destruktif; konflik juga dapat mempererat kohesi kelompok internal (in-group solidarity) dan mendorong perubahan sosial yang konstruktif.",
       },
     ];
 
@@ -88,22 +98,58 @@ export class QuestionImportService {
     // Atur lebar kolom agar nyaman dibaca di Excel
     wsTemplate["!cols"] = [
       { wch: 5 },  // No
-      { wch: 18 }, // Mata Pelajaran
+      { wch: 18 }, // Jenis Soal
+      { wch: 20 }, // Mata Pelajaran
       { wch: 30 }, // Topik Materi
       { wch: 16 }, // Tingkat Kesulitan
       { wch: 60 }, // Teks Soal
-      { wch: 25 }, // Opsi A
-      { wch: 25 }, // Opsi B
-      { wch: 25 }, // Opsi C
-      { wch: 25 }, // Opsi D
-      { wch: 25 }, // Opsi E
-      { wch: 14 }, // Kunci Jawaban
-      { wch: 50 }, // Pembahasan
+      { wch: 28 }, // Opsi A
+      { wch: 28 }, // Opsi B
+      { wch: 28 }, // Opsi C
+      { wch: 28 }, // Opsi D
+      { wch: 28 }, // Opsi E
+      { wch: 16 }, // Kunci Jawaban
+      { wch: 55 }, // Pembahasan
     ];
 
     XLSX.utils.book_append_sheet(wb, wsTemplate, "Template Soal");
 
-    // 2. Data untuk Sheet 2: "Panduan & Daftar Topik"
+    // 2. Data untuk Sheet 2: "Petunjuk Jenis Soal"
+    const instructions = [
+      {
+        "Jenis Soal": "PILIHAN GANDA",
+        "Format Opsi Jawaban": "Wajib mengisi lengkap Opsi A, B, C, D, dan E.",
+        "Format Kunci Jawaban": "Tepat 1 huruf: A, B, C, D, atau E.",
+        "Keterangan / Aturan": "Sistem pilihan ganda konvensional dengan skor tunggal penuh.",
+      },
+      {
+        "Jenis Soal": "PG KOMPLEKS",
+        "Format Opsi Jawaban": "Wajib mengisi Opsi A dan B. Opsi C, D, E opsional (bisa 2 s/d 5 pilihan).",
+        "Format Kunci Jawaban": "Minimal 2 huruf dipisah koma atau spasi. Contoh: A, C atau A, B, D.",
+        "Keterangan / Aturan":
+          "Peserta dapat memilih lebih dari satu jawaban benar. Sistem menerapkan penskoran parsial proporsional yang adil.",
+      },
+      {
+        "Jenis Soal": "BENAR SALAH",
+        "Format Opsi Jawaban":
+          "Cukup isi Opsi A ('Benar') dan Opsi B ('Salah'). Opsi C, D, E dikosongkan.",
+        "Format Kunci Jawaban":
+          "Isi 'A' (atau 'Benar') jika benar, atau 'B' (atau 'Salah') jika pernyataan salah.",
+        "Keterangan / Aturan":
+          "Jika kolom Opsi A & B dikosongkan, sistem otomatis mengisinya dengan 'Benar' & 'Salah'.",
+      },
+    ];
+
+    const wsInstructions = XLSX.utils.json_to_sheet(instructions);
+    wsInstructions["!cols"] = [
+      { wch: 18 }, // Jenis Soal
+      { wch: 45 }, // Format Opsi Jawaban
+      { wch: 35 }, // Format Kunci Jawaban
+      { wch: 50 }, // Keterangan / Aturan
+    ];
+    XLSX.utils.book_append_sheet(wb, wsInstructions, "Petunjuk Jenis Soal");
+
+    // 3. Data untuk Sheet 3: "Daftar Topik & Referensi"
     const guideRows: Array<Record<string, string>> = [];
 
     subjects.forEach((sub) => {
@@ -141,11 +187,11 @@ export class QuestionImportService {
   }
 
   /**
-   * Mengimpor soal pilihan ganda dari file Excel (.xlsx / .xls / .csv)
+   * Mengimpor soal pilihan ganda (Biasa, Kompleks, Benar/Salah) dari file Excel (.xlsx / .xls / .csv)
    */
   static async importQuestionsFromExcel(
     userId: string,
-    fileBuffer: Buffer | ArrayBuffer,
+    fileBuffer: Buffer | ArrayBuffer | Uint8Array,
   ): Promise<ImportResult> {
     const wb = XLSX.read(fileBuffer, { type: "buffer" });
     if (!wb.SheetNames || wb.SheetNames.length === 0) {
@@ -172,7 +218,7 @@ export class QuestionImportService {
       include: { topics: true },
     });
 
-    // Peta lookup case-insensitive: "subjectNameLower" -> Map("topicNameLower" -> topic)
+    // Peta lookup case-insensitive: "subjectNameLower" -> Map("topicNameLower" -> topicId)
     const subjectMap = new Map<string, { id: string; name: string; topics: Map<string, string> }>();
 
     for (const sub of subjects) {
@@ -198,6 +244,7 @@ export class QuestionImportService {
     const validQuestions: Array<{
       topicId: string;
       createdById: string;
+      type: QuestionType;
       content: string;
       difficulty: DifficultyLevel;
       explanation: string | null;
@@ -212,6 +259,10 @@ export class QuestionImportService {
       const rowNumber = index + 2; // Baris 1 adalah header di Excel
 
       // Ambil nilai kolom dengan toleransi variasi penamaan header
+      const rawType = String(
+        row["Jenis Soal"] || row["jenis_soal"] || row["Tipe Soal"] || row["tipe_soal"] || row["Type"] || "",
+      ).trim().toUpperCase();
+
       const subjectName = String(
         row["Mata Pelajaran"] || row["mata_pelajaran"] || row["Subject"] || "",
       ).trim();
@@ -231,7 +282,7 @@ export class QuestionImportService {
       const optD = String(row["Opsi D"] || row["opsi_d"] || row["D"] || "").trim();
       const optE = String(row["Opsi E"] || row["opsi_e"] || row["E"] || "").trim();
 
-      const correctKey = String(
+      const rawCorrectKey = String(
         row["Kunci Jawaban"] || row["kunci_jawaban"] || row["Kunci"] || row["Answer"] || "",
       ).trim().toUpperCase();
 
@@ -280,25 +331,141 @@ export class QuestionImportService {
         return;
       }
 
-      // Validasi 4: Pilihan Jawaban (A-E)
-      if (!optA || !optB || !optC || !optD || !optE) {
-        errors.push({
-          row: rowNumber,
-          error: "Opsi jawaban A, B, C, D, dan E seluruhnya wajib diisi.",
-        });
-        return;
+      // Tentukan Tipe Soal
+      let questionType: QuestionType = QuestionType.SINGLE_CHOICE;
+      if (rawType.includes("KOMPLEKS") || rawType.includes("MULTIPLE") || rawType.includes("COMPLEX")) {
+        questionType = QuestionType.MULTIPLE_CHOICE;
+      } else if (
+        rawType.includes("BENAR") ||
+        rawType.includes("SALAH") ||
+        rawType.includes("TRUE") ||
+        rawType.includes("FALSE")
+      ) {
+        questionType = QuestionType.TRUE_FALSE;
       }
 
-      // Validasi 5: Kunci Jawaban
-      if (!["A", "B", "C", "D", "E"].includes(correctKey)) {
-        errors.push({
-          row: rowNumber,
-          error: `Kunci Jawaban "${correctKey}" tidak valid. Harus salah satu dari A, B, C, D, atau E.`,
-        });
-        return;
+      // Validasi Opsi & Kunci Jawaban Berdasarkan Tipe Soal
+      const questionOptions: Array<{ label: string; content: string; isCorrect: boolean }> = [];
+
+      if (questionType === QuestionType.SINGLE_CHOICE) {
+        // --- 1. PILIHAN GANDA BIASA ---
+        if (!optA || !optB || !optC || !optD || !optE) {
+          errors.push({
+            row: rowNumber,
+            error: "Untuk Pilihan Ganda biasa, Opsi jawaban A, B, C, D, dan E seluruhnya wajib diisi.",
+          });
+          return;
+        }
+
+        if (!["A", "B", "C", "D", "E"].includes(rawCorrectKey)) {
+          errors.push({
+            row: rowNumber,
+            error: `Kunci Jawaban "${rawCorrectKey}" tidak valid. Untuk Pilihan Ganda harus salah satu dari A, B, C, D, atau E.`,
+          });
+          return;
+        }
+
+        questionOptions.push(
+          { label: "A", content: optA, isCorrect: rawCorrectKey === "A" },
+          { label: "B", content: optB, isCorrect: rawCorrectKey === "B" },
+          { label: "C", content: optC, isCorrect: rawCorrectKey === "C" },
+          { label: "D", content: optD, isCorrect: rawCorrectKey === "D" },
+          { label: "E", content: optE, isCorrect: rawCorrectKey === "E" },
+        );
+      } else if (questionType === QuestionType.MULTIPLE_CHOICE) {
+        // --- 2. PILIHAN GANDA KOMPLEKS ---
+        if (!optA || !optB) {
+          errors.push({
+            row: rowNumber,
+            error: "Untuk PG Kompleks, minimal Opsi A dan Opsi B wajib diisi.",
+          });
+          return;
+        }
+
+        // Kumpulkan opsi yang tersedia (A-E yang tidak kosong)
+        const rawOptionsList = [
+          { label: "A", content: optA },
+          { label: "B", content: optB },
+          { label: "C", content: optC },
+          { label: "D", content: optD },
+          { label: "E", content: optE },
+        ].filter((o) => o.content.length > 0);
+
+        const availableLabels = rawOptionsList.map((o) => o.label);
+
+        // Parse kunci jawaban multi-select (misal: "A, B, D" atau "A C" atau "A;B")
+        const parsedKeys = Array.from(
+          new Set(
+            rawCorrectKey
+              .split(/[,;\s/]+/)
+              .map((k) => k.trim().toUpperCase())
+              .filter(Boolean),
+          ),
+        );
+
+        if (parsedKeys.length < 2) {
+          errors.push({
+            row: rowNumber,
+            error: `Kunci Jawaban PG Kompleks "${rawCorrectKey}" tidak valid. Wajib memiliki minimal 2 jawaban benar (contoh: 'A, C' atau 'A, B, D').`,
+          });
+          return;
+        }
+
+        // Cek apakah ada kunci yang berada di luar opsi yang diisi
+        const invalidKeys = parsedKeys.filter((k) => !availableLabels.includes(k));
+        if (invalidKeys.length > 0) {
+          errors.push({
+            row: rowNumber,
+            error: `Kunci jawaban memuat opsi [${invalidKeys.join(", ")}] yang tidak memiliki teks pilihan di lembar Excel.`,
+          });
+          return;
+        }
+
+        for (const opt of rawOptionsList) {
+          questionOptions.push({
+            label: opt.label,
+            content: opt.content,
+            isCorrect: parsedKeys.includes(opt.label),
+          });
+        }
+      } else if (questionType === QuestionType.TRUE_FALSE) {
+        // --- 3. BENAR / SALAH ---
+        const labelAContent = optA || "Benar";
+        const labelBContent = optB || "Salah";
+
+        // Normalisasi kunci jawaban
+        let isCorrectA = false;
+        let isCorrectB = false;
+
+        if (
+          rawCorrectKey === "A" ||
+          rawCorrectKey === "BENAR" ||
+          rawCorrectKey === "TRUE" ||
+          rawCorrectKey === "B1" // variasi B/S
+        ) {
+          isCorrectA = true;
+        } else if (
+          rawCorrectKey === "B" ||
+          rawCorrectKey === "SALAH" ||
+          rawCorrectKey === "FALSE" ||
+          rawCorrectKey === "S"
+        ) {
+          isCorrectB = true;
+        } else {
+          errors.push({
+            row: rowNumber,
+            error: `Kunci Jawaban Benar/Salah "${rawCorrectKey}" tidak valid. Harap gunakan 'A' (Benar) atau 'B' (Salah).`,
+          });
+          return;
+        }
+
+        questionOptions.push(
+          { label: "A", content: labelAContent, isCorrect: isCorrectA },
+          { label: "B", content: labelBContent, isCorrect: isCorrectB },
+        );
       }
 
-      // Validasi 6: Tingkat Kesulitan
+      // Validasi Tingkat Kesulitan
       let difficulty: DifficultyLevel = DifficultyLevel.MEDIUM;
       if (rawDifficulty === "MUDAH" || rawDifficulty === "EASY") {
         difficulty = DifficultyLevel.EASY;
@@ -311,16 +478,11 @@ export class QuestionImportService {
       validQuestions.push({
         topicId: targetTopicId,
         createdById: userId,
+        type: questionType,
         content,
         difficulty,
         explanation: explanation || null,
-        options: [
-          { label: "A", content: optA, isCorrect: correctKey === "A" },
-          { label: "B", content: optB, isCorrect: correctKey === "B" },
-          { label: "C", content: optC, isCorrect: correctKey === "C" },
-          { label: "D", content: optD, isCorrect: correctKey === "D" },
-          { label: "E", content: optE, isCorrect: correctKey === "E" },
-        ],
+        options: questionOptions,
       });
     });
 
@@ -332,6 +494,7 @@ export class QuestionImportService {
             data: {
               topicId: q.topicId,
               createdById: q.createdById,
+              type: q.type,
               content: q.content,
               difficulty: q.difficulty,
               explanation: q.explanation,
