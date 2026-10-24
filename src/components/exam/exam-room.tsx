@@ -289,68 +289,85 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   // Jika ujian sudah selesai disubmit (Modal Hasil Selesai)
   if (submitResult) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200/90 rounded-3xl max-w-lg w-full p-8 text-center space-y-6 shadow-xl animate-in zoom-in-95">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
+      <div className="min-h-screen bg-slate-50/80 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6">
+        <div className="bg-white border border-slate-200/90 rounded-[32px] max-w-xl sm:max-w-2xl w-full p-6 sm:p-10 text-center space-y-7 shadow-2xl animate-in zoom-in-95 my-auto">
+          {/* Ikon Sukses Centang */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-emerald-50 border-2 border-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md shadow-emerald-500/10">
+            <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 stroke-[2.2]" />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-center gap-2">
-              <Badge variant="info">{initialData.subjectName}</Badge>
-              <Badge variant="outline" className="text-xs font-semibold text-slate-700">
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2.5 flex-wrap">
+              <Badge variant="info" className="text-xs sm:text-sm px-3.5 py-1 font-bold rounded-xl">
+                {initialData.subjectName}
+              </Badge>
+              <Badge variant="outline" className="text-xs sm:text-sm font-bold text-slate-700 bg-slate-50 border-slate-200 px-3.5 py-1 rounded-xl">
                 Percobaan {initialData.attemptNumber || 1} dari {initialData.maxAttempts || 3}x
               </Badge>
             </div>
-            <h2 className="text-2xl font-black text-slate-900">Ujian Telah Selesai!</h2>
-            <p className="text-xs text-slate-500">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Ujian Telah Selesai!
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-lg mx-auto">
               Jawaban Anda pada paket &quot;{initialData.tryoutTitle}&quot; telah berhasil dikumpulkan dan
               dinilai otomatis. Sistem mencatat nilai tertinggi dari seluruh percobaan Anda.
             </p>
           </div>
 
-          {/* Skor Card */}
-          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+          {/* Skor Card yang Luas & Jelas */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-slate-50/80 border border-slate-200/90 space-y-4">
+            <span className="text-xs sm:text-sm text-slate-500 uppercase tracking-wider font-bold block">
               Nilai Percobaan #{initialData.attemptNumber || 1}:
             </span>
-            <div className="text-5xl font-black text-slate-900">{submitResult.totalScore}</div>
-            <div className="flex items-center justify-center gap-2">
-              <Badge variant={submitResult.isPassed ? "success" : "danger"}>
+            <div className="text-6xl sm:text-7xl font-black text-slate-900 tracking-tight">
+              {submitResult.totalScore}
+            </div>
+            <div className="flex items-center justify-center">
+              <Badge
+                variant={submitResult.isPassed ? "success" : "danger"}
+                className="text-xs sm:text-sm px-4 py-1.5 font-black uppercase tracking-wider rounded-xl shadow-2xs"
+              >
                 {submitResult.isPassed ? "LULUS STANDAR KKM" : "DI BAWAH KKM"}
               </Badge>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200 text-xs">
-              <div>
-                <span className="text-emerald-600 font-bold block">{submitResult.correctCount}</span>
-                <span className="text-slate-500 text-[11px]">Benar</span>
+            {/* Grid 3 Kolom Detail Jawaban */}
+            <div className="grid grid-cols-3 gap-3 pt-5 border-t border-slate-200">
+              <div className="p-2 sm:p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                <span className="text-xl sm:text-2xl font-black text-emerald-600 block">
+                  {submitResult.correctCount}
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-emerald-800">Benar</span>
               </div>
-              <div>
-                <span className="text-rose-600 font-bold block">{submitResult.wrongCount}</span>
-                <span className="text-slate-500 text-[11px]">Salah</span>
+              <div className="p-2 sm:p-3 rounded-2xl bg-rose-50/60 border border-rose-100">
+                <span className="text-xl sm:text-2xl font-black text-rose-600 block">
+                  {submitResult.wrongCount}
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-rose-800">Salah</span>
               </div>
-              <div>
-                <span className="text-slate-500 font-bold block">{submitResult.unansweredCount}</span>
-                <span className="text-slate-400 text-[11px]">Kosong</span>
+              <div className="p-2 sm:p-3 rounded-2xl bg-slate-100/70 border border-slate-200/80">
+                <span className="text-xl sm:text-2xl font-black text-slate-600 block">
+                  {submitResult.unansweredCount}
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-slate-600">Kosong</span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3 pt-1">
             <Button
               variant="primary"
               size="lg"
               onClick={() => router.push(`/dashboard/student/exam-sessions/${initialData.id}/result`)}
-              className="w-full gap-2 font-bold shadow-xs"
+              className="w-full gap-2 text-sm sm:text-base font-black py-4 rounded-2xl shadow-lg shadow-blue-600/25"
             >
               <span>Lihat Rincian & Evaluasi Nilai →</span>
             </Button>
             <Button
               variant="outline"
-              size="md"
+              size="lg"
               onClick={() => router.push("/dashboard/student/tryouts")}
-              className="w-full text-xs text-slate-600"
+              className="w-full text-sm sm:text-base font-bold py-3.5 rounded-2xl text-slate-700 hover:bg-slate-100 border-slate-300"
             >
               <span>Kembali ke Katalog Tryout</span>
             </Button>
