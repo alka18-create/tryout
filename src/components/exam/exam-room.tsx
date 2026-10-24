@@ -775,60 +775,64 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
       {/* 4. MODAL: Konfirmasi Kumpulkan Ujian */}
       {isSubmitModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
-                <Send className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-white border border-slate-200/90 rounded-[32px] max-w-xl w-full p-6 sm:p-10 space-y-7 shadow-2xl animate-in fade-in zoom-in-95 my-auto">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-blue-50 border-2 border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-md shadow-blue-500/10">
+                <Send className="w-8 h-8 sm:w-10 sm:h-10 -mr-1" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Kumpulkan Lembar Ujian?</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Kumpulkan Lembar Ujian?
+              </h3>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-md mx-auto">
                 Pastikan Anda telah memeriksa seluruh jawaban. Setelah dikumpulkan, lembar ujian akan
                 langsung dinilai dan tidak dapat diubah kembali.
               </p>
             </div>
 
             {/* Statistik Ringkas */}
-            <div className="grid grid-cols-3 gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs">
-              <div>
-                <span className="text-slate-500 text-[11px]">Terjawab:</span>
-                <p className="font-extrabold text-emerald-600 text-base">{answeredCount}</p>
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 text-center">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex flex-col justify-center items-center">
+                <span className="text-emerald-700 font-semibold text-xs sm:text-sm">Terjawab</span>
+                <p className="font-black text-emerald-600 text-2xl sm:text-3xl mt-1">{answeredCount}</p>
               </div>
-              <div>
-                <span className="text-slate-500 text-[11px]">Ragu-ragu:</span>
-                <p className="font-extrabold text-amber-600 text-base">{flaggedCount}</p>
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex flex-col justify-center items-center">
+                <span className="text-amber-700 font-semibold text-xs sm:text-sm">Ragu-ragu</span>
+                <p className="font-black text-amber-600 text-2xl sm:text-3xl mt-1">{flaggedCount}</p>
               </div>
-              <div>
-                <span className="text-slate-500 text-[11px]">Kosong:</span>
-                <p className="font-extrabold text-rose-600 text-base">{unansweredCount}</p>
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50/80 border border-rose-200/80 flex flex-col justify-center items-center">
+                <span className="text-rose-700 font-semibold text-xs sm:text-sm">Kosong</span>
+                <p className="font-black text-rose-600 text-2xl sm:text-3xl mt-1">{unansweredCount}</p>
               </div>
             </div>
 
             {unansweredCount > 0 && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                <span className="font-medium">Masih terdapat {unansweredCount} soal yang belum Anda jawab.</span>
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-900 text-sm sm:text-base flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-amber-600" />
+                <span className="font-medium leading-snug">
+                  Masih terdapat <strong>{unansweredCount} soal</strong> yang belum Anda jawab.
+                </span>
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-center gap-3 pt-2">
               <Button
                 variant="outline"
-                size="md"
+                size="lg"
                 disabled={isSubmitting}
                 onClick={() => setIsSubmitModalOpen(false)}
-                className="text-xs flex-1"
+                className="w-full sm:flex-1 py-3.5 text-sm sm:text-base font-bold rounded-2xl text-slate-700 hover:bg-slate-100 border-slate-300"
               >
                 Kembali Periksa
               </Button>
               <Button
                 variant="primary"
-                size="md"
+                size="lg"
                 isLoading={isSubmitting}
                 onClick={handleSubmitExam}
-                className="text-xs font-bold flex-1 gap-2 shadow-xs"
+                className="w-full sm:flex-1 py-3.5 text-sm sm:text-base font-black gap-2 shadow-lg shadow-blue-600/25 rounded-2xl"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-5 h-5" />
                 <span>Ya, Kumpulkan</span>
               </Button>
             </div>
