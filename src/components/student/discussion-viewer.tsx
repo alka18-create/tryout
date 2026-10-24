@@ -239,30 +239,30 @@ export function DiscussionViewer({
 
           {/* Teks Soal */}
           <div className="space-y-4">
-            <p className="text-base text-slate-800 leading-relaxed font-medium">
+            <p className="text-lg sm:text-xl text-slate-900 leading-relaxed font-medium">
               {currentQuestion.content}
             </p>
 
             {currentQuestion.imageUrl && (
-              <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-xs">
+              <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-xs">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={currentQuestion.imageUrl}
                   alt="Lampiran Soal"
-                  className="max-h-72 mx-auto object-contain rounded-xl"
+                  className="max-h-96 mx-auto object-contain rounded-xl"
                 />
               </div>
             )}
           </div>
 
           {/* Pilihan Opsi */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3.5 pt-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+              <span className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider block">
                 Pilihan Jawaban & Analisis Kunci:
               </span>
-              <span className="text-xs font-bold text-slate-600">
-                Kunci Benar: <span className="text-emerald-700 font-extrabold">{currentQuestion.correctLabel}</span>
+              <span className="text-xs sm:text-sm font-bold text-slate-700">
+                Kunci Benar: <span className="text-emerald-700 font-black">{currentQuestion.correctLabel}</span>
               </span>
             </div>
             {currentQuestion.options.map((option) => {
@@ -273,39 +273,39 @@ export function DiscussionViewer({
                 ? currentQuestion.correctOptionIds.includes(option.id)
                 : option.isCorrect;
 
-              let style = "bg-white border-slate-200 text-slate-700 shadow-xs";
+              let style = "bg-white border-slate-200 text-slate-800 shadow-xs";
               if (isCorrectAnswer) {
-                style = "bg-emerald-50/80 border-emerald-300 text-emerald-950 ring-1 ring-emerald-400/50 shadow-xs";
+                style = "bg-emerald-50/90 border-emerald-300 text-emerald-950 ring-1 ring-emerald-400/50 shadow-xs";
               } else if (isStudentChoice && !isCorrectAnswer) {
-                style = "bg-rose-50/80 border-rose-300 text-rose-950 ring-1 ring-rose-400/50 shadow-xs";
+                style = "bg-rose-50/90 border-rose-300 text-rose-950 ring-1 ring-rose-400/50 shadow-xs";
               }
 
               return (
                 <div
                   key={option.id}
-                  className={`p-4 rounded-2xl border flex items-start gap-4 transition-all ${style}`}
+                  className={`p-4 sm:p-5 rounded-2xl border flex items-start gap-4 sm:gap-5 transition-all ${style}`}
                 >
                   <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-black text-sm sm:text-base shrink-0 ${
                       isCorrectAnswer
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-emerald-600 text-white shadow-xs"
                         : isStudentChoice
-                        ? "bg-rose-600 text-white"
+                        ? "bg-rose-600 text-white shadow-xs"
                         : "bg-slate-100 text-slate-700"
                     }`}
                   >
                     {option.label}
                   </div>
 
-                  <div className="flex-1 min-w-0 pt-0.5 text-sm leading-relaxed">
+                  <div className="flex-1 min-w-0 pt-0.5 text-base sm:text-lg leading-relaxed">
                     {option.content}
                     {option.imageUrl && (
-                      <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 max-w-xs">
+                      <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200 max-w-sm">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={option.imageUrl}
                           alt={`Opsi ${option.label}`}
-                          className="max-h-40 object-contain"
+                          className="max-h-48 object-contain"
                         />
                       </div>
                     )}

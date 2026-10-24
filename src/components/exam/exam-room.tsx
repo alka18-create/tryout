@@ -355,23 +355,23 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col select-none">
       {/* 1. TOP HEADER (Sticky Focus Bar) */}
-      <header className="h-16 px-4 sm:px-6 bg-white border-b border-slate-200/90 shadow-xs flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 sm:h-18 px-4 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center justify-between sticky top-0 z-30">
         {/* Left: Info Paket */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="info" className="text-[10px] hidden sm:inline-flex">
+              <Badge variant="info" className="text-xs hidden sm:inline-flex px-2.5 py-0.5">
                 {initialData.subjectName}
               </Badge>
-              <Badge variant="outline" className="text-[10px] font-semibold text-blue-700 bg-blue-50/70 border-blue-200">
+              <Badge variant="outline" className="text-xs font-semibold text-blue-700 bg-blue-50/70 border-blue-200 px-2.5 py-0.5">
                 Percobaan {initialData.attemptNumber || 1}/{initialData.maxAttempts || 3}
               </Badge>
-              <h1 className="font-bold text-sm sm:text-base text-slate-900 line-clamp-1 max-w-[170px] sm:max-w-md">
+              <h1 className="font-extrabold text-base sm:text-lg text-slate-900 line-clamp-1 max-w-[200px] sm:max-w-xl">
                 {initialData.tryoutTitle}
               </h1>
             </div>
             {/* Status Simpan */}
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
               {saveStatus === "saving" ? (
                 <>
                   <CloudUpload className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
@@ -393,16 +393,16 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
         </div>
 
         {/* Right: Timer & Submit Trigger */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Countdown Clock */}
           <div
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border font-mono font-bold text-sm tracking-wider transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl border font-mono font-black text-sm sm:text-base tracking-wider transition-colors shadow-xs ${
               isTimeCritical
                 ? "bg-rose-50 border-rose-300 text-rose-600 animate-pulse ring-2 ring-rose-200"
-                : "bg-blue-50/80 border-blue-200 text-blue-700"
+                : "bg-blue-50/90 border-blue-200 text-blue-700"
             }`}
           >
-            <Clock className="w-4 h-4 shrink-0" />
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span>{formatTime(remainingSeconds)}</span>
           </div>
 
@@ -418,38 +418,38 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
           {/* Tombol Kumpulkan Ujian */}
           <Button
             variant="primary"
-            size="sm"
+            size="md"
             onClick={() => setIsSubmitModalOpen(true)}
-            className="hidden sm:inline-flex gap-1.5 text-xs font-bold shadow-xs"
+            className="hidden sm:inline-flex gap-2 text-xs sm:text-sm font-bold shadow-xs px-4 py-2.5 rounded-2xl"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-4 h-4" />
             <span>Selesai & Kumpulkan</span>
           </Button>
         </div>
       </header>
 
       {/* 2. BODY LAYOUT: Main Question Screen + Number Grid Sidebar */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
         {/* Main Question Sheet */}
         <main className="flex-1 flex flex-col justify-between p-4 sm:p-8 space-y-6">
-          <div className="space-y-6 max-w-3xl mx-auto w-full">
+          <div className="space-y-6 max-w-4xl mx-auto w-full">
             {/* Question Header Bar */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold text-slate-900">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl sm:text-2xl font-black text-slate-900">
                   Soal Nomor {currentQuestion.orderNumber}
                 </span>
-                <span className="text-xs text-slate-400">/ {questions.length}</span>
+                <span className="text-sm text-slate-400 font-semibold">/ {questions.length}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" ? "info" : "outline"} className="text-xs">
+                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "PG Kompleks"
                     : currentQuestion.type === "TRUE_FALSE"
                     ? "Benar / Salah"
                     : "Pilihan Ganda"}
                 </Badge>
-                <Badge variant="default" className="text-xs">
+                <Badge variant="default" className="text-xs sm:text-sm px-3 py-1 font-semibold">
                   Bobot: {currentQuestion.weight} Poin
                 </Badge>
               </div>
@@ -457,34 +457,34 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
             {/* Question Text */}
             <div className="space-y-4">
-              <div className="text-base sm:text-lg text-slate-800 leading-relaxed font-medium select-text">
+              <div className="text-lg sm:text-xl text-slate-900 leading-relaxed font-medium select-text">
                 {currentQuestion.content}
               </div>
 
               {/* Optional Question Image */}
               {currentQuestion.imageUrl && (
-                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-xs">
+                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-3 shadow-xs">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={currentQuestion.imageUrl}
                     alt="Lampiran Soal"
-                    className="max-h-80 mx-auto object-contain rounded-xl"
+                    className="max-h-96 mx-auto object-contain rounded-xl"
                   />
                 </div>
               )}
             </div>
 
             {/* Options List */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3.5 pt-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                <span className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider block">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "Pilih Satu atau Lebih Jawaban Benar:"
                     : "Pilih Jawaban:"}
                 </span>
                 {currentQuestion.type === "MULTIPLE_CHOICE" && (
-                  <span className="text-xs text-blue-600 font-semibold flex items-center gap-1">
-                    <CheckSquare className="w-3.5 h-3.5" /> Centang jawaban yang benar
+                  <span className="text-xs sm:text-sm text-blue-600 font-bold flex items-center gap-1.5">
+                    <CheckSquare className="w-4 h-4" /> Centang jawaban yang benar
                   </span>
                 )}
               </div>
@@ -498,38 +498,38 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                     key={option.id}
                     type="button"
                     onClick={() => handleSelectOption(option.id)}
-                    className={`w-full text-left p-4 rounded-2xl border transition-all flex items-start gap-4 group shadow-xs cursor-pointer ${
+                    className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all flex items-start gap-4 sm:gap-5 group shadow-xs cursor-pointer ${
                       isSelected
-                        ? "bg-blue-50/90 border-blue-600 text-blue-950 ring-1 ring-blue-600"
-                        : "bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/30"
+                        ? "bg-blue-50/90 border-blue-600 text-blue-950 ring-2 ring-blue-600"
+                        : "bg-white border-slate-200 text-slate-800 hover:border-blue-300 hover:bg-blue-50/30"
                     }`}
                   >
                     {/* Circle / Square Letter / Checkbox */}
                     <div
-                      className={`w-8 h-8 ${
-                        currentQuestion.type === "MULTIPLE_CHOICE" ? "rounded-lg" : "rounded-xl"
-                      } flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 ${
+                        currentQuestion.type === "MULTIPLE_CHOICE" ? "rounded-xl" : "rounded-2xl"
+                      } flex items-center justify-center font-black text-base shrink-0 transition-colors ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-xs"
                           : "bg-slate-100 text-slate-700 group-hover:bg-blue-100 group-hover:text-blue-700"
                       }`}
                     >
                       {isSelected && currentQuestion.type === "MULTIPLE_CHOICE" ? (
-                        <Check className="w-4 h-4 stroke-[3]" />
+                        <Check className="w-5 h-5 stroke-[3]" />
                       ) : (
                         option.label
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0 pt-1 text-sm sm:text-base leading-relaxed select-text font-normal">
+                    <div className="flex-1 min-w-0 pt-1 text-base sm:text-lg leading-relaxed select-text font-normal">
                       {option.content}
                       {option.imageUrl && (
-                        <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 max-w-xs">
+                        <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200 max-w-sm">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={option.imageUrl}
                             alt={`Opsi ${option.label}`}
-                            className="max-h-40 object-contain"
+                            className="max-h-48 object-contain"
                           />
                         </div>
                       )}
@@ -541,13 +541,13 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
           </div>
 
           {/* Bottom Navigation Toolbar */}
-          <div className="max-w-3xl mx-auto w-full pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="max-w-4xl mx-auto w-full pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             <Button
               variant="outline"
-              size="md"
+              size="lg"
               disabled={currentIndex === 0}
               onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-              className="gap-2 text-xs"
+              className="gap-2 text-sm sm:text-base font-bold rounded-2xl px-5 py-3"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Sebelumnya</span>
@@ -557,22 +557,22 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             <button
               type="button"
               onClick={handleToggleFlag}
-              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-2 shadow-xs ${
+              className={`px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold border transition-colors flex items-center gap-2 shadow-xs cursor-pointer ${
                 currentQuestion.isFlagged
-                  ? "bg-amber-50 border-amber-300 text-amber-800"
-                  : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  ? "bg-amber-100/80 border-amber-400 text-amber-900"
+                  : "bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Bookmark className={`w-4 h-4 ${currentQuestion.isFlagged ? "fill-current" : ""}`} />
+              <Bookmark className={`w-4 h-4 ${currentQuestion.isFlagged ? "fill-current text-amber-700" : ""}`} />
               <span>{currentQuestion.isFlagged ? "Ragu-Ragu (Ditandai)" : "Tandai Ragu-Ragu"}</span>
             </button>
 
             {currentIndex === questions.length - 1 ? (
               <Button
                 variant="primary"
-                size="md"
+                size="lg"
                 onClick={() => setIsSubmitModalOpen(true)}
-                className="gap-2 text-xs font-bold shadow-xs"
+                className="gap-2 text-sm sm:text-base font-bold shadow-md shadow-blue-600/20 rounded-2xl px-6 py-3"
               >
                 <span>Tinjau & Kumpulkan</span>
                 <Send className="w-4 h-4" />
@@ -580,9 +580,9 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             ) : (
               <Button
                 variant="primary"
-                size="md"
+                size="lg"
                 onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-                className="gap-2 text-xs shadow-xs"
+                className="gap-2 text-sm sm:text-base font-bold shadow-md shadow-blue-600/20 rounded-2xl px-6 py-3"
               >
                 <span>Berikutnya</span>
                 <ArrowRight className="w-4 h-4" />
@@ -593,14 +593,14 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
         {/* 3. SIDEBAR / DRAWER: Number Navigator Grid */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-72 bg-white border-l border-slate-200/90 shadow-sm p-5 flex flex-col justify-between transform transition-transform duration-300 md:relative md:transform-none md:flex ${
+          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-84 bg-white border-l border-slate-200/90 shadow-sm p-6 flex flex-col justify-between transform transition-transform duration-300 md:relative md:transform-none md:flex ${
             isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
           }`}
         >
           <div className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <span className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
+              <span className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-blue-600" />
                 Daftar Nomor Soal
               </span>
               <button
@@ -612,23 +612,23 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             </div>
 
             {/* Status Legend */}
-            <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-500 pb-2 border-b border-slate-200">
+            <div className="grid grid-cols-3 gap-2 text-xs text-slate-600 pb-2.5 border-b border-slate-200 font-medium">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-emerald-600" />
+                <div className="w-3.5 h-3.5 rounded bg-emerald-600" />
                 <span>Dijawab ({answeredCount})</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-amber-400" />
+                <div className="w-3.5 h-3.5 rounded bg-amber-400" />
                 <span>Ragu ({flaggedCount})</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-white border border-slate-300" />
+                <div className="w-3.5 h-3.5 rounded bg-white border border-slate-300" />
                 <span>Belum ({unansweredCount})</span>
               </div>
             </div>
 
             {/* Grid 5 Columns */}
-            <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-5 gap-2.5 max-h-[60vh] overflow-y-auto pr-1">
               {questions.map((q, idx) => {
                 const isCurrent = idx === currentIndex;
                 const isAnswered = (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null;
@@ -649,7 +649,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                       setCurrentIndex(idx);
                       setIsSidebarOpen(false);
                     }}
-                    className={`h-10 rounded-xl text-xs font-semibold transition-all flex items-center justify-center relative ${btnStyle} ${
+                    className={`h-11 sm:h-12 rounded-xl text-sm sm:text-base font-bold transition-all flex items-center justify-center relative ${btnStyle} ${
                       isCurrent ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white scale-105" : ""
                     }`}
                   >
@@ -664,9 +664,9 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
           <div className="pt-4 border-t border-slate-200">
             <Button
               variant="primary"
-              size="md"
+              size="lg"
               onClick={() => setIsSubmitModalOpen(true)}
-              className="w-full gap-2 text-xs font-bold shadow-xs"
+              className="w-full gap-2 text-sm font-bold shadow-xs py-3 rounded-2xl"
             >
               <Send className="w-4 h-4" />
               <span>Selesai & Kumpulkan</span>
