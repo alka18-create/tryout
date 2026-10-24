@@ -593,80 +593,124 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
         {/* 3. SIDEBAR / DRAWER: Number Navigator Grid */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-84 bg-white border-l border-slate-200/90 shadow-sm p-6 flex flex-col justify-between transform transition-transform duration-300 md:relative md:transform-none md:flex ${
+          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-sm p-6 flex flex-col justify-between transform transition-transform duration-300 md:relative md:transform-none md:flex ${
             isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
           }`}
         >
-          <div className="space-y-5">
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
-              <span className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-blue-600" />
+          <div className="space-y-4">
+            {/* Header Sidebar */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
                 Daftar Nomor Soal
               </span>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="md:hidden text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Status Legend */}
-            <div className="grid grid-cols-3 gap-2 text-xs text-slate-600 pb-2.5 border-b border-slate-200 font-medium">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded bg-emerald-600" />
-                <span>Dijawab ({answeredCount})</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded bg-amber-400" />
-                <span>Ragu ({flaggedCount})</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded bg-white border border-slate-300" />
-                <span>Belum ({unansweredCount})</span>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 text-slate-600 bg-slate-50">
+                  {answeredCount}/{questions.length} Selesai
+                </Badge>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="md:hidden text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                  title="Tutup Navigator"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            {/* Grid 5 Columns */}
-            <div className="grid grid-cols-5 gap-2.5 max-h-[60vh] overflow-y-auto pr-1">
-              {questions.map((q, idx) => {
-                const isCurrent = idx === currentIndex;
-                const isAnswered = (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null;
-                const isFlagged = q.isFlagged;
+            {/* Mini Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                <span>Progres Pengerjaan</span>
+                <span className="text-blue-600 font-bold">{Math.round((answeredCount / questions.length) * 100)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-300"
+                  style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+                />
+              </div>
+            </div>
 
-                let btnStyle = "bg-white border border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/30 shadow-xs";
-                if (isFlagged) {
-                  btnStyle = "bg-amber-400 text-amber-950 font-bold border-amber-400 shadow-xs";
-                } else if (isAnswered) {
-                  btnStyle = "bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs";
-                }
+            {/* Status Legend (Pill Cards) */}
+            <div className="grid grid-cols-3 gap-1.5 text-[11px] font-medium pt-1">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0 shadow-2xs" />
+                <span className="truncate">Dijawab <strong>({answeredCount})</strong></span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-800">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-2xs" />
+                <span className="truncate">Ragu <strong>({flaggedCount})</strong></span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-400 shrink-0" />
+                <span className="truncate">Belum <strong>({unansweredCount})</strong></span>
+              </div>
+            </div>
 
-                return (
-                  <button
-                    key={q.questionId}
-                    type="button"
-                    onClick={() => {
-                      setCurrentIndex(idx);
-                      setIsSidebarOpen(false);
-                    }}
-                    className={`h-11 sm:h-12 rounded-xl text-sm sm:text-base font-bold transition-all flex items-center justify-center relative ${btnStyle} ${
-                      isCurrent ? "ring-2 ring-blue-600 ring-offset-2 ring-offset-white scale-105" : ""
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
+            {/* Grid 5 Columns - Symmetrical Aspect Square Keypad */}
+            <div className="p-1 max-h-[55vh] overflow-y-auto">
+              <div className="grid grid-cols-5 gap-2">
+                {questions.map((q, idx) => {
+                  const isCurrent = idx === currentIndex;
+                  const isAnswered =
+                    (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null;
+                  const isFlagged = q.isFlagged;
+
+                  // Tentukan warna dasar tombol
+                  let baseStyle = "bg-white border border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/40 hover:text-blue-700 shadow-2xs";
+                  if (isFlagged) {
+                    baseStyle = "bg-amber-400 text-amber-950 font-bold border-amber-400 shadow-xs hover:bg-amber-500";
+                  } else if (isAnswered) {
+                    baseStyle = "bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs hover:bg-emerald-700";
+                  }
+
+                  // Tentukan style khusus jika tombol adalah soal yang sedang aktif
+                  let activeIndicator = "";
+                  if (isCurrent) {
+                    if (isAnswered) {
+                      activeIndicator = "ring-2 ring-offset-1 ring-blue-600 font-black";
+                    } else if (isFlagged) {
+                      activeIndicator = "ring-2 ring-offset-1 ring-blue-600 font-black";
+                    } else {
+                      activeIndicator = "border-2 border-blue-600 bg-blue-50 text-blue-700 font-black shadow-xs";
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={q.questionId}
+                      type="button"
+                      onClick={() => {
+                        setCurrentIndex(idx);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`aspect-square w-full rounded-2xl text-xs sm:text-sm transition-all flex flex-col items-center justify-center relative cursor-pointer ${baseStyle} ${activeIndicator}`}
+                      title={`Pindah ke Soal Nomor ${idx + 1}`}
+                    >
+                      <span>{idx + 1}</span>
+                      {/* Titik indikator soal aktif di bawah angka */}
+                      {isCurrent && (
+                        <span
+                          className={`w-1 h-1 rounded-full mt-0.5 ${
+                            isAnswered || isFlagged ? "bg-white" : "bg-blue-600"
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* Quick Submit in Sidebar */}
-          <div className="pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-slate-100">
             <Button
               variant="primary"
               size="lg"
               onClick={() => setIsSubmitModalOpen(true)}
-              className="w-full gap-2 text-sm font-bold shadow-xs py-3 rounded-2xl"
+              className="w-full gap-2 text-sm font-bold shadow-md shadow-blue-600/20 py-3 rounded-2xl"
             >
               <Send className="w-4 h-4" />
               <span>Selesai & Kumpulkan</span>
