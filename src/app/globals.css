@@ -23,6 +23,19 @@ html {
   color-scheme: light;
 }
 
+/* Penyesuaian skala tampilan laptop & desktop (setara zoom ~110%) agar lebih nyaman dibaca */
+@media (min-width: 1024px) {
+  html {
+    font-size: 110%; /* 17.6px base (menaikkan ukuran teks, padding, icon, dan layout ~10%) */
+  }
+}
+
+@media (min-width: 1536px) {
+  html {
+    font-size: 112.5%; /* 18px base untuk layar monitor besar (Full HD / 2K) */
+  }
+}
+
 html[data-scroll-behavior="smooth"] {
   scroll-behavior: smooth;
 }
