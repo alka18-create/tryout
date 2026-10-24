@@ -16,9 +16,10 @@ import {
   HelpCircle,
   Menu,
   X,
-  Award,
   Check,
   CheckSquare,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,14 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
   // UI state
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Tutup sidebar secara default di layar mobile (<768px)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{
     totalScore: number;
@@ -406,13 +414,24 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             <span>{formatTime(remainingSeconds)}</span>
           </div>
 
-          {/* Tombol Buka Lembar Nomor di Mobile */}
+          {/* Tombol Toggle Navigator Nomor Soal (Mobile & Desktop) */}
           <button
+            type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200"
-            title="Navigasi Nomor Soal"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+              isSidebarOpen
+                ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100/70"
+                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+            }`}
+            title={isSidebarOpen ? "Sembunyikan Daftar Nomor Soal" : "Tampilkan Daftar Nomor Soal"}
           >
-            <Menu className="w-5 h-5" />
+            <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="hidden sm:inline">
+              {isSidebarOpen ? "Sembunyikan Soal" : "Daftar Soal"}
+            </span>
+            <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+              {currentIndex + 1}/{questions.length}
+            </span>
           </button>
 
           {/* Tombol Kumpulkan Ujian */}
@@ -591,10 +610,20 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
           </div>
         </main>
 
+        {/* Mobile Backdrop saat Drawer Navigator Terbuka */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden animate-in fade-in"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         {/* 3. SIDEBAR / DRAWER: Number Navigator Grid */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-sm p-6 flex flex-col justify-between transform transition-transform duration-300 md:relative md:transform-none md:flex ${
-            isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
+          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-xl md:shadow-none p-6 flex flex-col justify-between transform transition-all duration-300 md:relative ${
+            isSidebarOpen
+              ? "translate-x-0 opacity-100 md:flex"
+              : "translate-x-full opacity-0 pointer-events-none md:hidden"
           }`}
         >
           <div className="space-y-4">
@@ -609,11 +638,14 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                   {answeredCount}/{questions.length} Selesai
                 </Badge>
                 <button
+                  type="button"
                   onClick={() => setIsSidebarOpen(false)}
-                  className="md:hidden text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-                  title="Tutup Navigator"
+                  className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                  title="Sembunyikan Daftar Nomor Soal"
                 >
-                  <X className="w-5 h-5" />
+                  <span className="text-xs font-semibold text-slate-500 hidden sm:inline">Sembunyikan</span>
+                  <ChevronRight className="w-4 h-4 hidden sm:inline" />
+                  <X className="w-5 h-5 sm:hidden" />
                 </button>
               </div>
             </div>
@@ -683,7 +715,9 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                       type="button"
                       onClick={() => {
                         setCurrentIndex(idx);
-                        setIsSidebarOpen(false);
+                        if (typeof window !== "undefined" && window.innerWidth < 768) {
+                          setIsSidebarOpen(false);
+                        }
                       }}
                       className={`aspect-square w-full rounded-2xl text-xs sm:text-sm transition-all flex flex-col items-center justify-center relative cursor-pointer ${baseStyle} ${activeIndicator}`}
                       title={`Pindah ke Soal Nomor ${idx + 1}`}
@@ -717,6 +751,26 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             </Button>
           </div>
         </aside>
+
+        {/* Floating Toggle Button jika Sidebar di-Hide (Desktop) */}
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-white border border-r-0 border-slate-200/90 hover:border-blue-300 shadow-lg hover:shadow-xl rounded-l-2xl py-3.5 px-2.5 flex-col items-center gap-2.5 transition-all hover:bg-blue-50/40 group cursor-pointer"
+            title="Tampilkan Daftar Nomor Soal"
+          >
+            <div className="p-1 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-black text-slate-600 [writing-mode:vertical-rl] tracking-wider py-1 group-hover:text-blue-700">
+              NOMOR SOAL
+            </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+              {answeredCount}/{questions.length}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* 4. MODAL: Konfirmasi Kumpulkan Ujian */}
