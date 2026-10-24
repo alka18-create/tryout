@@ -378,9 +378,9 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   }
 
   return (
-    <div className="min-h-screen md:h-screen md:overflow-hidden bg-slate-50 text-slate-800 flex flex-col select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col select-none">
       {/* 1. TOP HEADER (Sticky Focus Bar) */}
-      <header className="h-16 sm:h-18 px-4 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center justify-between shrink-0 z-30">
+      <header className="h-16 sm:h-18 px-4 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center justify-between sticky top-0 z-30">
         {/* Left: Info Paket */}
         <div className="flex items-center gap-3.5">
           <div>
@@ -465,9 +465,9 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
       </header>
 
       {/* 2. BODY LAYOUT: Main Question Screen + Number Grid Sidebar */}
-      <div className="flex-1 flex max-w-[1440px] w-full mx-auto md:overflow-hidden min-h-0">
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto">
         {/* Main Question Sheet */}
-        <main className="flex-1 flex flex-col justify-between p-4 sm:p-8 space-y-6 md:overflow-y-auto min-h-0">
+        <main className="flex-1 flex flex-col justify-between p-4 sm:p-8 space-y-6">
           <div className="space-y-6 max-w-4xl mx-auto w-full">
             {/* Question Header Bar */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200">
@@ -637,7 +637,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
         {/* 3. SIDEBAR / DRAWER: Number Navigator Grid */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-xl md:shadow-none p-6 flex flex-col justify-between transform transition-all duration-300 md:relative md:h-full md:shrink-0 md:overflow-hidden ${
+          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-xl md:shadow-none p-6 flex flex-col justify-between transform transition-all duration-300 md:sticky md:top-16 sm:md:top-18 md:h-[calc(100vh-4rem)] sm:md:h-[calc(100vh-4.5rem)] md:self-start ${
             isSidebarOpen
               ? "translate-x-0 opacity-100 md:flex"
               : "translate-x-full opacity-0 pointer-events-none md:hidden"
@@ -698,7 +698,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
             </div>
 
             {/* Grid 5 Columns - Symmetrical Aspect Square Keypad */}
-            <div className="p-1 flex-1 min-h-0 overflow-y-auto">
+            <div className="p-1 flex-1 overflow-y-auto min-h-0">
               <div className="grid grid-cols-5 gap-2">
                 {questions.map((q, idx) => {
                   const isCurrent = idx === currentIndex;
