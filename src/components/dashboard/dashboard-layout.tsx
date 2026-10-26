@@ -58,6 +58,7 @@ export function DashboardLayout({
     { label: "Manajemen Tryout", href: "/dashboard/teacher/tryouts", icon: <FileSpreadsheet className="w-4 h-4" /> },
     { label: "Materi Belajar", href: "/dashboard/teacher/materials", icon: <GraduationCap className="w-4 h-4" /> },
     { label: "Analisis & Laporan", href: "/dashboard/teacher/reports", icon: <BarChart3 className="w-4 h-4" /> },
+    { label: "Profil Saya", href: "/dashboard/teacher/profile", icon: <UserIcon className="w-4 h-4" /> },
   ];
 
   const adminNav: NavItem[] = [
@@ -68,6 +69,7 @@ export function DashboardLayout({
     { label: "Laporan & Nilai", href: "/dashboard/teacher/reports", icon: <BarChart3 className="w-4 h-4" /> },
     { label: "Kelola Pengguna", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" /> },
     { label: "Master Sekolah", href: "/dashboard/admin/schools", icon: <Building2 className="w-4 h-4" /> },
+    { label: "Profil Saya", href: "/dashboard/teacher/profile", icon: <UserIcon className="w-4 h-4" /> },
   ];
 
   const navItems = role === "ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;
