@@ -83,7 +83,7 @@ export function DashboardLayout({
         : "bg-blue-50 text-blue-700 border-blue-200";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-2xs">
         <Link href="/" className="flex items-center gap-2 font-bold text-slate-900 tracking-tight">
@@ -110,10 +110,10 @@ export function DashboardLayout({
         />
       )}
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation (Fixed terkunci di sisi kiri, tidak ikut bergerak saat scroll) */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-72 max-w-[85vw] border-r border-slate-200/90 bg-white flex flex-col justify-between z-50 md:z-30 transition-transform duration-300 ease-in-out md:translate-x-0 ${
-          isMobileMenuOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
+        className={`fixed top-0 left-0 h-screen w-72 max-w-[85vw] border-r border-slate-200/90 bg-white flex flex-col justify-between z-50 md:z-30 transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? "translate-x-0 shadow-xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
         <div className="p-5 flex flex-col flex-1 overflow-y-auto">
@@ -190,7 +190,7 @@ export function DashboardLayout({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden bg-slate-50">
+      <main className="flex-1 flex flex-col min-w-0 md:pl-72 bg-slate-50 min-h-screen">
         <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">{children}</div>
       </main>
     </div>
