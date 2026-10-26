@@ -89,14 +89,20 @@ export class AuthService {
       create: { identifier: normalizedEmail, token, expires },
     });
 
-    // Logging di konsol server (MVP dev mode)
-    console.log(`[AUTH] Password reset token for ${normalizedEmail}: ${token}`);
-    console.log(`[AUTH] Reset URL: /auth/reset-password?token=${token}`);
+    // Logging di konsol server hanya di mode development
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[AUTH] Password reset token for ${normalizedEmail}: ${token}`);
+      console.log(`[AUTH] Reset URL: /auth/reset-password?token=${token}`);
+    }
 
     return {
       success: true,
-      token, // Dikirim untuk kemudahan testing dev
-      message: "Link reset password telah dibuat.",
+      // Di production, token tidak dikirim ke client browser demi keamanan
+      token: process.env.NODE_ENV !== "production" ? token : undefined,
+      message:
+        process.env.NODE_ENV !== "production"
+          ? "Link reset password telah dibuat."
+          : "Jika email terdaftar, instruksi pemulihan kata sandi telah dikirim.",
     };
   }
 
