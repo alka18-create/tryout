@@ -14,7 +14,7 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 # Install dependensi (termasuk devDependencies untuk build & prisma)
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN npm install
 
 # STAGE 2: Build Aplikasi
 FROM node:22-alpine AS builder
