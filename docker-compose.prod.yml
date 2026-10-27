@@ -45,7 +45,7 @@ services:
       - ./uploads:/app/public/uploads
     ports:
       # Bind ke 127.0.0.1 agar hanya bisa diakses melalui Nginx reverse proxy
-      - "127.0.0.1:${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3001}:3000"
     networks:
       - tryoutku_prod_net
 
