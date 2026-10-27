@@ -37,7 +37,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 
 # 5. Jalankan migrasi database
 echo "🗄️ [3/4] Menjalankan migrasi schema Prisma database..."
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app npx prisma db migrate
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app npx prisma migrate deploy
 
 # 6. Verifikasi status container
 echo "🔍 [4/4] Memverifikasi status layanan..."
@@ -48,5 +48,5 @@ echo "=================================================================="
 echo "✅ DEPLOYMENT BERHASIL!"
 echo "Aplikasi TryoutKu kini aktif di port yang telah dikonfigurasi."
 echo "Jika ini adalah instalasi pertama kali, buat akun Admin dengan:"
-echo "  docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app npx tsx scripts/seed-admin.ts"
+echo "  docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app node scripts/seed-admin.js"
 echo "=================================================================="
