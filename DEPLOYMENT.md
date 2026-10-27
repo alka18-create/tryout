@@ -124,7 +124,7 @@ Script akan otomatis:
 
 Setelah container aktif, buat akun Admin pertama Anda:
 ```bash
-docker compose -f docker-compose.prod.yml exec -T app npx tsx scripts/seed-admin.ts
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app node scripts/seed-admin.js
 ```
 
 Akun Administrator telah siap digunakan untuk login di halaman `/auth/login`.

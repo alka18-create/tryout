@@ -9,6 +9,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/student";
+  const reason = searchParams.get("reason");
 
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
@@ -36,6 +37,13 @@ function LoginForm() {
         setErrorMsg("Email atau password tidak sesuai.");
         setIsLoading(false);
         return;
+      }
+
+      // Inisialisasi timestamp aktivitas saat login sukses
+      if (typeof window !== "undefined") {
+        const now = Date.now().toString();
+        localStorage.setItem("tryoutku_last_activity", now);
+        document.cookie = `tryoutku_last_activity=${now}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       router.push(callbackUrl);
@@ -75,6 +83,30 @@ function LoginForm() {
           Masuk ke akun TryoutKu untuk melanjutkan sesi belajar Anda
         </p>
       </div>
+
+      {reason === "timeout" && !errorMsg && (
+        <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-2.5 animate-in fade-in duration-200">
+          <span className="text-base leading-none">⏱️</span>
+          <div>
+            <strong className="font-semibold block text-amber-950">Sesi Berakhir Otomatis</strong>
+            <span className="text-amber-800 text-xs">
+              Tidak ada aktivitas selama 10 menit. Sesi login Anda telah diakhiri secara otomatis demi keamanan akun. Silakan masuk kembali.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {reason === "remote" && !errorMsg && (
+        <div className="mb-5 p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs sm:text-sm flex items-start gap-2.5 animate-in fade-in duration-200">
+          <span className="text-base leading-none">ℹ️</span>
+          <div>
+            <strong className="font-semibold block text-blue-950">Sesi Telah Diakhiri</strong>
+            <span className="text-blue-800 text-xs">
+              Akun Anda telah keluar dari tab atau perangkat lain. Silakan login kembali untuk melanjutkan.
+            </span>
+          </div>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">

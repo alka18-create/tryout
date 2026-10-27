@@ -186,6 +186,41 @@ export async function runUnitTests(): Promise<boolean> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // 5. UNIT TEST: Inactivity Timeout Configuration & Auto-Logout Rules
+  // ---------------------------------------------------------------------------
+  console.log("\n[5] Menguji Pengaturan Inactivity Timeout (10 Menit Auto-Logout)...");
+  const {
+    INACTIVITY_TIMEOUT_MS,
+    WARNING_DURATION_MS,
+    STORAGE_KEY_LAST_ACTIVE,
+    COOKIE_NAME_LAST_ACTIVE,
+  } = await import("../../src/components/auth/session-idle-timer");
+  const { INACTIVITY_TIMEOUT_MS: PROXY_TIMEOUT, LAST_ACTIVITY_COOKIE } = await import("../../src/proxy");
+
+  assert("Durasi batas inaktivitas tepat 10 menit (600.000 ms)", INACTIVITY_TIMEOUT_MS === 10 * 60 * 1000);
+  assert("Batas waktu proxy sinkron dengan client timer (10 menit)", PROXY_TIMEOUT === INACTIVITY_TIMEOUT_MS);
+  assert("Durasi peringatan sebelum logout tepat 60 detik (60.000 ms)", WARNING_DURATION_MS === 60 * 1000);
+  assert("Nama cookie aktivitas sinkron antara Client dan Proxy", COOKIE_NAME_LAST_ACTIVE === LAST_ACTIVITY_COOKIE);
+  assert("Storage key localStorage valid", STORAGE_KEY_LAST_ACTIVE === "tryoutku_last_activity");
+
+  // Simulasi perhitungan waktu
+  const baseTime = 1700000000000;
+  const idle5Min = baseTime + 5 * 60 * 1000;
+  const idle9Min30Sec = baseTime + 9.5 * 60 * 1000;
+  const idle10Min1Sec = baseTime + 10 * 60 * 1000 + 1000;
+
+  const isWarning5Min = idle5Min - baseTime >= INACTIVITY_TIMEOUT_MS - WARNING_DURATION_MS;
+  const isExpired5Min = idle5Min - baseTime >= INACTIVITY_TIMEOUT_MS;
+  assert("Aktivitas di 5 menit: tidak memicu warning dan tidak logout", !isWarning5Min && !isExpired5Min);
+
+  const isWarning9Min30 = idle9Min30Sec - baseTime >= INACTIVITY_TIMEOUT_MS - WARNING_DURATION_MS;
+  const isExpired9Min30 = idle9Min30Sec - baseTime >= INACTIVITY_TIMEOUT_MS;
+  assert("Aktivitas di 9.5 menit: memicu dialog warning (sisa 30 detik)", isWarning9Min30 && !isExpired9Min30);
+
+  const isExpired10Min1 = idle10Min1Sec - baseTime >= INACTIVITY_TIMEOUT_MS;
+  assert("Aktivitas di >10 menit: memicu auto logout seketika", isExpired10Min1);
+
   const allPassed = results.every((r) => r.pass);
   console.log(`\n=> Hasil Unit Tests: ${results.filter((r) => r.pass).length}/${results.length} Pengujian Berhasil.`);
   return allPassed;

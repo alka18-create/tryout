@@ -18,6 +18,8 @@ export const metadata: Metadata = {
     "Platform tryout online modular untuk siswa dan guru dengan evaluasi diagnostik berbasis materi dan pembahasan terperinci.",
 };
 
+import { AuthProvider } from "@/components/providers/auth-provider";
+
 export default function RootLayout({
   children,
 }: {
@@ -34,7 +36,7 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-slate-50 text-slate-900"
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -9,12 +9,12 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Salin manifest dependensi
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 # Install dependensi (termasuk devDependencies untuk build & prisma)
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # STAGE 2: Build Aplikasi
 FROM node:22-alpine AS builder
@@ -22,9 +22,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client untuk environment Linux
+# Environment build-time untuk prisma generate & next build (akan ditimpa saat container jalan)
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV DATABASE_URL="postgresql://tryoutku_admin:dummy@postgres:5432/tryoutku_prod?schema=public"
+ENV AUTH_SECRET="dummy_build_time_auth_secret_minimal_32_chars"
 
 RUN npx prisma generate
 RUN npm run build
@@ -51,9 +53,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Salin folder prisma dan konfigurasi jika perlu menjalankan migrasi/seed dari container
+# Salin folder prisma, scripts, dan konfigurasi jika perlu menjalankan migrasi/seed dari container
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 USER nextjs
 
