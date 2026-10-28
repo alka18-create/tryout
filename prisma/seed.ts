@@ -1,4 +1,6 @@
-import "dotenv/config";
+try {
+  process.loadEnvFile?.();
+} catch {}
 import bcrypt from "bcryptjs";
 import { PrismaClient, UserRole, DifficultyLevel, TryoutStatus, DiscussionVisibility } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";

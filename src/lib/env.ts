@@ -1,4 +1,6 @@
-import "dotenv/config";
+try {
+  process.loadEnvFile?.();
+} catch {}
 import { z } from "zod";
 
 /**
