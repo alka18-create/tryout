@@ -86,6 +86,16 @@ export async function proxy(request: NextRequest) {
       return attachActivityCookie(res, now);
     }
 
+    if (pathname.startsWith("/dashboard/student") && role === "ADMIN") {
+      const res = NextResponse.redirect(new URL("/dashboard/admin", request.url));
+      return attachActivityCookie(res, now);
+    }
+
+    if (pathname.startsWith("/dashboard/student") && role === "TEACHER") {
+      const res = NextResponse.redirect(new URL("/dashboard/teacher", request.url));
+      return attachActivityCookie(res, now);
+    }
+
     if (pathname.startsWith("/dashboard/admin") && role !== "ADMIN") {
       const res = NextResponse.redirect(new URL("/dashboard/student", request.url));
       return attachActivityCookie(res, now);

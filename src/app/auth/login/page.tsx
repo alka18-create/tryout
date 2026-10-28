@@ -8,7 +8,9 @@ import { signIn } from "next-auth/react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/student";
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl =
+    rawCallbackUrl && !rawCallbackUrl.includes("/auth/login") ? rawCallbackUrl : "/dashboard";
   const reason = searchParams.get("reason");
 
   const [mounted, setMounted] = useState(false);
@@ -46,8 +48,37 @@ function LoginForm() {
         document.cookie = `tryoutku_last_activity=${now}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      router.push(callbackUrl);
-      router.refresh();
+      // Ambil session terbaru untuk menentukan dashboard tujuan sesuai role user yang baru login
+      let destination = callbackUrl;
+      try {
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        const role = sessionData?.user?.role;
+
+        if (role === "ADMIN") {
+          destination =
+            !rawCallbackUrl || rawCallbackUrl.startsWith("/dashboard/student")
+              ? "/dashboard/admin"
+              : rawCallbackUrl;
+        } else if (role === "TEACHER") {
+          destination =
+            !rawCallbackUrl || rawCallbackUrl.startsWith("/dashboard/student")
+              ? "/dashboard/teacher"
+              : rawCallbackUrl;
+        } else {
+          destination =
+            !rawCallbackUrl ||
+            rawCallbackUrl.startsWith("/dashboard/admin") ||
+            rawCallbackUrl.startsWith("/dashboard/teacher")
+              ? "/dashboard/student"
+              : rawCallbackUrl;
+        }
+      } catch {
+        destination = "/dashboard";
+      }
+
+      // Gunakan window.location.href agar browser me-reload penuh dan membersihkan state akun sebelumnya
+      window.location.href = destination;
     } catch {
       setErrorMsg("Terjadi gangguan jaringan saat login. Silakan coba lagi.");
       setIsLoading(false);
