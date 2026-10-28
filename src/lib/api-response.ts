@@ -35,7 +35,13 @@ export function handleApiError(error: unknown) {
     return fail(error.code, error.message, error.details, error.status);
   }
   if (error instanceof ZodError) {
-    return fail("VALIDATION_ERROR", "Data yang dikirim tidak valid.", error.flatten().fieldErrors);
+    const firstIssue = error.issues[0];
+    const fieldName = firstIssue?.path.filter((p) => typeof p === "string" || typeof p === "number").join(".");
+    const message = firstIssue
+      ? `${firstIssue.message}${fieldName ? ` (pada ${fieldName})` : ""}`
+      : "Data yang dikirim tidak valid.";
+
+    return fail("VALIDATION_ERROR", message, error.flatten().fieldErrors);
   }
   console.error("[API] Unhandled error:", error);
   return fail("INTERNAL_ERROR", "Terjadi kesalahan pada server.");

@@ -48,14 +48,15 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Siapkan direktori public dan uploads dengan kepemilikan yang tepat
-RUN mkdir -p public/uploads/questions && \
-    chown -R nextjs:nodejs public
-
 # Salin output standalone dan aset statis hasil build
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Siapkan direktori uploads dengan kepemilikan dan hak akses write penuh untuk user nextjs
+RUN mkdir -p public/uploads/questions && \
+    chown -R nextjs:nodejs public && \
+    chmod -R 777 public/uploads
 
 # Salin folder prisma, scripts, dan konfigurasi jika perlu menjalankan migrasi/seed dari container
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma

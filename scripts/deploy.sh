@@ -27,9 +27,9 @@ fi
 # Pastikan symlink .env mengarah ke .env.production agar docker compose selalu membaca env
 ln -sf .env.production .env
 
-# 3. Pastikan direktori persistent storage upload gambar tersedia
+# 3. Pastikan direktori persistent storage upload gambar tersedia dengan izin tulis penuh untuk container
 mkdir -p ./uploads/questions
-chmod -R 775 ./uploads
+chmod -R 777 ./uploads
 
 # 4. Build dan jalankan container dengan Docker Compose
 echo "🐳 [2/4] Membangun dan menjalankan Docker container produksi..."

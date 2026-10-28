@@ -17,32 +17,41 @@ export const topicSchema = z.object({
 
 export type TopicInput = z.infer<typeof topicSchema>;
 
-const optionItemSchema = z.object({
-  label: z.string().min(1, "Label opsi tidak boleh kosong"),
-  content: z.string().min(1, "Konten opsi jawaban tidak boleh kosong"),
-  imageUrl: z.string().optional().or(z.literal("")),
-  isCorrect: z.boolean().default(false),
-});
+const optionItemSchema = z
+  .object({
+    label: z.string().min(1, "Label opsi tidak boleh kosong"),
+    content: z.string().nullable().optional().default(""),
+    imageUrl: z.string().nullable().optional().or(z.literal("")),
+    isCorrect: z.boolean().default(false),
+  })
+  .refine(
+    (opt) =>
+      Boolean((opt.content && opt.content.trim().length > 0) || (opt.imageUrl && opt.imageUrl.trim().length > 0)),
+    {
+      message: "Opsi jawaban harus memiliki teks atau lampiran gambar",
+      path: ["content"],
+    },
+  );
 
 export const questionSchema = z
   .object({
     topicId: z.string().min(1, "Topik materi wajib dipilih"),
     type: z.nativeEnum(QuestionType).default(QuestionType.SINGLE_CHOICE),
     difficulty: z.nativeEnum(DifficultyLevel).default(DifficultyLevel.MEDIUM),
-    content: z.string().min(5, "Teks soal minimal 5 karakter"),
-    imageUrl: z.string().optional().or(z.literal("")),
-    explanation: z.string().optional().or(z.literal("")),
-    explanationImageUrl: z.string().optional().or(z.literal("")),
+    content: z.string().min(1, "Teks soal tidak boleh kosong"),
+    imageUrl: z.string().nullable().optional().or(z.literal("")),
+    explanation: z.string().nullable().optional().or(z.literal("")),
+    explanationImageUrl: z.string().nullable().optional().or(z.literal("")),
     options: z.array(optionItemSchema).min(2, "Soal harus memiliki minimal 2 opsi jawaban"),
   })
   .superRefine((data, ctx) => {
     const correctOptions = data.options.filter((opt) => opt.isCorrect);
 
     if (data.type === QuestionType.SINGLE_CHOICE) {
-      if (data.options.length !== 5) {
+      if (data.options.length < 2 || data.options.length > 5) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Pilihan ganda biasa wajib memiliki tepat 5 opsi (A, B, C, D, E)",
+          message: "Pilihan ganda biasa harus memiliki 2 hingga 5 opsi jawaban",
           path: ["options"],
         });
       }

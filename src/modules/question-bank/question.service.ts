@@ -220,7 +220,7 @@ export class QuestionBankService {
         options: {
           create: input.options.map((opt) => ({
             label: opt.label,
-            content: opt.content.trim(),
+            content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
           })),
@@ -291,14 +291,14 @@ export class QuestionBankService {
             },
           },
           update: {
-            content: opt.content.trim(),
+            content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
           },
           create: {
             questionId,
             label: opt.label,
-            content: opt.content.trim(),
+            content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
           },

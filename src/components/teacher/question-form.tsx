@@ -56,7 +56,10 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
     imageUrl: initialData?.imageUrl || "",
     explanation: initialData?.explanation || "",
     explanationImageUrl: initialData?.explanationImageUrl || "",
-    options: initialData?.options || [
+    options: initialData?.options?.map((opt) => ({
+      ...opt,
+      imageUrl: opt.imageUrl || "",
+    })) || [
       { label: "A", content: "", isCorrect: true, imageUrl: "" },
       { label: "B", content: "", isCorrect: false, imageUrl: "" },
       { label: "C", content: "", isCorrect: false, imageUrl: "" },
@@ -182,9 +185,14 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
       return;
     }
 
-    const emptyOption = formData.options.find((opt) => !opt.content.trim());
+    const emptyOption = formData.options.find(
+      (opt) => !opt.content.trim() && !opt.imageUrl?.trim(),
+    );
     if (emptyOption) {
-      setFeedback({ type: "error", text: `Opsi ${emptyOption.label} tidak boleh kosong.` });
+      setFeedback({
+        type: "error",
+        text: `Opsi ${emptyOption.label} wajib diisi teks atau lampiran gambar.`,
+      });
       return;
     }
 
@@ -221,9 +229,18 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
 
       const json = await res.json();
       if (!res.ok || !json.success) {
+        let errorMsg = json.error?.message || "Gagal menyimpan soal.";
+        if (json.error?.details && typeof json.error.details === "object") {
+          const detailStr = Object.entries(json.error.details)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join("; ");
+          if (detailStr && !errorMsg.includes(detailStr)) {
+            errorMsg += ` (${detailStr})`;
+          }
+        }
         setFeedback({
           type: "error",
-          text: json.error?.message || "Gagal menyimpan soal.",
+          text: errorMsg,
         });
         setIsLoading(false);
         return;
@@ -507,7 +524,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   <div className="flex-1 space-y-2">
                     <input
                       type="text"
-                      required
+                      required={!opt.imageUrl}
                       value={opt.content}
                       onChange={(e) => handleOptionChange(index, e.target.value)}
                       placeholder={

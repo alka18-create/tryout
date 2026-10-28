@@ -8,10 +8,21 @@ export const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 export const ALLOWED_IMAGE_MIME_TYPES: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/jpg": ".jpg",
+  "image/pjpeg": ".jpg",
   "image/png": ".png",
+  "image/x-png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
   "image/svg+xml": ".svg",
+};
+
+const EXTENSION_MIME_FALLBACK: Record<string, string> = {
+  ".jpg": ".jpg",
+  ".jpeg": ".jpg",
+  ".png": ".png",
+  ".webp": ".webp",
+  ".gif": ".gif",
+  ".svg": ".svg",
 };
 
 export class QuestionUploadService {
@@ -25,7 +36,7 @@ export class QuestionUploadService {
     size: number;
     mimeType: string;
   }> {
-    if (!file) {
+    if (!file || typeof file === "string" || !(file instanceof Blob)) {
       throw new AppError("VALIDATION_ERROR", "File gambar wajib dilampirkan.");
     }
 
@@ -37,9 +48,15 @@ export class QuestionUploadService {
       );
     }
 
-    // 2. Validasi tipe file
-    const mimeType = file.type.toLowerCase();
-    const extension = ALLOWED_IMAGE_MIME_TYPES[mimeType];
+    // 2. Validasi tipe file & ekstensi
+    const mimeType = (file.type || "").toLowerCase();
+    let extension = ALLOWED_IMAGE_MIME_TYPES[mimeType];
+
+    // Fallback ekstensi jika tipe MIME tidak dikenali browser
+    if (!extension && file.name) {
+      const ext = path.extname(file.name).toLowerCase();
+      extension = EXTENSION_MIME_FALLBACK[ext];
+    }
 
     if (!extension) {
       throw new AppError(
@@ -55,19 +72,35 @@ export class QuestionUploadService {
 
     // 4. Pastikan direktori tujuan tersedia
     const uploadDir = path.join(process.cwd(), "public", "uploads", "questions");
-    await fs.mkdir(uploadDir, { recursive: true });
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+    } catch (err) {
+      console.error("[QuestionUploadService] Gagal membuat direktori upload:", err);
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "Gagal menyiapkan folder penyimpanan gambar di server. Periksa izin akses (permission) folder public/uploads.",
+      );
+    }
 
     // 5. Simpan file
-    const filePath = path.join(uploadDir, filename);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await fs.writeFile(filePath, buffer);
+    try {
+      const filePath = path.join(uploadDir, filename);
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      await fs.writeFile(filePath, buffer);
+    } catch (err) {
+      console.error("[QuestionUploadService] Gagal menulis file gambar:", err);
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "Gagal menyimpan file gambar ke disk server. Periksa kapasitas disk atau izin akses folder public/uploads.",
+      );
+    }
 
     return {
       url: `/uploads/questions/${filename}`,
       filename,
       size: file.size,
-      mimeType,
+      mimeType: mimeType || "image/jpeg",
     };
   }
 }

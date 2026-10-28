@@ -26,15 +26,16 @@ export default async function EditQuestionPage({
   const initialData = {
     id: question.id,
     topicId: question.topicId,
+    type: question.type,
     difficulty: question.difficulty,
     content: question.content,
-    imageUrl: question.imageUrl,
-    explanation: question.explanation,
-    explanationImageUrl: question.explanationImageUrl,
+    imageUrl: question.imageUrl || "",
+    explanation: question.explanation || "",
+    explanationImageUrl: question.explanationImageUrl || "",
     options: question.options.map((opt) => ({
       label: opt.label as "A" | "B" | "C" | "D" | "E",
       content: opt.content,
-      imageUrl: opt.imageUrl,
+      imageUrl: opt.imageUrl || "",
       isCorrect: opt.isCorrect,
     })),
   };

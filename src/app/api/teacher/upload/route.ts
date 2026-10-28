@@ -12,14 +12,14 @@ export async function POST(req: NextRequest) {
 
     // 2. Parse form-data
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file");
 
-    if (!file) {
+    if (!file || typeof file === "string" || !(file instanceof Blob)) {
       throw new AppError("VALIDATION_ERROR", "File gambar wajib dilampirkan.");
     }
 
     // 3. Simpan dan validasi file gambar
-    const result = await QuestionUploadService.uploadImage(file);
+    const result = await QuestionUploadService.uploadImage(file as File);
 
     return ok(result, "Gambar berhasil diunggah.", 201);
   } catch (error) {
