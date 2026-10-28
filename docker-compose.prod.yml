@@ -38,6 +38,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
+      AUTH_TRUST_HOST: "true"
+      AUTH_URL: ${APP_URL:-https://tryout.43.134.169.245.sslip.io}
+      NEXTAUTH_URL: ${APP_URL:-https://tryout.43.134.169.245.sslip.io}
       # URL Database diarahkan ke container postgres di internal network
       DATABASE_URL: "postgresql://${POSTGRES_USER:-tryoutku_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tryoutku_prod}?schema=public"
     volumes:

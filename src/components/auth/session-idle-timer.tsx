@@ -47,14 +47,18 @@ export function SessionIdleTimer() {
           clearActivityCookie();
         }
 
-        // Redirect dengan alasan logout
-        await signOut({
-          redirect: true,
-          callbackUrl: `/auth/login?reason=${reason}`,
-        });
+        // Hancurkan session NextAuth tanpa server redirect
+        try {
+          await signOut({ redirect: false });
+        } catch {
+          // Abaikan jika error jaringan
+        }
+
+        if (typeof window !== "undefined") {
+          window.location.href = `/auth/login?reason=${reason}`;
+        }
       } catch (err) {
         console.error("Gagal melakukan auto logout:", err);
-        // Fallback jika signOut next-auth gagal/terkendala jaringan
         if (typeof window !== "undefined") {
           window.location.href = `/auth/login?reason=${reason}`;
         }

@@ -187,7 +187,14 @@ export function DashboardLayout({
                 localStorage.removeItem("tryoutku_last_activity");
                 document.cookie = "tryoutku_last_activity=; path=/; max-age=0; SameSite=Lax";
               }
-              await signOut({ callbackUrl: "/auth/login" });
+              try {
+                await signOut({ redirect: false });
+              } catch {
+                // Ignore network error if any
+              }
+              if (typeof window !== "undefined") {
+                window.location.href = "/auth/login";
+              }
             }}
             className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-slate-600 text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
           >
