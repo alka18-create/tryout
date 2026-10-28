@@ -8,6 +8,9 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Nonaktifkan io_uring di libuv untuk mencegah error ETXTBSY (file busy) pada esbuild saat npm install di Docker
+ENV UV_USE_IO_URING=0
+
 # Salin manifest dependensi
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
@@ -19,6 +22,7 @@ RUN npm install
 # STAGE 2: Build Aplikasi
 FROM node:22-alpine AS builder
 WORKDIR /app
+ENV UV_USE_IO_URING=0
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
