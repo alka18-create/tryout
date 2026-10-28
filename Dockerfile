@@ -62,10 +62,8 @@ RUN mkdir -p public/uploads/questions && \
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
+# Salin node_modules lengkap dari deps agar semua CLI (prisma, tsx, dll) dan transitif dependensinya tersedia
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 
