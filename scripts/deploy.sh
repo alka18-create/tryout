@@ -37,7 +37,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 
 # 5. Jalankan migrasi database
 echo "🗄️ [3/4] Menjalankan migrasi schema Prisma database..."
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app npx prisma migrate deploy
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app ./node_modules/.bin/prisma migrate deploy
 
 # 6. Verifikasi status container
 echo "🔍 [4/4] Memverifikasi status layanan..."

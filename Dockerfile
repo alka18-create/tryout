@@ -58,10 +58,14 @@ RUN mkdir -p public/uploads/questions && \
     chown -R nextjs:nodejs public && \
     chmod -R 777 public/uploads
 
-# Salin folder prisma, scripts, dan konfigurasi jika perlu menjalankan migrasi/seed dari container
+# Salin folder prisma, scripts, konfigurasi, dan modul Prisma untuk migrasi database
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
 
 USER nextjs
 
