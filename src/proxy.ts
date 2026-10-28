@@ -26,11 +26,29 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const now = Date.now();
 
-  // Baca JWT session token
-  const token = await getToken({
+  // Deteksi secure cookie untuk HTTPS reverse proxy (Nginx SSL)
+  const hasSecureCookie = request.cookies.has("__Secure-authjs.session-token");
+  const isHttps =
+    hasSecureCookie ||
+    request.headers.get("x-forwarded-proto") === "https" ||
+    request.nextUrl.protocol === "https:" ||
+    process.env.NODE_ENV === "production";
+
+  // Baca JWT session token dengan mencoba secureCookie terlebih dahulu
+  let token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    secureCookie: isHttps,
   });
+
+  // Fallback jika belum ketemu
+  if (!token) {
+    token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+      secureCookie: !isHttps,
+    });
+  }
 
   const role = token?.role as string | undefined;
 
