@@ -3,12 +3,19 @@ import { AppError } from "@/lib/errors";
 import { ExamSessionStatus, TryoutStatus, QuestionType } from "@/generated/prisma/client";
 import { SaveAnswerInput } from "./exam.schema";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
+import { isDemoStudentEmail, getDemoAllowedTryoutId } from "@/lib/demo";
 
 export class ExamService {
   /**
    * Mengambil daftar tryout yang tersedia untuk peserta didik.
    */
   static async getAvailableTryoutsForStudent(studentId: string, subjectId?: string) {
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, email: true },
+    });
+    const isDemo = isDemoStudentEmail(student?.email);
+
     const tryouts = await prisma.tryout.findMany({
       where: {
         status: TryoutStatus.PUBLISHED,
@@ -45,6 +52,7 @@ export class ExamService {
       orderBy: { createdAt: "desc" },
     });
 
+    const demoAllowedTryoutId = isDemo ? getDemoAllowedTryoutId(tryouts) : null;
     const now = Date.now();
 
     return tryouts.map((t) => {
@@ -95,7 +103,8 @@ export class ExamService {
       const latestCompleted = completedSessions[completedSessions.length - 1] || null;
       const attemptsUsed = completedSessions.length + (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0);
       const attemptsRemaining = Math.max(0, maxAttempts - completedSessions.length - (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0));
-      const canRetake = !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
+      const isLockedForDemo = isDemo && demoAllowedTryoutId !== null && t.id !== demoAllowedTryoutId;
+      const canRetake = !isLockedForDemo && !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
 
       return {
         id: t.id,
@@ -109,6 +118,10 @@ export class ExamService {
         attemptsUsed,
         attemptsRemaining,
         canRetake,
+        isLockedForDemo,
+        demoLockMessage: isLockedForDemo
+          ? "Paket tryout ini terkunci untuk akun demo. Silakan daftarkan akun resmi Anda untuk membuka seluruh paket tryout."
+          : null,
         startDate: t.startDate,
         endDate: t.endDate,
         isPeriodActive: isStarted && !isEnded,
@@ -202,10 +215,26 @@ export class ExamService {
       isPassed = sortedByScore[0].isPassed;
     }
 
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, email: true },
+    });
+    const isDemo = isDemoStudentEmail(student?.email);
+    let isLockedForDemo = false;
+    if (isDemo) {
+      const allPublished = await prisma.tryout.findMany({
+        where: { status: TryoutStatus.PUBLISHED },
+        select: { id: true, title: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const allowedId = getDemoAllowedTryoutId(allPublished);
+      isLockedForDemo = allowedId !== null && tryoutId !== allowedId;
+    }
+
     const latestCompleted = completedSessions[completedSessions.length - 1] || null;
     const attemptsUsed = completedSessions.length + (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0);
     const attemptsRemaining = Math.max(0, maxAttempts - completedSessions.length - (activeSession && participationStatus === "IN_PROGRESS" ? 1 : 0));
-    const canRetake = !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
+    const canRetake = !isLockedForDemo && !activeSession && completedSessions.length < maxAttempts && isStarted && !isEnded;
 
     const attemptsHistory = completedSessions.map((s) => ({
       sessionId: s.id,
@@ -232,6 +261,10 @@ export class ExamService {
       attemptsUsed,
       attemptsRemaining,
       canRetake,
+      isLockedForDemo,
+      demoLockMessage: isLockedForDemo
+        ? "Paket tryout ini terkunci untuk akun demo. Silakan daftarkan akun resmi Anda untuk membuka seluruh paket tryout."
+        : null,
       startDate: tryout.startDate,
       endDate: tryout.endDate,
       isPeriodActive: isStarted && !isEnded,
@@ -250,6 +283,26 @@ export class ExamService {
    * Memulai sesi ujian baru atau menyambung sesi yang sedang berjalan (Idempotent Resume).
    */
   static async startOrResumeExamSession(studentId: string, tryoutId: string) {
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, email: true },
+    });
+    const isDemo = isDemoStudentEmail(student?.email);
+    if (isDemo) {
+      const allPublished = await prisma.tryout.findMany({
+        where: { status: TryoutStatus.PUBLISHED },
+        select: { id: true, title: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const allowedId = getDemoAllowedTryoutId(allPublished);
+      if (allowedId !== null && tryoutId !== allowedId) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Akun demo dibatasi hanya untuk 1 paket tryout uji coba. Silakan daftarkan akun resmi Anda (gratis) untuk membuka dan mengerjakan paket tryout ini."
+        );
+      }
+    }
+
     const tryout = await prisma.tryout.findUnique({
       where: { id: tryoutId },
       include: {

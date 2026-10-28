@@ -204,32 +204,17 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Quick Demo Credentials untuk Pengujian */}
+      {/* Quick Demo Credentials untuk Pengujian Siswa */}
       <div className="mt-6 pt-5 border-t border-slate-200">
         <p className="text-[11px] font-medium text-slate-500 mb-2">⚡ Coba Akun Demo Cepat (1-Klik):</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleDemoFill("ahmad@tryoutku.com")}
-            className="px-2 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-[11px] text-slate-700 transition-colors text-center font-medium shadow-xs"
-          >
-            👨‍🎓 Siswa
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDemoFill("guru@tryoutku.com")}
-            className="px-2 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-[11px] text-slate-700 transition-colors text-center font-medium shadow-xs"
-          >
-            👨‍🏫 Guru
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDemoFill("admin@tryoutku.com")}
-            className="px-2 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-[11px] text-slate-700 transition-colors text-center font-medium shadow-xs"
-          >
-            🛡️ Admin
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleDemoFill("ahmad@tryoutku.com")}
+          className="w-full py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-xs text-slate-700 transition-colors text-center font-semibold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>👨‍🎓</span>
+          <span>Siswa</span>
+        </button>
       </div>
 
       <div className="mt-6 text-center text-xs text-slate-500">

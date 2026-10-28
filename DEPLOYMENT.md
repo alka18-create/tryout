@@ -129,6 +129,12 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app
 
 Akun Administrator telah siap digunakan untuk login di halaman `/auth/login`.
 
+*(Opsional)* Jika Anda ingin mengaktifkan akun **Demo 1-Klik** (Siswa, Guru, Admin Demo) untuk pengujian awal:
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app node scripts/seed-demo.js
+```
+Password untuk semua akun demo adalah `Password123!`.
+
 ---
 
 ## 7. Setup Nginx Reverse Proxy & SSL (HTTPS)

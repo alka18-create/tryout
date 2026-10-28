@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Check,
   Filter,
+  Lock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,8 @@ interface TryoutStudentItem {
   attemptsUsed?: number;
   attemptsRemaining?: number;
   canRetake?: boolean;
+  isLockedForDemo?: boolean;
+  demoLockMessage?: string | null;
   highestScore?: number | null;
   bestSessionId?: string | null;
   startDate: string | null;
@@ -135,6 +138,26 @@ export default function StudentTryoutsPage() {
           </p>
         </div>
       </div>
+
+      {/* Demo Account Notification Banner */}
+      {tryouts.some((t) => t.isLockedForDemo) && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🔒</span>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950">Mode Uji Coba Akun Demo</h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Akun demo siswa dibatasi untuk 1 paket tryout uji coba. Untuk membuka seluruh paket tryout lainnya dan menyimpan hasil belajar Anda, silakan daftarkan akun peserta resmi secara gratis.
+              </p>
+            </div>
+          </div>
+          <Link href="/auth/register" className="shrink-0 w-full sm:w-auto">
+            <Button size="sm" variant="primary" className="w-full text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs">
+              Daftar Akun Sekarang (Gratis)
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Filter and Search */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -303,12 +326,19 @@ export default function StudentTryoutsPage() {
             return (
               <Card
                 key={tryout.id}
-                className="flex flex-col justify-between hover:border-blue-400 hover:shadow-md transition-all group bg-white border-slate-200/90"
+                className={`flex flex-col justify-between hover:border-blue-400 hover:shadow-md transition-all group bg-white border-slate-200/90 ${
+                  tryout.isLockedForDemo ? "border-amber-200/80 bg-slate-50/30" : ""
+                }`}
               >
                 <div className="p-5 space-y-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant="info">{tryout.subject.name}</Badge>
-                    {isCompleted ? (
+                    {tryout.isLockedForDemo ? (
+                      <Badge variant="outline" className="text-[10px] font-semibold text-amber-700 bg-amber-50 border-amber-300 gap-1 flex items-center">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Terkunci (Akun Demo)</span>
+                      </Badge>
+                    ) : isCompleted ? (
                       <div className="flex items-center gap-1.5">
                         <Badge variant="outline" className="text-[10px] font-semibold text-slate-600 bg-slate-50">
                           {tryout.attemptsUsed || 1}/{tryout.maxAttempts || 3}x
@@ -410,7 +440,14 @@ export default function StudentTryoutsPage() {
                     {tryout.questionCount > 0 ? "Pilihan Ganda A–E" : "Soal Kosong"}
                   </span>
 
-                  {isInProgress ? (
+                  {tryout.isLockedForDemo ? (
+                    <Link href={`/dashboard/student/tryouts/${tryout.id}`} className="shrink-0">
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs text-amber-800 border-amber-300 hover:bg-amber-50 font-bold shadow-xs">
+                        <Lock className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Terkunci (Perlu Terdaftar)</span>
+                      </Button>
+                    </Link>
+                  ) : isInProgress ? (
                     <Link href={`/exam/${tryout.latestSessionId}`} className="shrink-0">
                       <Button variant="warning" size="sm" className="gap-2 text-xs font-bold">
                         <Play className="w-3.5 h-3.5 fill-current" />

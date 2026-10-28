@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ShieldAlert,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
   const isInProgress = tryout.participationStatus === "IN_PROGRESS";
   const isCompleted =
     tryout.participationStatus === "SUBMITTED" || tryout.participationStatus === "EXPIRED";
+  const isLockedForDemo = Boolean(tryout.isLockedForDemo);
 
   return (
     <div className="max-w-3xl space-y-6 mx-auto">
@@ -62,7 +64,12 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="info">{tryout.subject.name}</Badge>
-            {isCompleted ? (
+            {isLockedForDemo ? (
+              <Badge variant="outline" className="text-xs font-bold text-amber-700 bg-amber-50 border-amber-300 gap-1.5 flex items-center">
+                <Lock className="w-3 h-3" />
+                <span>TERKUNCI (AKUN DEMO)</span>
+              </Badge>
+            ) : isCompleted ? (
               <>
                 <Badge variant="outline" className="text-xs font-semibold text-slate-600 bg-slate-50">
                   {tryout.attemptsUsed}/{tryout.maxAttempts}x Percobaan
@@ -89,6 +96,37 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
               "Paket tryout ini dirancang untuk menguji pemahaman konsep materi secara mendalam melalui pilihan ganda berbobot."}
           </p>
         </div>
+
+        {/* Banner Khusus Akun Demo Terkunci */}
+        {isLockedForDemo && (
+          <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-3.5 shadow-2xs">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-amber-900">
+                  Paket Tryout Ini Terkunci untuk Akun Demo
+                </h3>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Akun demo siswa dibatasi hanya untuk <strong>1 paket tryout uji coba</strong>. Untuk mengerjakan paket <strong>&quot;{tryout.title}&quot;</strong> dan menyimpan hasil belajar Anda, silakan mendaftarkan akun peserta resmi Anda secara gratis.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1 border-t border-amber-200/60">
+              <Link href="/auth/register">
+                <Button size="sm" variant="primary" className="text-xs font-bold gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-xs">
+                  <span>Daftar Akun Peserta (Gratis)</span>
+                </Button>
+              </Link>
+              <Link href="/dashboard/student/tryouts">
+                <Button size="sm" variant="outline" className="text-xs border-amber-300 text-amber-900 hover:bg-amber-100/50">
+                  Pilih Paket Demo yang Terbuka
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Specs Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-4 border-y border-slate-100">
@@ -235,7 +273,14 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
 
         {/* Action Button */}
         <div className="pt-2">
-          {isInProgress ? (
+          {isLockedForDemo ? (
+            <Link href="/auth/register" className="block">
+              <Button variant="secondary" size="lg" className="w-full gap-2 font-bold text-sm bg-amber-100/80 border-amber-300 text-amber-900 hover:bg-amber-100 transition-all shadow-xs">
+                <Lock className="w-4 h-4 text-amber-700" />
+                <span>Daftar Akun Resmi untuk Membuka Paket Ini (Gratis) →</span>
+              </Button>
+            </Link>
+          ) : isInProgress ? (
             <Link href={`/exam/${tryout.activeSessionId}`} className="block">
               <Button variant="warning" size="lg" className="w-full gap-2 font-bold text-sm">
                 <Play className="w-4 h-4 fill-current" />

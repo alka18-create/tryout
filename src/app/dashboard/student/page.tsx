@@ -2,14 +2,16 @@ import React from "react";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { BookOpen, Clock, Award, ArrowRight, Play, CheckCircle2 } from "lucide-react";
+import { BookOpen, Clock, Award, ArrowRight, Play, CheckCircle2, Lock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isDemoStudentEmail, getDemoAllowedTryoutId } from "@/lib/demo";
 
 export default async function StudentDashboardPage() {
   const session = await auth();
   const userId = session?.user?.id;
+  const isDemo = isDemoStudentEmail(session?.user?.email);
 
   // 1. Ambil tryout yang berstatus PUBLISHED
   const availableTryouts = await prisma.tryout.findMany({
@@ -49,6 +51,8 @@ export default async function StudentDashboardPage() {
         ) / 10
       : 0;
 
+  const demoAllowedTryoutId = isDemo ? getDemoAllowedTryoutId(availableTryouts) : null;
+
   return (
     <div className="space-y-8">
       {/* Sapaan Header */}
@@ -68,6 +72,26 @@ export default async function StudentDashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Banner Khusus Akun Demo */}
+      {isDemo && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🔒</span>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950">Mode Uji Coba Akun Demo</h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Akun demo siswa dibatasi hanya untuk 1 paket tryout uji coba. Untuk membuka seluruh paket tryout lainnya dan menyimpan rekor belajar Anda, silakan mendaftar secara gratis.
+              </p>
+            </div>
+          </div>
+          <Link href="/auth/register" className="shrink-0 w-full sm:w-auto">
+            <Button size="sm" variant="primary" className="w-full text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs">
+              Daftar Akun Sekarang
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Ringkasan Skor & Aktivitas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -125,16 +149,25 @@ export default async function StudentDashboardPage() {
             const isCompleted =
               lastSession && (lastSession.status === "SUBMITTED" || lastSession.status === "EXPIRED");
             const isInProgress = lastSession && lastSession.status === "IN_PROGRESS";
+            const isLockedForDemo =
+              isDemo && demoAllowedTryoutId !== null && tryout.id !== demoAllowedTryoutId;
 
             return (
               <Card
                 key={tryout.id}
-                className="hover:border-blue-400 hover:shadow-sm transition-all flex flex-col justify-between"
+                className={`hover:border-blue-400 hover:shadow-sm transition-all flex flex-col justify-between ${
+                  isLockedForDemo ? "border-amber-200/80 bg-slate-50/30" : ""
+                }`}
               >
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <Badge variant="info">{tryout.subject.name}</Badge>
-                    {isCompleted ? (
+                    {isLockedForDemo ? (
+                      <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 gap-1 flex items-center text-[10px] font-semibold">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Terkunci</span>
+                      </Badge>
+                    ) : isCompleted ? (
                       <Badge variant="success">Sudah Dikerjakan (Skor: {lastSession.totalScore})</Badge>
                     ) : isInProgress ? (
                       <Badge variant="warning">Sedang Berlangsung</Badge>
@@ -157,9 +190,24 @@ export default async function StudentDashboardPage() {
                   </div>
 
                   <Link href={`/dashboard/student/tryouts/${tryout.id}`}>
-                    <Button size="sm" variant={isInProgress ? "warning" : "primary"} className="gap-1.5 text-xs">
-                      <Play className="w-3 h-3" />
-                      <span>{isInProgress ? "Lanjutkan" : isCompleted ? "Lihat Hasil" : "Mulai"}</span>
+                    <Button
+                      size="sm"
+                      variant={isLockedForDemo ? "outline" : isInProgress ? "warning" : "primary"}
+                      className={`gap-1.5 text-xs ${
+                        isLockedForDemo ? "text-amber-800 border-amber-300 hover:bg-amber-50 font-bold" : ""
+                      }`}
+                    >
+                      {isLockedForDemo ? (
+                        <>
+                          <Lock className="w-3 h-3 text-amber-600" />
+                          <span>Terkunci</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3 h-3" />
+                          <span>{isInProgress ? "Lanjutkan" : isCompleted ? "Lihat Hasil" : "Mulai"}</span>
+                        </>
+                      )}
                     </Button>
                   </Link>
                 </div>
