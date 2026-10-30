@@ -365,42 +365,86 @@ export function QuestionAiModal({
         payload.customInstructions = customPrompt.trim();
       }
 
-      let res: Response;
-      try {
-        res = await fetch("/api/teacher/questions/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } catch (fetchErr: any) {
-        console.error("[QuestionAiModal] fetch failed:", fetchErr);
-        throw new Error(
-          `Gagal menghubungi server (${fetchErr?.message || "Koneksi terputus atau timeout"}). Jika proses berlangsung lebih dari 60 detik, pastikan proxy timeout server telah disesuaikan.`
-        );
+      // Helper: kirim request & parse JSON dengan aman (tangani respon HTML dari proxy)
+      const requestJson = async (url: string, init?: RequestInit) => {
+        let res: Response;
+        try {
+          res = await fetch(url, { cache: "no-store", ...init });
+        } catch (fetchErr: any) {
+          const err: any = new Error(
+            `Gagal menghubungi server (${fetchErr?.message || "koneksi terputus"}).`
+          );
+          err.isNetworkError = true;
+          throw err;
+        }
+        const rawText = await res.text().catch(() => "");
+        let json: any = null;
+        try {
+          json = rawText ? JSON.parse(rawText) : null;
+        } catch {
+          const cleanPreview = rawText
+            .replace(/<[^>]*>?/gm, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .substring(0, 150);
+          throw new Error(
+            `Server Error (${res.status} ${res.statusText}): ${cleanPreview || "respon tidak valid dari server"}`
+          );
+        }
+        if (!res.ok || !json?.success) {
+          throw new Error(json?.error?.message || `Permintaan gagal (HTTP ${res.status}).`);
+        }
+        return json.data;
+      };
+
+      // 1. Mulai job di server (langsung dibalas dengan jobId, tidak menunggu AI)
+      const started = await requestJson("/api/teacher/questions/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const jobId: string | undefined = started?.jobId;
+      if (!jobId) {
+        throw new Error("Server tidak mengembalikan ID proses pembuatan soal.");
       }
 
-      // Membaca teks mentah terlebih dahulu untuk mencegah error double-read stream
-      const rawText = await res.text().catch(() => "");
-      let json: any = null;
-      try {
-        json = rawText ? JSON.parse(rawText) : null;
-      } catch {
-        // Jika server mengembalikan respon HTML (seperti 504 Gateway Time-out Nginx / aaPanel)
-        const cleanPreview = rawText
-          .replace(/<[^>]*>?/gm, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .substring(0, 150);
-        throw new Error(
-          `Server Error (${res.status} ${res.statusText}): ${cleanPreview || "Koneksi ke backend timeout / terputus"}`
-        );
+      // 2. Polling status job setiap 2,5 detik (maksimal ~5 menit)
+      const POLL_INTERVAL_MS = 2500;
+      const MAX_WAIT_MS = 5 * 60 * 1000;
+      const startedAt = Date.now();
+      let networkFailures = 0;
+      let items: GeneratedQuestionItem[] = [];
+
+      while (true) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+        if (Date.now() - startedAt > MAX_WAIT_MS) {
+          throw new Error("Proses pembuatan soal melebihi 5 menit. Coba kurangi jumlah soal atau panjang materi.");
+        }
+
+        let statusData: any;
+        try {
+          statusData = await requestJson(`/api/teacher/questions/generate/jobs/${jobId}`);
+          networkFailures = 0;
+        } catch (pollErr: any) {
+          // Toleransi gangguan jaringan sesaat saat polling
+          if (pollErr?.isNetworkError && networkFailures < 3) {
+            networkFailures++;
+            continue;
+          }
+          throw pollErr;
+        }
+
+        if (statusData?.status === "DONE") {
+          items = statusData.result?.questions || [];
+          break;
+        }
+        if (statusData?.status === "FAILED") {
+          throw new Error(statusData.error?.message || "Gagal membuat soal dengan AI.");
+        }
+        // PENDING -> lanjut polling
       }
 
-      if (!res.ok || !json?.success) {
-        throw new Error(json?.error?.message || "Gagal membuat soal dengan AI.");
-      }
-
-      const items: GeneratedQuestionItem[] = json.data?.questions || [];
       if (items.length === 0) {
         throw new Error("AI tidak menghasilkan butir soal. Coba ganti topik atau kurangi jumlah materi.");
       }
