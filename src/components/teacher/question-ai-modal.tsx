@@ -82,9 +82,10 @@ export function QuestionAiModal({
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [optionsCount, setOptionsCount] = useState<number>(5);
 
-  // Custom API Key
+  // Custom API Key & Model
   const [useCustomKey, setUseCustomKey] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
 
   // Generation Results
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestionItem[]>([]);
@@ -242,6 +243,7 @@ export function QuestionAiModal({
         difficulty,
         questionCount: Number(questionCount),
         optionsCount: Number(optionsCount),
+        model: selectedModel,
         apiKey: useCustomKey && apiKey.trim() ? apiKey.trim() : undefined,
       };
 
@@ -259,16 +261,29 @@ export function QuestionAiModal({
         payload.customInstructions = customPrompt.trim();
       }
 
-      const res = await fetch("/api/teacher/questions/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/teacher/questions/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (fetchErr: any) {
+        throw new Error(
+          "Gagal menghubungi server (koneksi terputus atau timeout). Jika melampirkan file dokumen/PDF, pastikan ukurannya di bawah 5MB."
+        );
+      }
 
-      const json = await res.json();
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Server (${res.status}): ${text.substring(0, 300) || res.statusText}`);
+      }
 
-      if (!res.ok || !json.success) {
-        throw new Error(json.error?.message || "Gagal membuat soal dengan AI.");
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error?.message || "Gagal membuat soal dengan AI.");
       }
 
       const items: GeneratedQuestionItem[] = json.data?.questions || [];
@@ -674,6 +689,24 @@ export function QuestionAiModal({
                     </p>
                   </div>
                 )}
+
+                {/* Pilihan Model Gemini */}
+                <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+                    <BrainCircuit className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Model Engine AI:</span>
+                  </div>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
+                  >
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Direkomendasikan)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Stabil)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Penalaran Rumit)</option>
+                    <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}

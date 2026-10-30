@@ -5,6 +5,9 @@ import { QuestionAiService } from "@/modules/question-bank/question-ai.service";
 import { GenerateQuestionsInputSchema } from "@/modules/question-bank/question-ai.schema";
 import { ok, handleApiError } from "@/lib/api-response";
 
+export const maxDuration = 180;
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/teacher/questions/generate
  * Memeriksa ketersediaan API key Gemini di server
@@ -13,7 +16,7 @@ export async function GET() {
   try {
     await requireRole([UserRole.TEACHER, UserRole.ADMIN]);
     const hasSystemApiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0);
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
     return ok({
       hasSystemApiKey,

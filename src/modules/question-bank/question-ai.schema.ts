@@ -28,6 +28,7 @@ export const GenerateQuestionsInputSchema = z.object({
   questionCount: z.coerce.number().min(1).max(20).default(5),
   optionsCount: z.coerce.number().min(4).max(5).default(5), // 4 atau 5 opsi (A-D atau A-E)
   customInstructions: z.string().optional(),
+  model: z.string().optional(), // Contoh: "gemini-2.0-flash", "gemini-1.5-flash"
   apiKey: z.string().optional(), // Opsional jika user membawa API key sendiri
 });
 
