@@ -17,9 +17,117 @@ const PROGRAM_LABELS: Record<string, string> = {
   AKM: "AKM (Asesmen Kompetensi Minimum) Literasi & Numerasi",
 };
 
+/**
+ * Ekstraktor JSON yang tangguh dari teks respon AI
+ */
+function extractJsonFromAiText(text: string): any {
+  const trimmed = text.trim();
+
+  // 1. Coba parse langsung
+  try {
+    return JSON.parse(trimmed);
+  } catch {}
+
+  // 2. Ekstrak dari blok markdown ```json ... ```
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch {}
+  }
+
+  // 3. Ekstrak substring dari kurung kurawal pertama sampai terakhir
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = trimmed.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {}
+  }
+
+  throw new Error("Gagal mengurai respon AI menjadi format JSON.");
+}
+
+/**
+ * Normalisasi dan validasi data soal agar seragam
+ */
+function normalizeQuestions(
+  rawQuestions: any[],
+  optCount: number,
+  optLabels: string[]
+): GeneratedQuestionItem[] {
+  if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+    throw new Error("AI tidak menghasilkan butir soal dalam format array.");
+  }
+
+  return rawQuestions.map((q, idx) => {
+    let rawOptions: any[] = Array.isArray(q.options) ? q.options : [];
+    if (rawOptions.length < 2) {
+      throw new Error(`Soal nomor ${idx + 1} tidak memiliki pilihan jawaban yang cukup.`);
+    }
+
+    rawOptions = rawOptions.slice(0, optCount);
+
+    const mappedOptions = rawOptions.map((opt, oIdx) => {
+      // Menangani format { label, content, isCorrect } atau string murni
+      const content = typeof opt === "string" ? opt : String(opt.content || opt.text || "").trim();
+      const isCorrect = typeof opt === "object" ? Boolean(opt.isCorrect) : false;
+      return {
+        label: optLabels[oIdx] || String.fromCharCode(65 + oIdx),
+        content,
+        isCorrect,
+      };
+    });
+
+    // Validasi atau inferensi kunci jawaban jika kunci disimpan di q.correctAnswer
+    if (q.correctAnswer && typeof q.correctAnswer === "string") {
+      const targetLabel = q.correctAnswer.trim().toUpperCase();
+      let matched = false;
+      mappedOptions.forEach((o) => {
+        if (o.label === targetLabel || o.content.trim() === q.correctAnswer.trim()) {
+          o.isCorrect = true;
+          matched = true;
+        }
+      });
+      if (!matched && mappedOptions.length > 0) {
+        mappedOptions[0].isCorrect = true;
+      }
+    }
+
+    // Pastikan tepat ada 1 jawaban benar
+    const correctCount = mappedOptions.filter((o) => o.isCorrect).length;
+    if (correctCount === 0 && mappedOptions.length > 0) {
+      mappedOptions[0].isCorrect = true;
+    } else if (correctCount > 1) {
+      let foundFirst = false;
+      mappedOptions.forEach((o) => {
+        if (o.isCorrect) {
+          if (foundFirst) o.isCorrect = false;
+          else foundFirst = true;
+        }
+      });
+    }
+
+    const validDiff = ["EASY", "MEDIUM", "HARD"].includes(q.difficulty)
+      ? q.difficulty
+      : "MEDIUM";
+
+    return {
+      number: Number(q.number) || idx + 1,
+      content: String(q.content || q.question || "").trim(),
+      difficulty: validDiff,
+      type: QuestionType.SINGLE_CHOICE,
+      options: mappedOptions,
+      explanation: String(q.explanation || "").trim(),
+      bloomLevel: q.bloomLevel ? String(q.bloomLevel).trim() : undefined,
+    };
+  });
+}
+
 export class QuestionAiService {
   /**
-   * Menghasilkan butir-butir soal menggunakan Google Gemini AI
+   * Menghasilkan butir-butir soal menggunakan Cloudflare Workers AI atau Google Gemini
    */
   static async generateQuestions(
     teacherId: string,
@@ -39,24 +147,220 @@ export class QuestionAiService {
       throw new AppError("NOT_FOUND", "Topik materi yang dipilih tidak ditemukan.");
     }
 
-    // 2. Tentukan API Key Gemini
+    const programName = PROGRAM_LABELS[input.programType] || "Latihan Soal";
+    const optCount = input.optionsCount || 5;
+    const optLabels = optCount === 4 ? ["A", "B", "C", "D"] : ["A", "B", "C", "D", "E"];
+
+    // Ekstraksi teks materi dari PDF jika dilampirkan
+    let documentText = "";
+    if (input.uploadedFile?.data && input.uploadedFile?.mimeType) {
+      if (input.uploadedFile.mimeType.includes("pdf")) {
+        try {
+          const buffer = Buffer.from(input.uploadedFile.data, "base64");
+          const { extractText } = await import("unpdf");
+          const res = await extractText(new Uint8Array(buffer));
+          documentText = Array.isArray(res.text) ? res.text.join("\n\n").trim() : String(res.text || "").trim();
+        } catch (pdfErr) {
+          console.warn("[QuestionAiService] Gagal ekstraksi teks PDF:", pdfErr);
+        }
+      }
+    }
+
+    const provider = input.provider || "CLOUDFLARE";
+
+    if (provider === "CLOUDFLARE") {
+      return this.generateWithCloudflare(topic, input, programName, optCount, optLabels, documentText);
+    } else {
+      return this.generateWithGemini(topic, input, programName, optCount, optLabels, documentText);
+    }
+  }
+
+  /**
+   * Pembuatan soal menggunakan Cloudflare Workers AI
+   */
+  private static async generateWithCloudflare(
+    topic: any,
+    input: GenerateQuestionsInput,
+    programName: string,
+    optCount: number,
+    optLabels: string[],
+    documentText: string
+  ) {
+    const accountId = input.cfAccountId?.trim() || process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = input.cfApiToken?.trim() || process.env.CLOUDFLARE_API_TOKEN;
+
+    if (!accountId || !apiToken) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cloudflare Account ID dan API Token belum diatur. Masukkan Account ID dan API Token Anda di formulir, atau atur di file .env.production server."
+      );
+    }
+
+    const systemInstruction = `Anda adalah asisten ahli pembuat soal kurikulum dan asesmen pendidikan Indonesia berstandar nasional (Kurikulum Merdeka / K13).
+Tugas Anda adalah membuat soal pilihan ganda berkualitas tinggi berdasarkan materi dan topik yang diberikan.
+
+PANDUAN MUTU SOAL:
+1. Soal harus relevan dengan Mata Pelajaran: "${topic.subject.name}" dan Topik/Materi: "${topic.name}".
+2. Bahasa Indonesia baku, jelas, kontekstual, dan mendidik.
+3. Setiap butir soal WAJIB memiliki tepat ${optCount} opsi jawaban (${optLabels.join(", ")}).
+4. Tepat 1 opsi bernilai benar (isCorrect: true) dan opsi lain salah (isCorrect: false).
+5. Pembahasan singkat, padat, dan jelas mengenai konsep dan alasan jawaban benar (1-3 kalimat).
+6. Format output HARUS berupa JSON valid tanpa teks atau penjelasan lain di luar JSON.
+
+Format JSON yang diwajibkan:
+{
+  "title": "Judul Latihan Soal",
+  "questions": [
+    {
+      "number": 1,
+      "content": "Teks pertanyaan soal...",
+      "difficulty": "MEDIUM",
+      "bloomLevel": "C3 Penerapan",
+      "options": [
+        { "label": "A", "content": "Teks opsi A...", "isCorrect": true },
+        { "label": "B", "content": "Teks opsi B...", "isCorrect": false },
+        { "label": "C", "content": "Teks opsi C...", "isCorrect": false },
+        { "label": "D", "content": "Teks opsi D...", "isCorrect": false }${optCount === 5 ? ',\n        { "label": "E", "content": "Teks opsi E...", "isCorrect": false }' : ""}
+      ],
+      "explanation": "Pembahasan konsep ringkas..."
+    }
+  ]
+}`;
+
+    const userPrompt = `SPESIFIKASI SOAL:
+- Mata Pelajaran: ${topic.subject.name}
+- Topik / Bab: ${topic.name}
+- Jenis Asesmen: ${programName}
+- Tingkat Kesulitan: ${input.difficulty === "MIXED" ? "Kombinasi Mudah, Sedang, Sulit" : input.difficulty}
+- Jumlah Soal: ${input.questionCount} butir
+- Jumlah Pilihan Jawaban per Soal: ${optCount} opsi (${optLabels.join(", ")})
+${input.customInstructions ? `- Instruksi Tambahan Guru: "${input.customInstructions}"` : ""}
+
+${documentText ? `MATERI DARI DOKUMEN:\n"""\n${documentText.substring(0, 18000)}\n"""\n` : ""}
+${input.materialText ? `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.trim().substring(0, 18000)}\n"""\n` : ""}
+
+INSTRUKSI:
+Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
+
+    // Model Cloudflare terkemuka yang siap pakai
+    const candidateModels = Array.from(
+      new Set(
+        [
+          input.model?.startsWith("@cf/") ? input.model : undefined,
+          process.env.CLOUDFLARE_MODEL,
+          "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "@cf/qwen/qwen2.5-72b-instruct",
+          "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+          "@cf/meta/llama-3.1-8b-instruct",
+        ].filter(Boolean) as string[]
+      )
+    );
+
+    let lastError: any = null;
+    let responseText = "";
+
+    for (const modelName of candidateModels) {
+      try {
+        console.log(`[QuestionAiService] Memanggil Cloudflare Workers AI model: ${modelName}...`);
+        const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`;
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: "system", content: systemInstruction },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.6,
+            max_tokens: 3800,
+          }),
+          signal: AbortSignal.timeout(45000), // Batas 45 detik
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.errors?.[0]?.message || res.statusText || `HTTP ${res.status}`;
+          console.warn(`[QuestionAiService] Cloudflare model ${modelName} gagal: ${errMsg}`);
+
+          // Jika auth salah, jangan retry model lain
+          if (res.status === 401 || res.status === 403) {
+            throw new AppError(
+              "FORBIDDEN",
+              "Cloudflare API Token tidak valid atau tidak memiliki izin Workers AI. Pastikan token memiliki izin 'Workers AI: Read'."
+            );
+          }
+          if (res.status === 404 && errMsg.toLowerCase().includes("account")) {
+            throw new AppError(
+              "VALIDATION_ERROR",
+              "Cloudflare Account ID tidak ditemukan. Periksa kembali Account ID Anda di dashboard Cloudflare."
+            );
+          }
+
+          lastError = new Error(errMsg);
+          continue;
+        }
+
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content && content.trim().length > 0) {
+          responseText = content;
+          console.log(`[QuestionAiService] Berhasil menerima respon dari Cloudflare (${modelName})`);
+          break;
+        }
+      } catch (err: any) {
+        if (err instanceof AppError) throw err;
+        lastError = err;
+        console.warn(`[QuestionAiService] Error request Cloudflare model ${modelName}:`, err.message || err);
+      }
+    }
+
+    if (!responseText) {
+      throw (
+        lastError ||
+        new AppError(
+          "INTERNAL_ERROR",
+          "Gagal mendapatkan respon dari Cloudflare Workers AI. Pastikan Account ID & API Token benar."
+        )
+      );
+    }
+
+    const parsed = extractJsonFromAiText(responseText);
+    const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels);
+
+    return {
+      subjectName: topic.subject.name,
+      topicName: topic.name,
+      questions,
+    };
+  }
+
+  /**
+   * Pembuatan soal menggunakan Google Gemini
+   */
+  private static async generateWithGemini(
+    topic: any,
+    input: GenerateQuestionsInput,
+    programName: string,
+    optCount: number,
+    optLabels: string[],
+    documentText: string
+  ) {
     const apiKey = input.apiKey?.trim() || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new AppError(
         "VALIDATION_ERROR",
-        "API Key Google Gemini belum diatur. Silakan masukkan API Key Gemini Anda atau hubungi Administrator untuk mengatur GEMINI_API_KEY di server."
+        "API Key Google Gemini belum diatur. Silakan masukkan API Key Gemini Anda atau gunakan provider Cloudflare."
       );
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // 3. Susun instruksi prompt
-    const programName = PROGRAM_LABELS[input.programType] || "Latihan Soal";
-    const optCount = input.optionsCount || 5;
-    const optLabels = optCount === 4 ? ["A", "B", "C", "D"] : ["A", "B", "C", "D", "E"];
-
-    const systemInstruction = `
-Anda adalah asisten ahli pembuat soal kurikulum dan asesmen pendidikan Indonesia berstandar nasional (Kurikulum Merdeka / K13).
+    const systemInstruction = `Anda adalah asisten ahli pembuat soal kurikulum dan asesmen pendidikan Indonesia berstandar nasional (Kurikulum Merdeka / K13).
 Tugas Anda adalah membuat soal pilihan ganda berkualitas tinggi berdasarkan materi dan topik yang diberikan.
 
 PANDUAN MUTU SOAL:
@@ -64,14 +368,10 @@ PANDUAN MUTU SOAL:
 2. Bahasa Indonesia baku, jelas, tidak ambigu, dan mendidik.
 3. Setiap soal WAJIB memiliki tepat ${optCount} pilihan jawaban dengan label (${optLabels.join(", ")}).
 4. Tepat 1 (satu) pilihan jawaban bernilai BENAR (isCorrect: true), dan pilihan lainnya SALAH (isCorrect: false).
-5. Pengecoh (distraktor) harus masuk akal, homogen, dan tidak memberikan petunjuk langsung ke jawaban benar.
-6. Hindari opsi klise seperti "Semua jawaban benar" atau "Tidak ada yang benar".
-7. Sertakan kunci jawaban dan PEMBAHASAN LENGKAP yang mendalam serta mendidik.
-8. Output HARUS berupa JSON terstruktur sesuai skema yang ditentukan tanpa teks pengantar markdown di luar JSON.
-`;
+5. Sertakan kunci jawaban dan pembahasan konsep ringkas (1-3 kalimat).
+6. Output HARUS berupa JSON terstruktur sesuai skema yang ditentukan tanpa teks pengantar markdown di luar JSON.`;
 
-    const userPrompt = `
-SPESIFIKASI SOAL YANG DIMINTA:
+    const userPrompt = `SPESIFIKASI SOAL:
 - Mata Pelajaran: ${topic.subject.name}
 - Topik / Bab: ${topic.name}
 - Jenis Asesmen: ${programName}
@@ -81,53 +381,31 @@ SPESIFIKASI SOAL YANG DIMINTA:
 ${input.customInstructions ? `- Instruksi Tambahan Guru: "${input.customInstructions}"` : ""}
 
 INSTRUKSI:
-Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi berdasarkan materi di bawah ini (atau berdasarkan pengetahuan mendalam tentang topik "${topic.name}" jika materi tidak dilampirkan).
-Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${optLabels.join(", ")}), penanda jawaban benar, serta penjelasan/pembahasan konsep yang benar.
-`;
+Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi berdasarkan materi di bawah ini (atau pengetahuan topik "${topic.name}").`;
 
-    // 4. Bangun content parts untuk Gemini (mendukung file PDF inline)
     const contentParts: any[] = [];
 
-    // Jika ada file lampiran dokumen (PDF/TXT)
-    if (input.uploadedFile?.data && input.uploadedFile?.mimeType) {
-      let extractedPdfText = "";
-      if (input.uploadedFile.mimeType.includes("pdf")) {
-        try {
-          const buffer = Buffer.from(input.uploadedFile.data, "base64");
-          const { extractText } = await import("unpdf");
-          const res = await extractText(new Uint8Array(buffer));
-          extractedPdfText = Array.isArray(res.text) ? res.text.join("\n\n").trim() : String(res.text || "").trim();
-        } catch (pdfErr) {
-          console.warn("[QuestionAiService] Gagal ekstraksi teks PDF lokal, akan menggunakan inlineData:", pdfErr);
-        }
-      }
-
-      if (extractedPdfText && extractedPdfText.length > 50) {
-        contentParts.push({
-          text: `MATERI PEMBELAJARAN DARI DOKUMEN (${input.uploadedFile.fileName || "PDF"}):\n"""\n${extractedPdfText.substring(0, 35000)}\n"""`,
-        });
-      } else {
-        contentParts.push({
-          inlineData: {
-            mimeType: input.uploadedFile.mimeType,
-            data: input.uploadedFile.data,
-          },
-        });
-      }
+    if (documentText && documentText.length > 50) {
+      contentParts.push({
+        text: `MATERI PEMBELAJARAN DARI DOKUMEN (${input.uploadedFile?.fileName || "PDF"}):\n"""\n${documentText.substring(0, 30000)}\n"""`,
+      });
+    } else if (input.uploadedFile?.data && input.uploadedFile?.mimeType) {
+      contentParts.push({
+        inlineData: {
+          mimeType: input.uploadedFile.mimeType,
+          data: input.uploadedFile.data,
+        },
+      });
     }
 
-    // Jika ada teks materi bacaan yang ditempelkan
     if (input.materialText && input.materialText.trim().length > 0) {
       contentParts.push({
         text: `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.trim().substring(0, 30000)}\n"""`,
       });
     }
 
-    contentParts.push({
-      text: userPrompt,
-    });
+    contentParts.push({ text: userPrompt });
 
-    // 5. Schema JSON Response untuk Google Gen AI SDK
     const responseSchema = {
       type: Type.OBJECT,
       properties: {
@@ -146,7 +424,7 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
               },
               bloomLevel: {
                 type: Type.STRING,
-                description: "Tingkat kognitif Bloom, misal: C1, C2, C3, C4 Analisis",
+                description: "Tingkat kognitif Bloom, misal: C1, C2, C3, C4",
               },
               options: {
                 type: Type.ARRAY,
@@ -162,7 +440,7 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
               },
               explanation: {
                 type: Type.STRING,
-                description: "Pembahasan lengkap dan langkah penyelesaian/konsep soal",
+                description: "Pembahasan ringkas 1-3 kalimat mengenai konsep dan alasan jawaban benar",
               },
             },
             required: ["number", "content", "difficulty", "options", "explanation"],
@@ -173,9 +451,8 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
     };
 
     try {
-      // Model yang aktif dan stabil (hindari gemini-2.5-flash karena restricted oleh Google)
       const rawCandidateModels = [
-        input.model,
+        input.model?.startsWith("gemini-") ? input.model : undefined,
         process.env.GEMINI_MODEL,
         "gemini-2.0-flash",
         "gemini-1.5-flash",
@@ -202,15 +479,14 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
             },
           });
           if (response?.text) {
-            console.log(`[QuestionAiService] Berhasil mendapatkan respon dari model: ${modelName}`);
+            console.log(`[QuestionAiService] Berhasil mendapatkan respon dari model Gemini: ${modelName}`);
             break;
           }
         } catch (err: any) {
           lastError = err;
           const errMsg = String(err?.message || err || "");
-          console.warn(`[QuestionAiService] Model ${modelName} gagal:`, errMsg);
+          console.warn(`[QuestionAiService] Gemini model ${modelName} gagal:`, errMsg);
 
-          // Jika masalah adalah API key invalid atau kuota habis, tidak ada gunanya mencoba model lain
           if (
             errMsg.includes("API_KEY_INVALID") ||
             errMsg.includes("API key not valid") ||
@@ -221,7 +497,6 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
             err?.status === 401 ||
             err?.status === 429
           ) {
-            console.warn("[QuestionAiService] Masalah autentikasi atau kuota API terdeteksi, menghentikan percobaan model lain.");
             break;
           }
         }
@@ -248,7 +523,7 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
         ) {
           throw new AppError(
             "VALIDATION_ERROR",
-            "Kuota gratis Google Gemini API Anda telah habis atau terkena Rate Limit. Silakan tunggu beberapa saat atau gunakan API Key akun Google lainnya."
+            "Kuota gratis Google Gemini API Anda telah habis atau terkena Rate Limit. Silakan gunakan Cloudflare Workers AI atau tunggu beberapa saat."
           );
         }
         if (lastError?.status === 403 || errMsg.includes("PERMISSION_DENIED")) {
@@ -263,60 +538,8 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
         );
       }
 
-      const parsed = JSON.parse(responseText);
-      const rawQuestions: any[] = parsed.questions || [];
-
-      if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
-        throw new Error("Format hasil generasi soal dari AI kosong.");
-      }
-
-      // Normalisasi dan validasi data soal
-      const questions: GeneratedQuestionItem[] = rawQuestions.map((q, idx) => {
-        // Pastikan opsi memiliki label dan ada 1 yang benar
-        let rawOptions: any[] = Array.isArray(q.options) ? q.options : [];
-        if (rawOptions.length < 2) {
-          throw new Error(`Soal nomor ${idx + 1} tidak memiliki pilihan jawaban yang cukup.`);
-        }
-
-        // Batasi opsi sesuai optCount
-        rawOptions = rawOptions.slice(0, optCount);
-
-        // Pastikan label sesuai A, B, C, D, E
-        const mappedOptions = rawOptions.map((opt, oIdx) => ({
-          label: optLabels[oIdx] || String.fromCharCode(65 + oIdx),
-          content: String(opt.content || "").trim(),
-          isCorrect: Boolean(opt.isCorrect),
-        }));
-
-        // Validasi harus ada tepat 1 kunci jawaban
-        const correctCount = mappedOptions.filter((o) => o.isCorrect).length;
-        if (correctCount === 0 && mappedOptions.length > 0) {
-          mappedOptions[0].isCorrect = true; // Fallback jika AI lupa menandai kunci
-        } else if (correctCount > 1) {
-          // Jika ada lebih dari satu kunci jawaban, pertahankan yang pertama
-          let foundFirst = false;
-          mappedOptions.forEach((o) => {
-            if (o.isCorrect) {
-              if (foundFirst) o.isCorrect = false;
-              else foundFirst = true;
-            }
-          });
-        }
-
-        const validDiff = ["EASY", "MEDIUM", "HARD"].includes(q.difficulty)
-          ? q.difficulty
-          : "MEDIUM";
-
-        return {
-          number: Number(q.number) || idx + 1,
-          content: String(q.content || "").trim(),
-          difficulty: validDiff,
-          type: QuestionType.SINGLE_CHOICE,
-          options: mappedOptions,
-          explanation: String(q.explanation || "").trim(),
-          bloomLevel: q.bloomLevel ? String(q.bloomLevel).trim() : undefined,
-        };
-      });
+      const parsed = extractJsonFromAiText(responseText);
+      const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels);
 
       return {
         subjectName: topic.subject.name,
@@ -324,13 +547,11 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
         questions,
       };
     } catch (err: any) {
-      if (err instanceof AppError) {
-        throw err;
-      }
-      console.error("[QuestionAiService] Error generating questions:", err);
+      if (err instanceof AppError) throw err;
+      console.error("[QuestionAiService] Error generating questions with Gemini:", err);
       throw new AppError(
         "VALIDATION_ERROR",
-        `Gagal membuat soal dengan AI: ${err?.message || "Pastikan materi dapat dibaca atau periksa API Key Gemini Anda."}`
+        `Gagal membuat soal dengan Gemini: ${err?.message || "Periksa API Key Gemini Anda."}`
       );
     }
   }
@@ -349,51 +570,49 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
     });
 
     if (!topic) {
-      throw new AppError("NOT_FOUND", "Topik materi tidak ditemukan.");
+      throw new AppError("NOT_FOUND", "Topik materi yang dipilih tidak ditemukan.");
     }
 
-    // Simpan semua soal terpilih dalam satu transaksi database
-    const createdQuestions = await prisma.$transaction(
-      input.questions.map((q) => {
-        const diffLevel: DifficultyLevel =
-          q.difficulty === "EASY"
-            ? DifficultyLevel.EASY
-            : q.difficulty === "HARD"
-            ? DifficultyLevel.HARD
-            : DifficultyLevel.MEDIUM;
+    if (!input.questions || input.questions.length === 0) {
+      throw new AppError("VALIDATION_ERROR", "Tidak ada butir soal yang dipilih untuk disimpan.");
+    }
 
-        return prisma.question.create({
+    // Simpan semua butir soal dalam transaksi database atomik
+    const createdQuestions = await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const item of input.questions) {
+        const question = await tx.question.create({
           data: {
-            topicId: input.topicId,
+            topicId: topic.id,
             createdById: teacherId,
-            content: q.content.trim(),
-            difficulty: diffLevel,
-            type: q.type || QuestionType.SINGLE_CHOICE,
-            explanation: q.explanation?.trim() || null,
-            isActive: true,
+            type: item.type || QuestionType.SINGLE_CHOICE,
+            content: item.content,
+            difficulty: item.difficulty as DifficultyLevel,
+            explanation: item.explanation || null,
             options: {
-              create: q.options.map((opt) => ({
-                label: opt.label.toUpperCase(),
-                content: opt.content.trim(),
-                isCorrect: Boolean(opt.isCorrect),
+              create: item.options.map((opt, idx) => ({
+                label: opt.label,
+                content: opt.content,
+                isCorrect: opt.isCorrect,
+                order: idx + 1,
               })),
             },
           },
           include: {
-            options: {
-              orderBy: { label: "asc" },
-            },
+            options: true,
           },
         });
-      })
-    );
+        results.push(question);
+      }
+
+      return results;
+    });
 
     return {
       count: createdQuestions.length,
       topicName: topic.name,
       subjectName: topic.subject.name,
-      subjectId: topic.subject.id,
-      questions: createdQuestions,
     };
   }
 }

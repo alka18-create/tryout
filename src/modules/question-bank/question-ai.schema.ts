@@ -28,8 +28,11 @@ export const GenerateQuestionsInputSchema = z.object({
   questionCount: z.coerce.number().min(1).max(20).default(5),
   optionsCount: z.coerce.number().min(4).max(5).default(5), // 4 atau 5 opsi (A-D atau A-E)
   customInstructions: z.string().optional(),
-  model: z.string().optional(), // Contoh: "gemini-2.0-flash", "gemini-1.5-flash"
-  apiKey: z.string().optional(), // Opsional jika user membawa API key sendiri
+  provider: z.enum(["CLOUDFLARE", "GEMINI"]).default("CLOUDFLARE"),
+  model: z.string().optional(), // Contoh: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "gemini-2.0-flash"
+  apiKey: z.string().optional(), // Gemini API key jika mode Gemini
+  cfAccountId: z.string().optional(), // Cloudflare Account ID jika mode Cloudflare
+  cfApiToken: z.string().optional(), // Cloudflare API Token jika mode Cloudflare
 });
 
 export type GenerateQuestionsInput = z.infer<typeof GenerateQuestionsInputSchema>;
