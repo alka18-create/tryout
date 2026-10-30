@@ -88,14 +88,32 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
     // 4. Bangun content parts untuk Gemini (mendukung file PDF inline)
     const contentParts: any[] = [];
 
-    // Jika ada file lampiran (misal PDF dokumen kurikulum / materi)
+    // Jika ada file lampiran dokumen (PDF/TXT)
     if (input.uploadedFile?.data && input.uploadedFile?.mimeType) {
-      contentParts.push({
-        inlineData: {
-          mimeType: input.uploadedFile.mimeType,
-          data: input.uploadedFile.data,
-        },
-      });
+      let extractedPdfText = "";
+      if (input.uploadedFile.mimeType.includes("pdf")) {
+        try {
+          const buffer = Buffer.from(input.uploadedFile.data, "base64");
+          const { extractText } = await import("unpdf");
+          const res = await extractText(new Uint8Array(buffer));
+          extractedPdfText = Array.isArray(res.text) ? res.text.join("\n\n").trim() : String(res.text || "").trim();
+        } catch (pdfErr) {
+          console.warn("[QuestionAiService] Gagal ekstraksi teks PDF lokal, akan menggunakan inlineData:", pdfErr);
+        }
+      }
+
+      if (extractedPdfText && extractedPdfText.length > 50) {
+        contentParts.push({
+          text: `MATERI PEMBELAJARAN DARI DOKUMEN (${input.uploadedFile.fileName || "PDF"}):\n"""\n${extractedPdfText.substring(0, 35000)}\n"""`,
+        });
+      } else {
+        contentParts.push({
+          inlineData: {
+            mimeType: input.uploadedFile.mimeType,
+            data: input.uploadedFile.data,
+          },
+        });
+      }
     }
 
     // Jika ada teks materi bacaan yang ditempelkan

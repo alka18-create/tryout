@@ -75,6 +75,13 @@ export function QuestionAiModal({
     mimeType: string;
     data: string; // Base64
   } | null>(null);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
+  const [extractedStats, setExtractedStats] = useState<{
+    fileName: string;
+    chars: number;
+    pages?: number;
+  } | null>(null);
+  const [showExtractedPreview, setShowExtractedPreview] = useState(false);
 
   // Assessment Settings
   const [programType, setProgramType] = useState("DAILY");
@@ -163,7 +170,7 @@ export function QuestionAiModal({
   }, [selectedSubjectId, filteredTopics, selectedTopicId]);
 
   // Handle File Upload (PDF, TXT)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -185,18 +192,57 @@ export function QuestionAiModal({
     }
 
     setErrorMessage("");
+    setIsExtractingFile(true);
+    setExtractedStats(null);
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      const base64 = dataUrl.split(",")[1];
-      setSelectedFile({
-        name: file.name,
-        mimeType: file.type || "application/pdf",
-        data: base64,
-      });
-    };
-    reader.readAsDataURL(file);
+    try {
+      // 1. Ekstraksi teks dari file TXT
+      if (file.name.endsWith(".txt") || file.type === "text/plain") {
+        const text = await file.text();
+        setMaterialText(text);
+        setExtractedStats({
+          fileName: file.name,
+          chars: text.length,
+        });
+      }
+      // 2. Ekstraksi teks dari file PDF langsung di browser via unpdf
+      else if (file.name.endsWith(".pdf") || file.type === "application/pdf") {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const { extractText } = await import("unpdf");
+          const res = await extractText(new Uint8Array(arrayBuffer));
+          const joined = Array.isArray(res.text) ? res.text.join("\n\n").trim() : String(res.text || "").trim();
+          if (joined.length > 20) {
+            setMaterialText(joined);
+            setExtractedStats({
+              fileName: file.name,
+              chars: joined.length,
+              pages: res.totalPages,
+            });
+          }
+        } catch (pdfErr) {
+          console.warn("Client-side PDF extraction error, will use server fallback:", pdfErr);
+        }
+      }
+
+      // 3. Fallback FileReader Base64
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const base64 = dataUrl.split(",")[1];
+        setSelectedFile({
+          name: file.name,
+          mimeType: file.type || "application/pdf",
+          data: base64,
+        });
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMessage("Gagal memproses file: " + (err.message || "Terjadi kesalahan."));
+    } finally {
+      setIsExtractingFile(false);
+    }
   };
 
   // Mulai Proses Generate Soal
@@ -250,12 +296,17 @@ export function QuestionAiModal({
       if (inputMode === "text") {
         payload.materialText = materialText.trim();
         payload.customInstructions = customPrompt.trim() || undefined;
-      } else if (inputMode === "file" && selectedFile) {
-        payload.uploadedFile = {
-          mimeType: selectedFile.mimeType,
-          data: selectedFile.data,
-          fileName: selectedFile.name,
-        };
+      } else if (inputMode === "file") {
+        // Prioritaskan pengiriman teks materi hasil ekstraksi (jauh lebih ringan & instan)
+        if (materialText && materialText.trim().length > 20) {
+          payload.materialText = materialText.trim();
+        } else if (selectedFile) {
+          payload.uploadedFile = {
+            mimeType: selectedFile.mimeType,
+            data: selectedFile.data,
+            fileName: selectedFile.name,
+          };
+        }
         payload.customInstructions = customPrompt.trim() || undefined;
       } else if (inputMode === "prompt") {
         payload.customInstructions = customPrompt.trim();
@@ -560,14 +611,55 @@ export function QuestionAiModal({
                         {selectedFile ? selectedFile.name : "Klik untuk memilih dokumen materi"}
                       </p>
                       <p className="text-[11px] text-slate-500 mt-1">
-                        Format PDF atau TXT (maks. 20MB). Gemini AI akan membaca langsung konten dokumen.
+                        Format PDF atau TXT. Teks materi akan langsung diekstrak secara otomatis.
                       </p>
-                      {selectedFile && (
-                        <Badge variant="outline" className="mt-2 text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px]">
-                          ✓ Dokumen Terlampir Siap Diproses
-                        </Badge>
+
+                      {isExtractingFile && (
+                        <div className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-purple-600 font-semibold">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mengekstrak teks dari dokumen...</span>
+                        </div>
+                      )}
+
+                      {extractedStats && !isExtractingFile && (
+                        <div className="mt-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{extractedStats.chars.toLocaleString()} karakter teks diekstrak</span>
+                              {extractedStats.pages && (
+                                <span className="font-normal text-emerald-700">({extractedStats.pages} halaman)</span>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setShowExtractedPreview(!showExtractedPreview);
+                              }}
+                              className="text-[10px] font-bold text-emerald-700 hover:underline"
+                            >
+                              {showExtractedPreview ? "Sembunyikan Teks" : "Lihat / Edit Teks"}
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
+
+                    {showExtractedPreview && materialText && (
+                      <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 animate-in fade-in">
+                        <div className="flex items-center justify-between text-[11px] text-slate-600 font-semibold">
+                          <span>Pratinjau Teks Materi yang Digunakan AI:</span>
+                          <span className="text-slate-400 font-normal">{materialText.length} karakter</span>
+                        </div>
+                        <textarea
+                          value={materialText}
+                          onChange={(e) => setMaterialText(e.target.value)}
+                          rows={6}
+                          className="w-full text-xs rounded-lg border border-slate-300 p-2.5 text-slate-800 font-sans focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
