@@ -29,6 +29,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QuestionImportModal } from "@/components/teacher/question-import-modal";
+import { QuestionAiModal } from "@/components/teacher/question-ai-modal";
+import { Sparkles } from "lucide-react";
 
 interface Option {
   id: string;
@@ -109,6 +111,7 @@ function TeacherQuestionsContent() {
   const [topicModalMsg, setTopicModalMsg] = useState("");
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -337,6 +340,16 @@ function TeacherQuestionsContent() {
               <Button
                 variant="outline"
                 size="md"
+                onClick={() => setIsAiModalOpen(true)}
+                className="gap-2 border-purple-300 text-purple-700 bg-purple-50/50 hover:bg-purple-100 shadow-xs cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-purple-600 animate-pulse" />
+                <span className="font-semibold">Generate Soal AI</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="md"
                 onClick={() => setIsImportModalOpen(true)}
                 className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 shadow-xs"
               >
@@ -520,6 +533,16 @@ function TeacherQuestionsContent() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setIsAiModalOpen(true)}
+                className="gap-2 border-purple-300 text-purple-700 bg-purple-50/50 hover:bg-purple-100 shadow-xs cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-purple-600 animate-pulse" />
+                <span className="font-semibold">Generate Soal AI</span>
+              </Button>
+
               <Button
                 variant="outline"
                 size="md"
@@ -907,6 +930,26 @@ function TeacherQuestionsContent() {
           setFeedback({
             type: "success",
             text: "Soal dari Excel berhasil diimpor ke sistem!",
+          });
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: GENERATE SOAL DENGAN GEMINI AI                                   */}
+      {/* ========================================================================= */}
+      <QuestionAiModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        initialSubjectId={selectedSubject}
+        initialTopicId={selectedTopic}
+        onSuccess={() => {
+          loadMetadata();
+          if (selectedSubject) {
+            loadQuestions({ subjectId: selectedSubject });
+          }
+          setFeedback({
+            type: "success",
+            text: "Soal hasil AI berhasil disimpan dan ditambahkan ke Bank Soal!",
           });
         }}
       />

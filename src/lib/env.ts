@@ -19,6 +19,10 @@ const envSchema = z.object({
 
   EMAIL_FROM: z.string().optional(),
   EMAIL_PROVIDER_API_KEY: z.string().optional(),
+
+  // Google Gemini AI untuk Generator Soal Otomatis
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
