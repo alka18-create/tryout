@@ -371,7 +371,7 @@ export function QuestionAiModal({
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-900 text-lg">AI Soal Generator</h3>
                 <Badge variant="outline" className="bg-purple-100/70 text-purple-700 border-purple-200 text-xs py-0.5">
-                  Gemini 2.5 Flash
+                  Gemini 3.8 Flash
                 </Badge>
               </div>
               <p className="text-xs text-slate-500">

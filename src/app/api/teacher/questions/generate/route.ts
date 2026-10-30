@@ -13,7 +13,7 @@ export async function GET() {
   try {
     await requireRole([UserRole.TEACHER, UserRole.ADMIN]);
     const hasSystemApiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0);
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
     return ok({
       hasSystemApiKey,

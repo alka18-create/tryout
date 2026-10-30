@@ -155,23 +155,45 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
     };
 
     try {
-      // Prioritaskan model gemini-2.5-flash, fallback jika perlu
-      const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+      // Prioritaskan model gemini-3.8-flash (sesuai rekomendasi Google Gemini API terbaru) dengan fallback
+      const candidateModels = Array.from(
+        new Set(
+          [
+            process.env.GEMINI_MODEL,
+            "gemini-3.8-flash",
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+          ].filter(Boolean) as string[]
+        )
+      );
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: { parts: contentParts },
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          responseSchema: responseSchema as any,
-          temperature: 0.7,
-        },
-      });
+      let response: any = null;
+      let lastError: any = null;
 
-      const responseText = response.text;
+      for (const modelName of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: { parts: contentParts },
+            config: {
+              systemInstruction,
+              responseMimeType: "application/json",
+              responseSchema: responseSchema as any,
+              temperature: 0.7,
+            },
+          });
+          if (response?.text) {
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[QuestionAiService] Model ${modelName} gagal, mencoba model alternatif...`, err?.message || err);
+        }
+      }
+
+      const responseText = response?.text;
       if (!responseText) {
-        throw new Error("AI tidak mengembalikan respon teks yang valid.");
+        throw lastError || new Error("AI tidak mengembalikan respon teks yang valid.");
       }
 
       const parsed = JSON.parse(responseText);
