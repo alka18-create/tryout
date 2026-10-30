@@ -259,6 +259,12 @@ export function QuestionAiModal({
       return;
     }
 
+    if (!hasSystemApiKey && (!useCustomKey || !apiKey.trim())) {
+      setUseCustomKey(true);
+      setErrorMessage("API Key Google Gemini belum diatur di server. Silakan masukkan API Key Gemini Anda pada kolom di bawah.");
+      return;
+    }
+
     if (useCustomKey && !apiKey.trim()) {
       setErrorMessage("Silakan masukkan Google Gemini API Key Anda.");
       return;
@@ -320,17 +326,27 @@ export function QuestionAiModal({
           body: JSON.stringify(payload),
         });
       } catch (fetchErr: any) {
+        console.error("[QuestionAiModal] fetch failed:", fetchErr);
         throw new Error(
-          "Gagal menghubungi server (koneksi terputus atau timeout). Jika melampirkan file dokumen/PDF, pastikan ukurannya di bawah 5MB."
+          `Gagal menghubungi server (${fetchErr?.message || "Koneksi terputus atau timeout"}). Jika proses berlangsung lebih dari 60 detik, pastikan proxy timeout server telah disesuaikan.`
         );
       }
 
+      // Membaca teks mentah terlebih dahulu untuk mencegah error double-read stream
+      const rawText = await res.text().catch(() => "");
       let json: any = null;
       try {
-        json = await res.json();
+        json = rawText ? JSON.parse(rawText) : null;
       } catch {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Server (${res.status}): ${text.substring(0, 300) || res.statusText}`);
+        // Jika server mengembalikan respon HTML (seperti 504 Gateway Time-out Nginx / aaPanel)
+        const cleanPreview = rawText
+          .replace(/<[^>]*>?/gm, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .substring(0, 150);
+        throw new Error(
+          `Server Error (${res.status} ${res.statusText}): ${cleanPreview || "Koneksi ke backend timeout / terputus"}`
+        );
       }
 
       if (!res.ok || !json?.success) {
@@ -347,7 +363,7 @@ export function QuestionAiModal({
       setSelectedIndices(new Set(items.map((_, i) => i)));
       setStep(3); // Masuk ke preview & pemilihan
     } catch (err: any) {
-      console.error(err);
+      console.error("[QuestionAiModal] Error caught:", err);
       setErrorMessage(err.message || "Terjadi kesalahan saat berkomunikasi dengan AI.");
       setStep(1);
     }

@@ -37,9 +37,15 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const validated = GenerateQuestionsInputSchema.parse(json);
 
+    console.log(
+      `[AI-GENERATE] Memulai generate: user=${user.id}, mapelId=${validated.subjectId}, topikId=${validated.topicId}, count=${validated.questionCount}, model=${validated.model || "default"}, customKey=${Boolean(validated.apiKey)}, materialChars=${validated.materialText?.length || 0}`
+    );
+
     const result = await QuestionAiService.generateQuestions(user.id, validated);
+    console.log(`[AI-GENERATE] Sukses membuat ${result.questions.length} butir soal.`);
     return ok(result, "Berhasil men-generate butir soal.");
   } catch (error) {
+    console.error("[AI-GENERATE] Gagal membuat soal:", error);
     return handleApiError(error);
   }
 }

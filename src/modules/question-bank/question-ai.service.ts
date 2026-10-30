@@ -173,18 +173,16 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
     };
 
     try {
-      // Prioritaskan model pilihan user / env, disusul model flash resmi Google GenAI yang aktif
+      // Model yang aktif dan stabil (hindari gemini-2.5-flash karena restricted oleh Google)
+      const rawCandidateModels = [
+        input.model,
+        process.env.GEMINI_MODEL,
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+      ].filter(Boolean) as string[];
+
       const candidateModels = Array.from(
-        new Set(
-          [
-            input.model,
-            process.env.GEMINI_MODEL,
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-2.5-flash",
-            "gemini-3.8-flash",
-          ].filter(Boolean) as string[]
-        )
+        new Set(rawCandidateModels.filter((m) => m !== "gemini-2.5-flash"))
       );
 
       let response: any = null;
@@ -192,6 +190,7 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
 
       for (const modelName of candidateModels) {
         try {
+          console.log(`[QuestionAiService] Memanggil Gemini API dengan model: ${modelName}...`);
           response = await ai.models.generateContent({
             model: modelName,
             contents: { parts: contentParts },
@@ -203,17 +202,65 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
             },
           });
           if (response?.text) {
+            console.log(`[QuestionAiService] Berhasil mendapatkan respon dari model: ${modelName}`);
             break;
           }
         } catch (err: any) {
           lastError = err;
-          console.warn(`[QuestionAiService] Model ${modelName} gagal, mencoba model alternatif...`, err?.message || err);
+          const errMsg = String(err?.message || err || "");
+          console.warn(`[QuestionAiService] Model ${modelName} gagal:`, errMsg);
+
+          // Jika masalah adalah API key invalid atau kuota habis, tidak ada gunanya mencoba model lain
+          if (
+            errMsg.includes("API_KEY_INVALID") ||
+            errMsg.includes("API key not valid") ||
+            errMsg.includes("INVALID_ARGUMENT") ||
+            errMsg.includes("RESOURCE_EXHAUSTED") ||
+            errMsg.includes("quota") ||
+            err?.status === 400 ||
+            err?.status === 401 ||
+            err?.status === 429
+          ) {
+            console.warn("[QuestionAiService] Masalah autentikasi atau kuota API terdeteksi, menghentikan percobaan model lain.");
+            break;
+          }
         }
       }
 
       const responseText = response?.text;
       if (!responseText) {
-        throw lastError || new Error("AI tidak mengembalikan respon teks yang valid.");
+        const errMsg = String(lastError?.message || lastError || "");
+        if (
+          errMsg.includes("API_KEY_INVALID") ||
+          errMsg.includes("API key not valid") ||
+          errMsg.includes("INVALID_ARGUMENT") ||
+          lastError?.status === 400
+        ) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            "Google Gemini API Key tidak valid. Silakan periksa kembali API Key Anda dari Google AI Studio."
+          );
+        }
+        if (
+          errMsg.includes("RESOURCE_EXHAUSTED") ||
+          errMsg.includes("quota") ||
+          lastError?.status === 429
+        ) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            "Kuota gratis Google Gemini API Anda telah habis atau terkena Rate Limit. Silakan tunggu beberapa saat atau gunakan API Key akun Google lainnya."
+          );
+        }
+        if (lastError?.status === 403 || errMsg.includes("PERMISSION_DENIED")) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Akses Google Gemini API ditolak. Pastikan API Key Anda memiliki izin untuk menggunakan model Gemini."
+          );
+        }
+        throw new AppError(
+          "INTERNAL_ERROR",
+          `Gagal membuat soal dengan Gemini AI: ${errMsg.substring(0, 250) || "Respon AI kosong"}`
+        );
       }
 
       const parsed = JSON.parse(responseText);
@@ -277,10 +324,13 @@ Pastikan setiap soal memiliki teks soal jelas, ${optCount} pilihan jawaban (${op
         questions,
       };
     } catch (err: any) {
+      if (err instanceof AppError) {
+        throw err;
+      }
       console.error("[QuestionAiService] Error generating questions:", err);
       throw new AppError(
         "VALIDATION_ERROR",
-        `Gagal membuat soal dengan AI: ${err.message || "Pastikan materi dapat dibaca atau periksa API Key Gemini Anda."}`
+        `Gagal membuat soal dengan AI: ${err?.message || "Pastikan materi dapat dibaca atau periksa API Key Gemini Anda."}`
       );
     }
   }
