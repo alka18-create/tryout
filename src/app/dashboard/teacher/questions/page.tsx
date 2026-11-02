@@ -18,6 +18,7 @@ import {
   FolderPlus,
   FileSpreadsheet,
   ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   GraduationCap,
   Layers,
@@ -99,6 +100,12 @@ function TeacherQuestionsContent() {
   const [selectedTopic, setSelectedTopic] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Modals State
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -124,7 +131,7 @@ function TeacherQuestionsContent() {
     const urlSubjectId = searchParams.get("subjectId") || "";
     setSelectedSubject(urlSubjectId);
     if (urlSubjectId) {
-      loadQuestions({ subjectId: urlSubjectId });
+      loadQuestions({ subjectId: urlSubjectId }, 1, pageSize);
     }
   }, [searchParams]);
 
@@ -146,9 +153,15 @@ function TeacherQuestionsContent() {
     }
   };
 
-  const loadQuestions = async (paramsObj?: Record<string, string>) => {
+  const loadQuestions = async (
+    paramsObj?: Record<string, string>,
+    targetPage?: number,
+    targetLimit?: number,
+  ) => {
     setIsLoading(true);
     try {
+      const activePage = targetPage !== undefined ? targetPage : page;
+      const activeLimit = targetLimit !== undefined ? targetLimit : pageSize;
       const query = new URLSearchParams(paramsObj || {});
       const activeSub = paramsObj?.subjectId !== undefined ? paramsObj.subjectId : selectedSubject;
 
@@ -156,11 +169,16 @@ function TeacherQuestionsContent() {
       if (search) query.set("search", search);
       if (selectedTopic) query.set("topicId", selectedTopic);
       if (selectedDifficulty) query.set("difficulty", selectedDifficulty);
+      query.set("page", String(activePage));
+      query.set("limit", String(activeLimit));
 
       const res = await fetch(`/api/teacher/questions?${query.toString()}`);
       const json = await res.json();
       if (json.success && json.data) {
         setQuestions(json.data.questions || []);
+        setTotalQuestions(json.data.total ?? (json.data.questions?.length || 0));
+        setTotalPages(json.data.totalPages ?? 1);
+        setPage(json.data.page ?? activePage);
       }
     } catch {
       setFeedback({ type: "error", text: "Gagal memuat daftar soal." });
@@ -169,13 +187,26 @@ function TeacherQuestionsContent() {
     }
   };
 
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    loadQuestions(undefined, newPage, pageSize);
+    window.scrollTo({ top: 320, behavior: "smooth" });
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+    loadQuestions(undefined, 1, newSize);
+  };
+
   const handleSelectSubject = (subjectId: string) => {
     setSelectedSubject(subjectId);
     setSelectedTopic("");
     setSearch("");
     setSelectedDifficulty("");
+    setPage(1);
     router.push(`/dashboard/teacher/questions?subjectId=${subjectId}`);
-    loadQuestions({ subjectId });
+    loadQuestions({ subjectId }, 1, pageSize);
   };
 
   const handleBackToSubjects = () => {
@@ -183,13 +214,15 @@ function TeacherQuestionsContent() {
     setSelectedTopic("");
     setSearch("");
     setSelectedDifficulty("");
+    setPage(1);
     router.push("/dashboard/teacher/questions");
     loadMetadata();
   };
 
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
-    loadQuestions();
+    setPage(1);
+    loadQuestions(undefined, 1, pageSize);
   };
 
   const handleDelete = async (id: string) => {
@@ -203,6 +236,7 @@ function TeacherQuestionsContent() {
       if (json.success) {
         setFeedback({ type: "success", text: json.message || "Soal berhasil dihapus." });
         setQuestions((prev) => prev.filter((q) => q.id !== id));
+        setTotalQuestions((prev) => Math.max(0, prev - 1));
         loadMetadata(); // update total count
       } else {
         setFeedback({ type: "error", text: json.error?.message || "Gagal menghapus soal." });
@@ -659,9 +693,23 @@ function TeacherQuestionsContent() {
             />
           ) : (
             <div className="space-y-4">
-              <div className="text-xs text-slate-500 font-medium">
-                Menampilkan <strong className="text-slate-900">{questions.length}</strong> butir soal pada mata pelajaran{" "}
-                <strong className="text-blue-600">{currentSubject?.name}</strong>:
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 font-medium pb-2 border-b border-slate-100">
+                <div>
+                  Menampilkan <strong className="text-slate-900">{totalQuestions > 0 ? (page - 1) * pageSize + 1 : 0}</strong> - <strong className="text-slate-900">{Math.min(page * pageSize, totalQuestions)}</strong> dari total <strong className="text-blue-600">{totalQuestions}</strong> butir soal pada mata pelajaran <strong className="text-slate-900">{currentSubject?.name}</strong>:
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span>Per halaman:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 outline-none focus:border-blue-600 shadow-2xs cursor-pointer"
+                  >
+                    <option value={20}>20 Soal</option>
+                    <option value={50}>50 Soal</option>
+                    <option value={100}>100 Soal</option>
+                    <option value={200}>200 Soal</option>
+                  </select>
+                </div>
               </div>
 
               {questions.map((q, idx) => (
@@ -672,8 +720,8 @@ function TeacherQuestionsContent() {
                   {/* Header Card Soal */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center justify-center">
-                        {idx + 1}
+                      <span className="min-w-6 h-6 px-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center justify-center">
+                        {(page - 1) * pageSize + idx + 1}
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {q.topic.name}
@@ -758,6 +806,64 @@ function TeacherQuestionsContent() {
                   )}
                 </Card>
               ))}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
+                  <div className="text-xs text-slate-500 font-medium">
+                    Halaman <strong className="text-slate-900">{page}</strong> dari <strong className="text-slate-900">{totalPages}</strong> (Total {totalQuestions} Soal)
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1 || isLoading}
+                      onClick={() => handlePageChange(page - 1)}
+                      className="gap-1 px-3 py-1.5 text-xs shadow-xs"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Sebelumnya</span>
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                        .map((p, idx, arr) => {
+                          const prev = arr[idx - 1];
+                          return (
+                            <React.Fragment key={p}>
+                              {prev && p - prev > 1 && (
+                                <span className="px-1 text-slate-400 text-xs">...</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handlePageChange(p)}
+                                className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  p === page
+                                    ? "bg-blue-600 text-white shadow-xs"
+                                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page >= totalPages || isLoading}
+                      onClick={() => handlePageChange(page + 1)}
+                      className="gap-1 px-3 py-1.5 text-xs shadow-xs"
+                    >
+                      <span>Berikutnya</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
