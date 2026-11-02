@@ -242,15 +242,31 @@ ${input.materialText ? `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.tr
 INSTRUKSI:
 Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
 
+    // Fungsi sanitasi model yang mungkin usang atau berganti nama di katalog Cloudflare
+    const sanitizeCfModel = (name?: string): string | undefined => {
+      if (!name) return undefined;
+      const trimmed = name.trim();
+      if (!trimmed.startsWith("@cf/")) return undefined;
+      // Model yang telah didepresiasi Cloudflare dialihkan ke versi aktif terbarunya
+      if (trimmed === "@cf/meta/llama-3.1-8b-instruct" || trimmed.includes("infire-llama-3.1-8b")) {
+        return "@cf/meta/llama-3.1-8b-instruct-fp8";
+      }
+      if (trimmed === "@cf/qwen/qwen2.5-72b-instruct") {
+        return "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+      }
+      return trimmed;
+    };
+
     // Model Cloudflare terkemuka yang terbukti aktif & teruji
     const candidateModels = Array.from(
       new Set(
         [
-          input.model?.startsWith("@cf/") ? input.model : undefined,
-          process.env.CLOUDFLARE_MODEL,
+          sanitizeCfModel(input.model),
+          sanitizeCfModel(process.env.CLOUDFLARE_MODEL),
           "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "@cf/meta/llama-3.1-8b-instruct-fp8",
+          "@cf/meta/llama-3.2-3b-instruct",
           "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-          "@cf/meta/llama-3.1-8b-instruct",
         ].filter(Boolean) as string[]
       )
     );

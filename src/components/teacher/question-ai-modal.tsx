@@ -965,11 +965,14 @@ export function QuestionAiModal({
                         <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
                           Meta Llama 3.3 70B (Sangat Cerdas & Direkomendasikan)
                         </option>
+                        <option value="@cf/meta/llama-3.1-8b-instruct-fp8">
+                          Meta Llama 3.1 8B FP8 (Super Cepat 2 Detik)
+                        </option>
+                        <option value="@cf/meta/llama-3.2-3b-instruct">
+                          Meta Llama 3.2 3B (Ringan & Cepat)
+                        </option>
                         <option value="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b">
                           DeepSeek R1 Distill 32B (Penalaran Matematis & HOTS)
-                        </option>
-                        <option value="@cf/meta/llama-3.1-8b-instruct">
-                          Meta Llama 3.1 8B (Super Cepat 2 Detik)
                         </option>
                       </select>
                     </div>
