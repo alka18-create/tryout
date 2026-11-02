@@ -13,14 +13,19 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireRole([UserRole.TEACHER, UserRole.ADMIN]);
     const json = await req.json();
+    console.log(
+      `[AI-SAVE] Menerima request simpan soal: user=${user.id}, topicId=${json?.topicId}, jumlahSoal=${json?.questions?.length}`
+    );
     const validated = SaveGeneratedQuestionsInputSchema.parse(json);
 
     const result = await QuestionAiService.saveGeneratedQuestions(user.id, validated);
+    console.log(`[AI-SAVE] Berhasil menyimpan ${result.count} soal ke Bank Soal.`);
     return created(
       result,
       `Berhasil menyimpan ${result.count} soal ke Bank Soal (${result.subjectName} - ${result.topicName}).`
     );
   } catch (error) {
+    console.error("[AI-SAVE] Gagal menyimpan soal hasil generate:", error);
     return handleApiError(error);
   }
 }

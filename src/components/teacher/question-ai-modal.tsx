@@ -514,15 +514,22 @@ export function QuestionAiModal({
         }),
       });
 
-      const json = await res.json();
+      const rawText = await res.text().catch(() => "");
+      let json: any = null;
+      try {
+        json = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        throw new Error(`Server Error (${res.status}): ${rawText.substring(0, 150) || res.statusText}`);
+      }
 
-      if (!res.ok || !json.success) {
-        throw new Error(json.error?.message || "Gagal menyimpan soal ke database.");
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error?.message || "Gagal menyimpan soal ke database.");
       }
 
       onSuccess();
       onClose();
     } catch (err: any) {
+      console.error("[QuestionAiModal] Save error:", err);
       setErrorMessage(err.message || "Gagal menyimpan butir soal.");
       setIsSaving(false);
     }
