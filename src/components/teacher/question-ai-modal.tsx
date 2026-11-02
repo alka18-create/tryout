@@ -89,21 +89,12 @@ export function QuestionAiModal({
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [optionsCount, setOptionsCount] = useState<number>(5);
 
-  // Custom Credentials & Models (Cloudflare Workers AI & Google Gemini)
-  const [provider, setProvider] = useState<"CLOUDFLARE" | "GEMINI">("CLOUDFLARE");
+  // Kredensial & Model Cloudflare Workers AI
   const [hasSystemCloudflare, setHasSystemCloudflare] = useState(false);
-  const [hasSystemGemini, setHasSystemGemini] = useState(false);
-
-  // Cloudflare Settings
   const [useCustomCf, setUseCustomCf] = useState(false);
   const [cfAccountId, setCfAccountId] = useState("");
   const [cfApiToken, setCfApiToken] = useState("");
   const [selectedCfModel, setSelectedCfModel] = useState("@cf/meta/llama-3.3-70b-instruct-fp8-fast");
-
-  // Gemini Settings
-  const [useCustomGemini, setUseCustomGemini] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [selectedGeminiModel, setSelectedGeminiModel] = useState("gemini-2.0-flash");
 
   // Generation Results
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestionItem[]>([]);
@@ -136,12 +127,7 @@ export function QuestionAiModal({
       setUseCustomCf(true);
     }
 
-    // Ambil API key Gemini dari localStorage jika ada
-    const savedGeminiKey = localStorage.getItem("tryoutku_gemini_key");
-    if (savedGeminiKey) {
-      setGeminiApiKey(savedGeminiKey);
-      setUseCustomGemini(true);
-    }
+
 
     const loadData = async () => {
       setIsMetaLoading(true);
@@ -162,24 +148,16 @@ export function QuestionAiModal({
           setTopics(topJson.data || []);
         }
 
-        if (genStatusRes.ok) {
-          const genJson = await genStatusRes.json();
-          const d = genJson.data || {};
-          setHasSystemCloudflare(Boolean(d.hasSystemCloudflare));
-          setHasSystemGemini(Boolean(d.hasSystemGemini));
-          if (d.defaultProvider) {
-            setProvider(d.defaultProvider);
-          }
-          if (d.cloudflareModel) setSelectedCfModel(d.cloudflareModel);
-          if (d.geminiModel) setSelectedGeminiModel(d.geminiModel);
+          if (genStatusRes.ok) {
+            const genJson = await genStatusRes.json();
+            const d = genJson.data || {};
+            setHasSystemCloudflare(Boolean(d.hasSystemCloudflare));
+            if (d.cloudflareModel) setSelectedCfModel(d.cloudflareModel);
 
-          if (!d.hasSystemCloudflare && !savedCfToken) {
-            setUseCustomCf(true);
+            if (!d.hasSystemCloudflare && !savedCfToken) {
+              setUseCustomCf(true);
+            }
           }
-          if (!d.hasSystemGemini && !savedGeminiKey) {
-            setUseCustomGemini(true);
-          }
-        }
       } catch (err) {
         console.error("Gagal memuat metadata AI Modal:", err);
       } finally {
@@ -290,33 +268,18 @@ export function QuestionAiModal({
       return;
     }
 
-    if (provider === "CLOUDFLARE") {
-      if (!hasSystemCloudflare && (!useCustomCf || !cfAccountId.trim() || !cfApiToken.trim())) {
-        setUseCustomCf(true);
-        setErrorMessage("Silakan lengkapi Cloudflare Account ID dan API Token Anda.");
-        return;
-      }
-      if (useCustomCf && (!cfAccountId.trim() || !cfApiToken.trim())) {
-        setErrorMessage("Silakan lengkapi Cloudflare Account ID dan API Token Anda.");
-        return;
-      }
-      if (useCustomCf && cfAccountId.trim() && cfApiToken.trim()) {
-        localStorage.setItem("tryoutku_cf_account", cfAccountId.trim());
-        localStorage.setItem("tryoutku_cf_token", cfApiToken.trim());
-      }
-    } else {
-      if (!hasSystemGemini && (!useCustomGemini || !geminiApiKey.trim())) {
-        setUseCustomGemini(true);
-        setErrorMessage("API Key Google Gemini belum diatur di server. Silakan masukkan API Key Gemini Anda.");
-        return;
-      }
-      if (useCustomGemini && !geminiApiKey.trim()) {
-        setErrorMessage("Silakan masukkan Google Gemini API Key Anda.");
-        return;
-      }
-      if (useCustomGemini && geminiApiKey.trim()) {
-        localStorage.setItem("tryoutku_gemini_key", geminiApiKey.trim());
-      }
+    if (!hasSystemCloudflare && (!useCustomCf || !cfAccountId.trim() || !cfApiToken.trim())) {
+      setUseCustomCf(true);
+      setErrorMessage("Silakan lengkapi Cloudflare Account ID dan API Token Anda.");
+      return;
+    }
+    if (useCustomCf && (!cfAccountId.trim() || !cfApiToken.trim())) {
+      setErrorMessage("Silakan lengkapi Cloudflare Account ID dan API Token Anda.");
+      return;
+    }
+    if (useCustomCf && cfAccountId.trim() && cfApiToken.trim()) {
+      localStorage.setItem("tryoutku_cf_account", cfAccountId.trim());
+      localStorage.setItem("tryoutku_cf_token", cfApiToken.trim());
     }
 
     if (inputMode === "text" && (!materialText || materialText.trim().length < 20)) {
@@ -339,11 +302,10 @@ export function QuestionAiModal({
         difficulty,
         questionCount: Number(questionCount),
         optionsCount: Number(optionsCount),
-        provider,
-        model: provider === "CLOUDFLARE" ? selectedCfModel : selectedGeminiModel,
-        cfAccountId: provider === "CLOUDFLARE" && useCustomCf && cfAccountId.trim() ? cfAccountId.trim() : undefined,
-        cfApiToken: provider === "CLOUDFLARE" && useCustomCf && cfApiToken.trim() ? cfApiToken.trim() : undefined,
-        apiKey: provider === "GEMINI" && useCustomGemini && geminiApiKey.trim() ? geminiApiKey.trim() : undefined,
+        provider: "CLOUDFLARE",
+        model: selectedCfModel,
+        cfAccountId: useCustomCf && cfAccountId.trim() ? cfAccountId.trim() : undefined,
+        cfApiToken: useCustomCf && cfApiToken.trim() ? cfApiToken.trim() : undefined,
       };
 
       if (inputMode === "text") {
@@ -550,8 +512,8 @@ export function QuestionAiModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-900 text-lg">AI Soal Generator</h3>
-                <Badge variant="outline" className="bg-purple-100/70 text-purple-700 border-purple-200 text-xs py-0.5">
-                  Gemini 3.8 Flash
+                <Badge variant="outline" className="bg-amber-100/70 text-amber-800 border-amber-300 text-xs py-0.5 font-semibold">
+                  Cloudflare Workers AI
                 </Badge>
               </div>
               <p className="text-xs text-slate-500">
@@ -860,177 +822,81 @@ export function QuestionAiModal({
                 </div>
               </div>
 
-              {/* 4. Pengaturan Provider AI (Cloudflare Workers AI vs Google Gemini) */}
+              {/* 4. Pengaturan Cloudflare Workers AI */}
               <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 text-xs space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Penyedia Engine AI (Provider)</span>
-                    </label>
-                    <span className="text-[10px] text-slate-500 font-medium">Bebas pilih engine yang aktif</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="font-bold text-slate-700">Cloudflare Workers AI</span>
+                    {hasSystemCloudflare && (
+                      <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px] py-0 font-medium">
+                        ✓ Server Siap Pakai
+                      </Badge>
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setProvider("CLOUDFLARE")}
-                      className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        provider === "CLOUDFLARE"
-                          ? "bg-amber-500/10 border-amber-500 text-amber-800 shadow-xs font-bold"
-                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                      <span>Cloudflare Workers AI</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setProvider("GEMINI")}
-                      className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        provider === "GEMINI"
-                          ? "bg-purple-50 border-purple-400 text-purple-800 shadow-xs font-bold"
-                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-                      <span>Google Gemini AI</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUseCustomCf(!useCustomCf)}
+                    className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline"
+                  >
+                    {useCustomCf ? "Gunakan Default Server" : "Gunakan Kredensial Pribadi"}
+                  </button>
                 </div>
 
-                {/* Sub-form Provider 1: Cloudflare Workers AI */}
-                {provider === "CLOUDFLARE" && (
-                  <div className="space-y-2.5 pt-1 border-t border-slate-200/60">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-amber-600" />
-                        <span className="font-semibold text-slate-700">Kredensial Cloudflare</span>
-                        {hasSystemCloudflare && (
-                          <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px] py-0">
-                            ✓ Server Default Siap
-                          </Badge>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setUseCustomCf(!useCustomCf)}
-                        className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline"
-                      >
-                        {useCustomCf ? "Gunakan Default Server" : "Gunakan Kredensial Pribadi"}
-                      </button>
+                {useCustomCf && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                        Cloudflare Account ID (32 Karakter)
+                      </label>
+                      <input
+                        type="text"
+                        value={cfAccountId}
+                        onChange={(e) => setCfAccountId(e.target.value)}
+                        placeholder="Contoh: a1b2c3d4e5f6..."
+                        className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-slate-800 focus:ring-2 focus:ring-amber-500 bg-white"
+                      />
                     </div>
-
-                    {useCustomCf && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1">
-                            Cloudflare Account ID (32 Karakter)
-                          </label>
-                          <input
-                            type="text"
-                            value={cfAccountId}
-                            onChange={(e) => setCfAccountId(e.target.value)}
-                            placeholder="Contoh: a1b2c3d4e5f6..."
-                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-slate-800 focus:ring-2 focus:ring-amber-500 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1">
-                            Cloudflare API Token (Workers AI)
-                          </label>
-                          <input
-                            type="password"
-                            value={cfApiToken}
-                            onChange={(e) => setCfApiToken(e.target.value)}
-                            placeholder="Masukkan API Token Cloudflare..."
-                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-slate-800 focus:ring-2 focus:ring-amber-500 bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Model Cloudflare */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                      <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-                        <BrainCircuit className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Pilihan Model Cloudflare:</span>
-                      </div>
-                      <select
-                        value={selectedCfModel}
-                        onChange={(e) => setSelectedCfModel(e.target.value)}
-                        className="text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-slate-800 focus:ring-2 focus:ring-amber-500 font-medium"
-                      >
-                        <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
-                          Meta Llama 3.3 70B (Sangat Cerdas & Direkomendasikan)
-                        </option>
-                        <option value="@cf/meta/llama-3.1-8b-instruct-fp8">
-                          Meta Llama 3.1 8B FP8 (Super Cepat 2 Detik)
-                        </option>
-                        <option value="@cf/meta/llama-3.2-3b-instruct">
-                          Meta Llama 3.2 3B (Ringan & Cepat)
-                        </option>
-                        <option value="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b">
-                          DeepSeek R1 Distill 32B (Penalaran Matematis & HOTS)
-                        </option>
-                      </select>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                        Cloudflare API Token (Workers AI)
+                      </label>
+                      <input
+                        type="password"
+                        value={cfApiToken}
+                        onChange={(e) => setCfApiToken(e.target.value)}
+                        placeholder="Masukkan API Token Cloudflare..."
+                        className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-slate-800 focus:ring-2 focus:ring-amber-500 bg-white"
+                      />
                     </div>
                   </div>
                 )}
 
-                {/* Sub-form Provider 2: Google Gemini */}
-                {provider === "GEMINI" && (
-                  <div className="space-y-2.5 pt-1 border-t border-slate-200/60">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-purple-600" />
-                        <span className="font-semibold text-slate-700">Google Gemini API Key</span>
-                        {hasSystemGemini && (
-                          <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px] py-0">
-                            ✓ Server Default Siap
-                          </Badge>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setUseCustomGemini(!useCustomGemini)}
-                        className="text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline"
-                      >
-                        {useCustomGemini ? "Gunakan Default Server" : "Gunakan API Key Pribadi"}
-                      </button>
-                    </div>
-
-                    {useCustomGemini && (
-                      <div className="mt-1 space-y-1">
-                        <input
-                          type="password"
-                          value={geminiApiKey}
-                          onChange={(e) => setGeminiApiKey(e.target.value)}
-                          placeholder="Masukkan Google Gemini API Key (AIzaSy...)"
-                          className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-slate-800 focus:ring-2 focus:ring-purple-500 bg-white"
-                        />
-                      </div>
-                    )}
-
-                    {/* Model Gemini */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                      <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-                        <BrainCircuit className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Pilihan Model Gemini:</span>
-                      </div>
-                      <select
-                        value={selectedGeminiModel}
-                        onChange={(e) => setSelectedGeminiModel(e.target.value)}
-                        className="text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
-                      >
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Direkomendasikan)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Stabil)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Penalaran Rumit)</option>
-                      </select>
-                    </div>
+                {/* Model Cloudflare */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+                  <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+                    <BrainCircuit className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Pilihan Model AI:</span>
                   </div>
-                )}
+                  <select
+                    value={selectedCfModel}
+                    onChange={(e) => setSelectedCfModel(e.target.value)}
+                    className="text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-slate-800 focus:ring-2 focus:ring-amber-500 font-medium"
+                  >
+                    <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
+                      Meta Llama 3.3 70B (Sangat Cerdas & Direkomendasikan)
+                    </option>
+                    <option value="@cf/meta/llama-3.1-8b-instruct-fp8">
+                      Meta Llama 3.1 8B FP8 (Super Cepat 2 Detik)
+                    </option>
+                    <option value="@cf/meta/llama-3.2-3b-instruct">
+                      Meta Llama 3.2 3B (Ringan & Cepat)
+                    </option>
+                    <option value="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b">
+                      DeepSeek R1 Distill 32B (Penalaran Matematis & HOTS)
+                    </option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -1048,7 +914,7 @@ export function QuestionAiModal({
               <div>
                 <h4 className="text-lg font-bold text-slate-800">Menganalisis Materi & Menyusun Butir Soal</h4>
                 <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Google Gemini sedang memformulasikan pertanyaan, pilihan distraktor, serta pembahasan konsep yang mendalam...
+                  Cloudflare Workers AI sedang memformulasikan pertanyaan, pilihan distraktor, serta pembahasan konsep yang mendalam...
                 </p>
               </div>
 
