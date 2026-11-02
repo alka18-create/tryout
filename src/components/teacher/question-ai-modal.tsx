@@ -84,6 +84,7 @@ export function QuestionAiModal({
   const [showExtractedPreview, setShowExtractedPreview] = useState(false);
 
   // Assessment Settings
+  const [questionType, setQuestionType] = useState<"SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MIXED">("SINGLE_CHOICE");
   const [programType, setProgramType] = useState("DAILY");
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD" | "MIXED">("MEDIUM");
   const [questionCount, setQuestionCount] = useState<number>(5);
@@ -301,6 +302,7 @@ export function QuestionAiModal({
         programType,
         difficulty,
         questionCount: Number(questionCount),
+        questionType,
         optionsCount: Number(optionsCount),
         provider: "CLOUDFLARE",
         model: selectedCfModel,
@@ -754,71 +756,129 @@ export function QuestionAiModal({
                 </div>
               </div>
 
-              {/* 3. Parameter Konfigurasi Soal */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+              {/* 3. Parameter Konfigurasi & Tipe Soal */}
+              <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3.5">
+                {/* Pemilihan Tipe / Bentuk Soal */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    Jumlah Soal
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Bentuk / Tipe Soal Asesmen</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-normal">Sesuai format ujian CBT</span>
                   </label>
-                  <select
-                    value={questionCount}
-                    onChange={(e) => setQuestionCount(Number(e.target.value))}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500"
-                  >
-                    {[1, 3, 5, 10, 15, 20].map((num) => (
-                      <option key={num} value={num}>
-                        {num} Butir Soal
-                      </option>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      {
+                        val: "SINGLE_CHOICE",
+                        title: "Pilihan Ganda",
+                        desc: "1 Kunci Benar (A–D/E)",
+                      },
+                      {
+                        val: "MULTIPLE_CHOICE",
+                        title: "PG Kompleks",
+                        desc: "Centang (≥ 2 Benar)",
+                      },
+                      {
+                        val: "TRUE_FALSE",
+                        title: "Benar / Salah",
+                        desc: "2 Opsi Pernyataan",
+                      },
+                      {
+                        val: "MIXED",
+                        title: "Campuran",
+                        desc: "Kombinasi Beragam",
+                      },
+                    ].map((item) => (
+                      <button
+                        key={item.val}
+                        type="button"
+                        onClick={() => setQuestionType(item.val as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          questionType === item.val
+                            ? "bg-purple-50/80 border-purple-500 text-purple-900 shadow-xs ring-1 ring-purple-400 font-bold"
+                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{item.title}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{item.desc}</div>
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    Tingkat Kesulitan
-                  </label>
-                  <select
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as any)}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="MEDIUM">Sedang (Standar)</option>
-                    <option value="EASY">Mudah (Dasar)</option>
-                    <option value="HARD">Sukar / HOTS</option>
-                    <option value="MIXED">Campuran / Proporsional</option>
-                  </select>
-                </div>
+                {/* Parameter Lainnya */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-200/60">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Jumlah Soal
+                    </label>
+                    <select
+                      value={questionCount}
+                      onChange={(e) => setQuestionCount(Number(e.target.value))}
+                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
+                    >
+                      {[1, 3, 5, 10, 15, 20].map((num) => (
+                        <option key={num} value={num}>
+                          {num} Butir Soal
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    Format Pilihan
-                  </label>
-                  <select
-                    value={optionsCount}
-                    onChange={(e) => setOptionsCount(Number(e.target.value))}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value={5}>5 Opsi (A, B, C, D, E)</option>
-                    <option value={4}>4 Opsi (A, B, C, D)</option>
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Tingkat Kesulitan
+                    </label>
+                    <select
+                      value={difficulty}
+                      onChange={(e) => setDifficulty(e.target.value as any)}
+                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
+                    >
+                      <option value="MEDIUM">Sedang (Standar)</option>
+                      <option value="EASY">Mudah (Dasar)</option>
+                      <option value="HARD">Sukar / HOTS</option>
+                      <option value="MIXED">Campuran / Proporsional</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    Tipe Program
-                  </label>
-                  <select
-                    value={programType}
-                    onChange={(e) => setProgramType(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="DAILY">Ulangan Harian</option>
-                    <option value="MID_TERM">Asesmen Tengah Smt</option>
-                    <option value="FINAL">Asesmen Akhir Smt</option>
-                    <option value="AKM">AKM Literasi/Numerasi</option>
-                    <option value="DIAGNOSTIC">Diagnostik Awal</option>
-                    <option value="GENERAL">Latihan Bebas</option>
-                  </select>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Format Pilihan
+                    </label>
+                    {questionType === "TRUE_FALSE" ? (
+                      <div className="w-full text-xs rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-slate-500 font-medium">
+                        2 Opsi (Benar & Salah)
+                      </div>
+                    ) : (
+                      <select
+                        value={optionsCount}
+                        onChange={(e) => setOptionsCount(Number(e.target.value))}
+                        className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
+                      >
+                        <option value={5}>5 Opsi (A, B, C, D, E)</option>
+                        <option value={4}>4 Opsi (A, B, C, D)</option>
+                      </select>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Tipe Program
+                    </label>
+                    <select
+                      value={programType}
+                      onChange={(e) => setProgramType(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
+                    >
+                      <option value="DAILY">Ulangan Harian</option>
+                      <option value="MID_TERM">Asesmen Tengah Smt</option>
+                      <option value="FINAL">Asesmen Akhir Smt</option>
+                      <option value="AKM">AKM Literasi/Numerasi</option>
+                      <option value="DIAGNOSTIC">Diagnostik Awal</option>
+                      <option value="GENERAL">Latihan Bebas</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -995,6 +1055,22 @@ export function QuestionAiModal({
                             }`}
                           >
                             {q.difficulty === "EASY" ? "Mudah" : q.difficulty === "HARD" ? "Sukar" : "Sedang"}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-semibold py-0 ${
+                              q.type === "MULTIPLE_CHOICE"
+                                ? "bg-indigo-50 text-indigo-700 border-indigo-300"
+                                : q.type === "TRUE_FALSE"
+                                ? "bg-teal-50 text-teal-700 border-teal-300"
+                                : "bg-blue-50 text-blue-700 border-blue-300"
+                            }`}
+                          >
+                            {q.type === "MULTIPLE_CHOICE"
+                              ? "PG Kompleks"
+                              : q.type === "TRUE_FALSE"
+                              ? "Benar / Salah"
+                              : "Pilihan Ganda"}
                           </Badge>
                           {q.bloomLevel && (
                             <span className="text-[10px] text-slate-400 font-medium">

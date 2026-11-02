@@ -26,7 +26,8 @@ export const GenerateQuestionsInputSchema = z.object({
   programType: AssessmentProgramTypeEnum.default("DAILY"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "MIXED"]).default("MEDIUM"),
   questionCount: z.coerce.number().min(1).max(20).default(5),
-  optionsCount: z.coerce.number().min(4).max(5).default(5), // 4 atau 5 opsi (A-D atau A-E)
+  questionType: z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE", "TRUE_FALSE", "MIXED"]).default("SINGLE_CHOICE"),
+  optionsCount: z.coerce.number().min(4).max(5).default(5), // 4 atau 5 opsi (A-D atau A-E) untuk tipe pilihan ganda
   customInstructions: z.string().optional(),
   provider: z.enum(["CLOUDFLARE", "GEMINI"]).default("CLOUDFLARE"),
   model: z.string().optional(), // Contoh: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "gemini-2.0-flash"

@@ -54,59 +54,104 @@ function extractJsonFromAiText(text: string): any {
  */
 function normalizeQuestions(
   rawQuestions: any[],
-  optCount: number,
-  optLabels: string[]
+  defaultOptCount: number,
+  defaultOptLabels: string[],
+  requestedType?: string
 ): GeneratedQuestionItem[] {
   if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
     throw new Error("AI tidak menghasilkan butir soal dalam format array.");
   }
 
   return rawQuestions.map((q, idx) => {
+    // Tentukan tipe soal (SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE)
+    let itemType: QuestionType = QuestionType.SINGLE_CHOICE;
+    const rawType = String(q.type || (requestedType !== "MIXED" ? requestedType : "") || "").toUpperCase().trim();
+    if (rawType.includes("MULTIPLE") || rawType.includes("KOMPLEKS")) {
+      itemType = QuestionType.MULTIPLE_CHOICE;
+    } else if (rawType.includes("TRUE") || rawType.includes("FALSE") || rawType.includes("BENAR")) {
+      itemType = QuestionType.TRUE_FALSE;
+    } else {
+      itemType = QuestionType.SINGLE_CHOICE;
+    }
+
     let rawOptions: any[] = Array.isArray(q.options) ? q.options : [];
-    if (rawOptions.length < 2) {
-      throw new Error(`Soal nomor ${idx + 1} tidak memiliki pilihan jawaban yang cukup.`);
-    }
+    let mappedOptions: { label: string; content: string; isCorrect: boolean }[] = [];
 
-    rawOptions = rawOptions.slice(0, optCount);
-
-    const mappedOptions = rawOptions.map((opt, oIdx) => {
-      // Menangani format { label, content, isCorrect } atau string murni
-      const content = typeof opt === "string" ? opt : String(opt.content || opt.text || "").trim();
-      const isCorrect = typeof opt === "object" ? Boolean(opt.isCorrect) : false;
-      return {
-        label: optLabels[oIdx] || String.fromCharCode(65 + oIdx),
-        content,
-        isCorrect,
-      };
-    });
-
-    // Validasi atau inferensi kunci jawaban jika kunci disimpan di q.correctAnswer
-    if (q.correctAnswer && typeof q.correctAnswer === "string") {
-      const targetLabel = q.correctAnswer.trim().toUpperCase();
-      let matched = false;
-      mappedOptions.forEach((o) => {
-        if (o.label === targetLabel || o.content.trim() === q.correctAnswer.trim()) {
-          o.isCorrect = true;
-          matched = true;
+    if (itemType === QuestionType.TRUE_FALSE) {
+      // Format 2 opsi standar: Benar vs Salah
+      let trueIsCorrect = true;
+      if (rawOptions.length >= 2) {
+        const firstContent = String(rawOptions[0]?.content || rawOptions[0]?.text || "").toLowerCase();
+        const firstIsCorrect = Boolean(rawOptions[0]?.isCorrect);
+        if (firstContent.includes("salah") || firstContent.includes("false")) {
+          trueIsCorrect = !firstIsCorrect;
+        } else {
+          trueIsCorrect = firstIsCorrect;
         }
-      });
-      if (!matched && mappedOptions.length > 0) {
-        mappedOptions[0].isCorrect = true;
+      } else if (typeof q.isCorrect === "boolean") {
+        trueIsCorrect = q.isCorrect;
       }
-    }
 
-    // Pastikan tepat ada 1 jawaban benar
-    const correctCount = mappedOptions.filter((o) => o.isCorrect).length;
-    if (correctCount === 0 && mappedOptions.length > 0) {
-      mappedOptions[0].isCorrect = true;
-    } else if (correctCount > 1) {
-      let foundFirst = false;
-      mappedOptions.forEach((o) => {
-        if (o.isCorrect) {
-          if (foundFirst) o.isCorrect = false;
-          else foundFirst = true;
-        }
+      mappedOptions = [
+        { label: "A", content: "Benar", isCorrect: trueIsCorrect },
+        { label: "B", content: "Salah", isCorrect: !trueIsCorrect },
+      ];
+    } else {
+      const optCount = defaultOptCount;
+      const optLabels = defaultOptLabels;
+      rawOptions = rawOptions.slice(0, optCount);
+
+      mappedOptions = rawOptions.map((opt, oIdx) => {
+        const content = typeof opt === "string" ? opt : String(opt.content || opt.text || "").trim();
+        const isCorrect = typeof opt === "object" ? Boolean(opt.isCorrect) : false;
+        return {
+          label: optLabels[oIdx] || String.fromCharCode(65 + oIdx),
+          content,
+          isCorrect,
+        };
       });
+
+      // Validasi atau inferensi kunci jawaban jika kunci disimpan di q.correctAnswer
+      if (q.correctAnswer) {
+        if (Array.isArray(q.correctAnswer)) {
+          const upperAnswers = q.correctAnswer.map((a: any) => String(a).trim().toUpperCase());
+          mappedOptions.forEach((o) => {
+            if (upperAnswers.includes(o.label) || upperAnswers.includes(o.content.trim().toUpperCase())) {
+              o.isCorrect = true;
+            }
+          });
+        } else if (typeof q.correctAnswer === "string") {
+          const targetLabel = q.correctAnswer.trim().toUpperCase();
+          mappedOptions.forEach((o) => {
+            if (o.label === targetLabel || o.content.trim() === q.correctAnswer.trim()) {
+              o.isCorrect = true;
+            }
+          });
+        }
+      }
+
+      const correctCount = mappedOptions.filter((o) => o.isCorrect).length;
+
+      if (itemType === QuestionType.SINGLE_CHOICE) {
+        // Tepat 1 kunci jawaban benar
+        if (correctCount === 0 && mappedOptions.length > 0) {
+          mappedOptions[0].isCorrect = true;
+        } else if (correctCount > 1) {
+          let foundFirst = false;
+          mappedOptions.forEach((o) => {
+            if (o.isCorrect) {
+              if (foundFirst) o.isCorrect = false;
+              else foundFirst = true;
+            }
+          });
+        }
+      } else if (itemType === QuestionType.MULTIPLE_CHOICE) {
+        // Pilihan Ganda Kompleks: Minimal 2 kunci jawaban benar
+        if (correctCount < 2 && mappedOptions.length >= 2) {
+          mappedOptions[0].isCorrect = true;
+          mappedOptions[1].isCorrect = true;
+        }
+      }
     }
 
     const validDiff = ["EASY", "MEDIUM", "HARD"].includes(q.difficulty)
@@ -117,7 +162,7 @@ function normalizeQuestions(
       number: Number(q.number) || idx + 1,
       content: String(q.content || q.question || "").trim(),
       difficulty: validDiff,
-      type: QuestionType.SINGLE_CHOICE,
+      type: itemType,
       options: mappedOptions,
       explanation: String(q.explanation || "").trim(),
       bloomLevel: q.bloomLevel ? String(q.bloomLevel).trim() : undefined,
@@ -196,23 +241,111 @@ export class QuestionAiService {
       );
     }
 
-    const systemInstruction = `Anda adalah asisten ahli pembuat soal kurikulum dan asesmen pendidikan Indonesia berstandar nasional (Kurikulum Merdeka / K13).
-Tugas Anda adalah membuat soal pilihan ganda berkualitas tinggi berdasarkan materi dan topik yang diberikan.
+    const requestedType = input.questionType || "SINGLE_CHOICE";
 
-PANDUAN MUTU SOAL:
-1. Soal harus relevan dengan Mata Pelajaran: "${topic.subject.name}" dan Topik/Materi: "${topic.name}".
-2. Bahasa Indonesia baku, jelas, kontekstual, dan mendidik.
-3. Setiap butir soal WAJIB memiliki tepat ${optCount} opsi jawaban (${optLabels.join(", ")}).
-4. Tepat 1 opsi bernilai benar (isCorrect: true) dan opsi lain salah (isCorrect: false).
-5. Pembahasan singkat, padat, dan jelas mengenai konsep dan alasan jawaban benar (1-3 kalimat).
-6. Format output HARUS berupa JSON valid tanpa teks atau penjelasan lain di luar JSON.
+    let typeRules = "";
+    let jsonExample = "";
 
-Format JSON yang diwajibkan:
-{
-  "title": "Judul Latihan Soal",
-  "questions": [
-    {
+    if (requestedType === "MULTIPLE_CHOICE") {
+      typeRules = `BENTUK SOAL: PILIHAN GANDA KOMPLEKS (AKM / ASESMEN NASIONAL)
+1. Setiap butir soal WAJIB berformat Pilihan Ganda Kompleks (type: "MULTIPLE_CHOICE").
+2. Siswa harus menganalisis materi dan mencentang SEMUA pernyataan yang bernilai benar.
+3. Setiap butir soal WAJIB memiliki tepat ${optCount} opsi pernyataan (${optLabels.join(", ")}).
+4. WAJIB memiliki MINIMAL 2 (dan maksimal ${optCount - 1}) opsi yang bernilai BENAR (isCorrect: true). Opsi lainnya salah (isCorrect: false).
+5. Pertanyaan harus kontekstual dan menginstruksikan siswa memilih lebih dari satu jawaban (misal: "Pilihlah pernyataan yang tepat di bawah ini (jawaban benar lebih dari satu):").`;
+
+      jsonExample = `    {
       "number": 1,
+      "type": "MULTIPLE_CHOICE",
+      "content": "Berdasarkan materi di atas, manakah pernyataan yang tepat mengenai konsep ini? (Pilihlah lebih dari satu jawaban benar):",
+      "difficulty": "HARD",
+      "bloomLevel": "C4 Analisis",
+      "options": [
+        { "label": "A", "content": "Pernyataan benar 1...", "isCorrect": true },
+        { "label": "B", "content": "Pernyataan salah 1...", "isCorrect": false },
+        { "label": "C", "content": "Pernyataan benar 2...", "isCorrect": true },
+        { "label": "D", "content": "Pernyataan salah 2...", "isCorrect": false }${optCount === 5 ? ',\n        { "label": "E", "content": "Pernyataan benar 3...", "isCorrect": true }' : ""}
+      ],
+      "explanation": "Pembahasan konsep ringkas..."
+    }`;
+    } else if (requestedType === "TRUE_FALSE") {
+      typeRules = `BENTUK SOAL: BENAR / SALAH (TRUE OR FALSE)
+1. Setiap butir soal WAJIB berformat Benar/Salah (type: "TRUE_FALSE").
+2. Teks soal menyajikan analisis narasi atau premis faktual yang harus dinilai siswa apakah bernilai Benar atau Salah.
+3. Setiap butir soal WAJIB memiliki TEPAT 2 opsi jawaban:
+   - Opsi label "A" dengan content: "Benar"
+   - Opsi label "B" dengan content: "Salah"
+4. Tepat 1 opsi bernilai benar (isCorrect: true) sesuai fakta ilmiah materi.`;
+
+      jsonExample = `    {
+      "number": 1,
+      "type": "TRUE_FALSE",
+      "content": "Pernyataan: [Kalimat premis/fakta yang harus dianalisis siswa apakah Benar atau Salah]",
+      "difficulty": "MEDIUM",
+      "bloomLevel": "C2 Pemahaman",
+      "options": [
+        { "label": "A", "content": "Benar", "isCorrect": true },
+        { "label": "B", "content": "Salah", "isCorrect": false }
+      ],
+      "explanation": "Pembahasan konsep ringkas..."
+    }`;
+    } else if (requestedType === "MIXED") {
+      typeRules = `BENTUK SOAL: KOMBINASI / CAMPURAN
+1. Buatkan variasi butir soal yang seimbang antara:
+   - "type": "SINGLE_CHOICE" (Pilihan Ganda Biasa, ${optCount} opsi, tepat 1 benar)
+   - "type": "MULTIPLE_CHOICE" (Pilihan Ganda Kompleks, ${optCount} opsi, minimal 2 benar)
+   - "type": "TRUE_FALSE" (Benar/Salah, 2 opsi: Benar vs Salah, tepat 1 benar)
+2. Pastikan field "type" pada masing-masing butir soal diisi sesuai jenisnya.`;
+
+      jsonExample = `    {
+      "number": 1,
+      "type": "SINGLE_CHOICE",
+      "content": "Teks pertanyaan pilihan ganda biasa...",
+      "difficulty": "MEDIUM",
+      "bloomLevel": "C3 Penerapan",
+      "options": [
+        { "label": "A", "content": "Opsi A...", "isCorrect": true },
+        { "label": "B", "content": "Opsi B...", "isCorrect": false },
+        { "label": "C", "content": "Opsi C...", "isCorrect": false },
+        { "label": "D", "content": "Opsi D...", "isCorrect": false }
+      ],
+      "explanation": "Pembahasan..."
+    },
+    {
+      "number": 2,
+      "type": "MULTIPLE_CHOICE",
+      "content": "Pilihlah pernyataan yang benar di bawah ini (lebih dari satu jawaban benar):",
+      "difficulty": "HARD",
+      "bloomLevel": "C4 Analisis",
+      "options": [
+        { "label": "A", "content": "Pernyataan benar 1...", "isCorrect": true },
+        { "label": "B", "content": "Pernyataan benar 2...", "isCorrect": true },
+        { "label": "C", "content": "Pernyataan salah 1...", "isCorrect": false },
+        { "label": "D", "content": "Pernyataan salah 2...", "isCorrect": false }
+      ],
+      "explanation": "Pembahasan..."
+    },
+    {
+      "number": 3,
+      "type": "TRUE_FALSE",
+      "content": "Pernyataan: [Premis konsep materi]",
+      "difficulty": "EASY",
+      "bloomLevel": "C2 Pemahaman",
+      "options": [
+        { "label": "A", "content": "Benar", "isCorrect": false },
+        { "label": "B", "content": "Salah", "isCorrect": true }
+      ],
+      "explanation": "Pembahasan..."
+    }`;
+    } else {
+      typeRules = `BENTUK SOAL: PILIHAN GANDA TUNGGAL (SINGLE CHOICE)
+1. Setiap butir soal WAJIB berformat Pilihan Ganda Tunggal (type: "SINGLE_CHOICE").
+2. Setiap butir soal WAJIB memiliki tepat ${optCount} opsi jawaban (${optLabels.join(", ")}).
+3. Tepat 1 opsi bernilai benar (isCorrect: true) dan opsi lainnya bernilai salah (isCorrect: false).`;
+
+      jsonExample = `    {
+      "number": 1,
+      "type": "SINGLE_CHOICE",
       "content": "Teks pertanyaan soal...",
       "difficulty": "MEDIUM",
       "bloomLevel": "C3 Penerapan",
@@ -223,7 +356,24 @@ Format JSON yang diwajibkan:
         { "label": "D", "content": "Teks opsi D...", "isCorrect": false }${optCount === 5 ? ',\n        { "label": "E", "content": "Teks opsi E...", "isCorrect": false }' : ""}
       ],
       "explanation": "Pembahasan konsep ringkas..."
+    }`;
     }
+
+    const systemInstruction = `Anda adalah asisten ahli pembuat soal kurikulum dan asesmen pendidikan Indonesia berstandar nasional (Kurikulum Merdeka / K13).
+Tugas Anda adalah membuat soal asesmen berkualitas tinggi berdasarkan materi dan topik yang diberikan.
+
+PANDUAN MUTU SOAL:
+1. Soal harus relevan dengan Mata Pelajaran: "${topic.subject.name}" dan Topik/Materi: "${topic.name}".
+2. Bahasa Indonesia baku, jelas, kontekstual, dan mendidik.
+3. ${typeRules}
+4. Pembahasan singkat, padat, dan jelas mengenai konsep dan alasan jawaban benar (1-3 kalimat).
+5. Format output HARUS berupa JSON valid tanpa teks atau penjelasan lain di luar JSON.
+
+Format JSON yang diwajibkan:
+{
+  "title": "Judul Latihan Soal",
+  "questions": [
+${jsonExample}
   ]
 }`;
 
@@ -231,16 +381,17 @@ Format JSON yang diwajibkan:
 - Mata Pelajaran: ${topic.subject.name}
 - Topik / Bab: ${topic.name}
 - Jenis Asesmen: ${programName}
+- Tipe / Bentuk Soal: ${requestedType === "MULTIPLE_CHOICE" ? "Pilihan Ganda Kompleks (AKM / Centang)" : requestedType === "TRUE_FALSE" ? "Benar / Salah" : requestedType === "MIXED" ? "Kombinasi (PG, PG Kompleks, Benar/Salah)" : "Pilihan Ganda Tunggal"}
 - Tingkat Kesulitan: ${input.difficulty === "MIXED" ? "Kombinasi Mudah, Sedang, Sulit" : input.difficulty}
 - Jumlah Soal: ${input.questionCount} butir
-- Jumlah Pilihan Jawaban per Soal: ${optCount} opsi (${optLabels.join(", ")})
+${requestedType !== "TRUE_FALSE" ? `- Format Opsi: ${optCount} opsi (${optLabels.join(", ")})` : ""}
 ${input.customInstructions ? `- Instruksi Tambahan Guru: "${input.customInstructions}"` : ""}
 
 ${documentText ? `MATERI DARI DOKUMEN:\n"""\n${documentText.substring(0, 18000)}\n"""\n` : ""}
 ${input.materialText ? `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.trim().substring(0, 18000)}\n"""\n` : ""}
 
 INSTRUKSI:
-Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
+Buatkan tepat ${input.questionCount} butir soal ${requestedType === "MULTIPLE_CHOICE" ? "pilihan ganda kompleks" : requestedType === "TRUE_FALSE" ? "benar/salah" : requestedType === "MIXED" ? "campuran" : "pilihan ganda"} bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
 
     // Fungsi sanitasi model yang mungkin usang atau berganti nama di katalog Cloudflare
     const sanitizeCfModel = (name?: string): string | undefined => {
@@ -345,7 +496,7 @@ Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi sek
     }
 
     const parsed = extractJsonFromAiText(responseText);
-    const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels);
+    const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels, input.questionType);
 
     return {
       subjectName: topic.subject.name,
@@ -554,7 +705,7 @@ Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi ber
       }
 
       const parsed = extractJsonFromAiText(responseText);
-      const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels);
+      const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels, input.questionType);
 
       return {
         subjectName: topic.subject.name,
