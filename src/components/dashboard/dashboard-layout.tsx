@@ -85,7 +85,7 @@ export function DashboardLayout({
         : "bg-blue-50 text-blue-700 border-blue-200";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased selection:bg-blue-600 selection:text-white w-full overflow-x-hidden">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-2xs">
         <Link href="/" className="flex items-center gap-2 font-bold text-slate-900 tracking-tight">
@@ -205,8 +205,8 @@ export function DashboardLayout({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 md:pl-72 bg-slate-50 min-h-screen">
-        <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">{children}</div>
+      <main className="flex-1 flex flex-col min-w-0 md:pl-72 bg-slate-50 min-h-screen w-full overflow-x-hidden">
+        <div className="flex-1 p-3.5 sm:p-6 md:p-8 max-w-7xl w-full mx-auto min-w-0">{children}</div>
       </main>
     </div>
   );

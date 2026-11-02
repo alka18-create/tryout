@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   title: "TryoutKu — Platform Tryout Online & Evaluasi Diagnostik Materi",
   description:
     "Platform tryout online modular untuk siswa dan guru dengan evaluasi diagnostik berbasis materi dan pembahasan terperinci.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 import { AuthProvider } from "@/components/providers/auth-provider";

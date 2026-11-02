@@ -124,7 +124,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl w-full min-w-0">
       <Link
         href="/dashboard/teacher/tryouts"
         className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
@@ -267,13 +267,13 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-end gap-3">
-          <Link href="/dashboard/teacher/tryouts">
-            <Button type="button" variant="outline">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
+          <Link href="/dashboard/teacher/tryouts" className="w-full sm:w-auto">
+            <Button type="button" variant="outline" className="w-full sm:w-auto">
               Batal
             </Button>
           </Link>
-          <Button type="submit" variant="primary" size="lg" isLoading={isLoading} className="gap-2">
+          <Button type="submit" variant="primary" size="lg" isLoading={isLoading} className="gap-2 w-full sm:w-auto">
             <Save className="w-4 h-4" />
             <span>{isEditing ? "Simpan Perubahan" : "Buat Tryout & Lanjut Susun Soal →"}</span>
           </Button>
