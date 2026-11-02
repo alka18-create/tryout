@@ -21,6 +21,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface QuestionOption {
   id: string;
@@ -565,29 +566,33 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                 />
               </div>
 
-              <select
-                value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 outline-none shadow-xs"
-              >
-                <option value="ALL">Semua Topik ({availableTopics.length})</option>
-                {availableTopics.map((top) => (
-                  <option key={top} value={top}>
-                    {top}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full sm:w-auto min-w-[160px]">
+                <CustomSelect
+                  value={selectedTopic}
+                  onChange={(val) => setSelectedTopic(val)}
+                  placeholder={`Semua Topik (${availableTopics.length})`}
+                  options={[
+                    { value: "ALL", label: `Semua Topik (${availableTopics.length})` },
+                    ...availableTopics.map((top) => ({ value: top, label: top })),
+                  ]}
+                  triggerClassName="py-1.5 text-xs"
+                />
+              </div>
 
-              <select
-                value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 outline-none shadow-xs"
-              >
-                <option value="ALL">Semua Kesulitan</option>
-                <option value="EASY">Mudah (EASY)</option>
-                <option value="MEDIUM">Sedang (MEDIUM)</option>
-                <option value="HARD">Sulit (HARD)</option>
-              </select>
+              <div className="w-full sm:w-auto min-w-[140px]">
+                <CustomSelect
+                  value={selectedDifficulty}
+                  onChange={(val) => setSelectedDifficulty(val)}
+                  placeholder="Semua Kesulitan"
+                  options={[
+                    { value: "ALL", label: "Semua Kesulitan" },
+                    { value: "EASY", label: "Mudah (EASY)" },
+                    { value: "MEDIUM", label: "Sedang (MEDIUM)" },
+                    { value: "HARD", label: "Sulit (HARD)" },
+                  ]}
+                  triggerClassName="py-1.5 text-xs"
+                />
+              </div>
 
               {filteredBankQuestions.length > 0 && (
                 <Button

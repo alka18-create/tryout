@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { detectMaterialType } from "@/modules/learning-material/learning-material.schema";
 
 interface TopicOption {
@@ -269,41 +270,48 @@ export function MaterialFormModal({
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Mata Pelajaran <span className="text-rose-500">*</span>
               </label>
-              <select
-                required
+              <CustomSelect
                 value={subjectId}
-                onChange={(e) => {
-                  setSubjectId(e.target.value);
+                onChange={(val) => {
+                  setSubjectId(val);
                   setTopicId("");
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-xs outline-none shadow-2xs transition-colors"
-              >
-                <option value="">-- Pilih Mata Pelajaran --</option>
-                {subjects.map((sub) => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="-- Pilih Mata Pelajaran --"
+                options={[
+                  { value: "", label: "-- Pilih Mata Pelajaran --" },
+                  ...subjects.map((sub) => ({
+                    value: sub.id,
+                    label: sub.name,
+                  })),
+                ]}
+                triggerClassName="py-2.5 text-xs"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Topik Materi (Opsional)
               </label>
-              <select
+              <CustomSelect
                 value={topicId}
-                onChange={(e) => setTopicId(e.target.value)}
+                onChange={(val) => setTopicId(val)}
                 disabled={isLoadingTopics || topics.length === 0}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-xs outline-none shadow-2xs transition-colors disabled:bg-slate-50 disabled:text-slate-400"
-              >
-                <option value="">-- Semua Topik (Umum) --</option>
-                {topics.map((top) => (
-                  <option key={top.id} value={top.id}>
-                    {top.name}
-                  </option>
-                ))}
-              </select>
+                placeholder={
+                  isLoadingTopics
+                    ? "Memuat topik..."
+                    : topics.length === 0
+                    ? "Belum ada topik"
+                    : "-- Semua Topik (Umum) --"
+                }
+                options={[
+                  { value: "", label: "-- Semua Topik (Umum) --" },
+                  ...topics.map((top) => ({
+                    value: top.id,
+                    label: top.name,
+                  })),
+                ]}
+                triggerClassName="py-2.5 text-xs"
+              />
             </div>
           </div>
 
@@ -312,18 +320,20 @@ export function MaterialFormModal({
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Format / Jenis Media
             </label>
-            <select
+            <CustomSelect
               value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-xs outline-none shadow-2xs transition-colors"
-            >
-              <option value="AUTO">Otomatis Deteksi dari Link</option>
-              <option value="GOOGLE_DRIVE">Google Drive / Google Docs</option>
-              <option value="YOUTUBE">Video YouTube</option>
-              <option value="DOCUMENT">Dokumen Modul / PDF Eksternal</option>
-              <option value="ARTICLE">Artikel / Web Bacaan</option>
-              <option value="LINK">Tautan Web Umum</option>
-            </select>
+              onChange={(val) => setType(val)}
+              placeholder="Otomatis Deteksi dari Link"
+              options={[
+                { value: "AUTO", label: "Otomatis Deteksi dari Link" },
+                { value: "GOOGLE_DRIVE", label: "Google Drive / Google Docs" },
+                { value: "YOUTUBE", label: "Video YouTube" },
+                { value: "DOCUMENT", label: "Dokumen Modul / PDF Eksternal" },
+                { value: "ARTICLE", label: "Artikel / Web Bacaan" },
+                { value: "LINK", label: "Tautan Web Umum" },
+              ]}
+              triggerClassName="py-2.5 text-xs"
+            />
           </div>
 
           {/* Deskripsi */}

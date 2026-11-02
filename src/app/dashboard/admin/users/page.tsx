@@ -18,6 +18,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface UserItem {
   id: string;
@@ -343,15 +344,17 @@ export default function AdminUsersPage() {
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Role Akses
                 </label>
-                <select
+                <CustomSelect
                   value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as any })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 outline-none focus:border-blue-600 shadow-xs"
-                >
-                  <option value="TEACHER">Guru (TEACHER) — Kelola Bank Soal & Tryout</option>
-                  <option value="ADMIN">Administrator (ADMIN) — Hak Akses Penuh Sistem</option>
-                  <option value="STUDENT">Peserta Didik (STUDENT)</option>
-                </select>
+                  onChange={(val) => setCreateForm({ ...createForm, role: val as any })}
+                  placeholder="Pilih Role"
+                  options={[
+                    { value: "TEACHER", label: "Guru (TEACHER) — Kelola Bank Soal & Tryout" },
+                    { value: "ADMIN", label: "Administrator (ADMIN) — Hak Akses Penuh Sistem" },
+                    { value: "STUDENT", label: "Peserta Didik (STUDENT)" },
+                  ]}
+                  triggerClassName="py-2.5 text-xs"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

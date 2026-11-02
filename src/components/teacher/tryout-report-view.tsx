@@ -19,6 +19,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface ParticipantItem {
   rank: number;
@@ -221,15 +222,19 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                 />
               </div>
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 outline-none shadow-xs"
-              >
-                <option value="ALL">Semua Status</option>
-                <option value="PASSED">Lulus KKM</option>
-                <option value="FAILED">Di Bawah KKM</option>
-              </select>
+              <div className="w-full sm:w-auto min-w-[140px]">
+                <CustomSelect
+                  value={statusFilter}
+                  onChange={(val) => setStatusFilter(val as any)}
+                  placeholder="Semua Status"
+                  options={[
+                    { value: "ALL", label: "Semua Status" },
+                    { value: "PASSED", label: "Lulus KKM" },
+                    { value: "FAILED", label: "Di Bawah KKM" },
+                  ]}
+                  triggerClassName="py-1.5 text-xs"
+                />
+              </div>
             </div>
           </CardHeader>
 

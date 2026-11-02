@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "./image-uploader";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface Subject {
   id: string;
@@ -329,39 +330,36 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Mata Pelajaran
                   </label>
-                  <select
+                  <CustomSelect
                     value={selectedSubjectId}
-                    onChange={(e) => {
-                      setSelectedSubjectId(e.target.value);
+                    onChange={(val) => {
+                      setSelectedSubjectId(val);
                       setFormData({ ...formData, topicId: "" });
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
-                  >
-                    {subjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="-- Pilih Mata Pelajaran --"
+                    options={subjects.map((sub) => ({
+                      value: sub.id,
+                      label: sub.name,
+                    }))}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Topik / Materi Pokok <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    required
+                  <CustomSelect
                     value={formData.topicId}
-                    onChange={(e) => setFormData({ ...formData, topicId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
-                  >
-                    <option value="">-- Pilih Topik --</option>
-                    {filteredTopics.map((top) => (
-                      <option key={top.id} value={top.id}>
-                        {top.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, topicId: val })}
+                    placeholder="-- Pilih Topik --"
+                    options={[
+                      { value: "", label: "-- Pilih Topik --" },
+                      ...filteredTopics.map((top) => ({
+                        value: top.id,
+                        label: top.name,
+                      })),
+                    ]}
+                  />
                 </div>
               </div>
 

@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QuestionImportModal } from "@/components/teacher/question-import-modal";
 import { QuestionAiModal } from "@/components/teacher/question-ai-modal";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { Sparkles } from "lucide-react";
 
 interface Option {
@@ -590,33 +591,35 @@ function TeacherQuestionsContent() {
               </div>
 
               <div>
-                <select
+                <CustomSelect
                   value={selectedTopic}
-                  onChange={(e) => setSelectedTopic(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600"
-                >
-                  <option value="">Semua Topik {currentSubject ? `(${currentSubject.name})` : ""}</option>
-                  {filteredTopics.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedTopic(val)}
+                  placeholder={`Semua Topik ${currentSubject ? `(${currentSubject.name})` : ""}`}
+                  options={[
+                    { value: "", label: `Semua Topik ${currentSubject ? `(${currentSubject.name})` : ""}` },
+                    ...filteredTopics.map((t) => ({ value: t.id, label: t.name })),
+                  ]}
+                  triggerClassName="py-2 text-xs"
+                />
               </div>
 
               <div className="flex gap-2">
-                <select
-                  value={selectedDifficulty}
-                  onChange={(e) => setSelectedDifficulty(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600"
-                >
-                  <option value="">Semua Kesulitan</option>
-                  <option value="EASY">Mudah</option>
-                  <option value="MEDIUM">Sedang</option>
-                  <option value="HARD">Sulit</option>
-                </select>
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={selectedDifficulty}
+                    onChange={(val) => setSelectedDifficulty(val)}
+                    placeholder="Semua Kesulitan"
+                    options={[
+                      { value: "", label: "Semua Kesulitan" },
+                      { value: "EASY", label: "Mudah" },
+                      { value: "MEDIUM", label: "Sedang" },
+                      { value: "HARD", label: "Sulit" },
+                    ]}
+                    triggerClassName="py-2 text-xs"
+                  />
+                </div>
 
-                <Button type="submit" size="sm" variant="secondary" className="px-3 shrink-0">
+                <Button type="submit" size="sm" variant="secondary" className="px-3 shrink-0 h-10">
                   <Filter className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -869,19 +872,19 @@ function TeacherQuestionsContent() {
                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   Mata Pelajaran *
                 </label>
-                <select
-                  required
+                <CustomSelect
                   value={newTopicSubjectId || selectedSubject}
-                  onChange={(e) => setNewTopicSubjectId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 outline-none focus:border-blue-600 shadow-xs"
-                >
-                  <option value="">-- Pilih Mata Pelajaran --</option>
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code || "-"})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewTopicSubjectId(val)}
+                  placeholder="-- Pilih Mata Pelajaran --"
+                  options={[
+                    { value: "", label: "-- Pilih Mata Pelajaran --" },
+                    ...subjects.map((s) => ({
+                      value: s.id,
+                      label: `${s.name} (${s.code || "-"})`,
+                    })),
+                  ]}
+                  triggerClassName="py-2 text-xs"
+                />
               </div>
 
               <div>

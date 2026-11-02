@@ -7,6 +7,7 @@ import { ArrowLeft, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface Subject {
   id: string;
@@ -174,24 +175,14 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
               placeholder="Contoh: Tryout Sosiologi Paket 02"
             />
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Mata Pelajaran
-              </label>
-              <select
-                required
-                value={formData.subjectId}
-                onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
-              >
-                <option value="">-- Pilih Mata Pelajaran --</option>
-                {subjects.map((sub) => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Mata Pelajaran"
+              required
+              value={formData.subjectId}
+              onChange={(val) => setFormData({ ...formData, subjectId: val })}
+              placeholder="-- Pilih Mata Pelajaran --"
+              options={subjects.map((sub) => ({ value: sub.id, label: sub.name }))}
+            />
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -249,21 +240,17 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Kebijakan Tampilan Pembahasan Soal
-              </label>
-              <select
-                value={formData.discussionVisibility}
-                onChange={(e) => setFormData({ ...formData, discussionVisibility: e.target.value as any })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 text-sm outline-none shadow-xs transition-colors"
-              >
-                <option value="AFTER_SUBMIT">Langsung Tampil Setelah Siswa Submit Ujian</option>
-                <option value="ALWAYS">Selalu Dapat Dilihat (Kapan Saja)</option>
-                <option value="AFTER_TRYOUT_CLOSED">Hanya Tampil Setelah Tryout Ditutup</option>
-                <option value="NEVER">Jangan Tampilkan Pembahasan</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Kebijakan Tampilan Pembahasan Soal"
+              value={formData.discussionVisibility}
+              onChange={(val) => setFormData({ ...formData, discussionVisibility: val as any })}
+              options={[
+                { value: "AFTER_SUBMIT", label: "Langsung Tampil Setelah Siswa Submit Ujian" },
+                { value: "ALWAYS", label: "Selalu Dapat Dilihat (Kapan Saja)" },
+                { value: "AFTER_TRYOUT_CLOSED", label: "Hanya Tampil Setelah Tryout Ditutup" },
+                { value: "NEVER", label: "Jangan Tampilkan Pembahasan" },
+              ]}
+            />
           </CardContent>
         </Card>
 

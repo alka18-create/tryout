@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { LearningMaterialItem } from "@/components/teacher/material-form-modal";
 
 export default function StudentMaterialsPage() {
@@ -234,17 +235,21 @@ export default function StudentMaterialsPage() {
         )}
 
         {/* Filter Jenis Media */}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-blue-600 shadow-2xs"
-        >
-          <option value="ALL">Semua Jenis Media</option>
-          <option value="YOUTUBE">Video Pembahasan (YouTube)</option>
-          <option value="GOOGLE_DRIVE">Google Drive / Docs</option>
-          <option value="DOCUMENT">Dokumen / Modul PDF</option>
-          <option value="ARTICLE">Artikel Web</option>
-        </select>
+        <div className="w-full sm:w-auto min-w-[200px]">
+          <CustomSelect
+            value={typeFilter}
+            onChange={(val) => setTypeFilter(val)}
+            placeholder="Semua Jenis Media"
+            options={[
+              { value: "ALL", label: "Semua Jenis Media" },
+              { value: "YOUTUBE", label: "Video Pembahasan (YouTube)" },
+              { value: "GOOGLE_DRIVE", label: "Google Drive / Docs" },
+              { value: "DOCUMENT", label: "Dokumen / Modul PDF" },
+              { value: "ARTICLE", label: "Artikel Web" },
+            ]}
+            triggerClassName="py-2.5 text-sm"
+          />
+        </div>
       </div>
 
       {/* Materials Grid */}

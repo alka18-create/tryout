@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CustomSelect } from "@/components/ui/custom-select";
 import type { GeneratedQuestionItem } from "@/modules/question-bank/question-ai.schema";
 
 interface Subject {
@@ -559,21 +560,22 @@ export function QuestionAiModal({
                     <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Mata Pelajaran <span className="text-rose-500">*</span></span>
                   </label>
-                  <select
+                  <CustomSelect
                     value={selectedSubjectId}
-                    onChange={(e) => {
-                      setSelectedSubjectId(e.target.value);
+                    onChange={(val) => {
+                      setSelectedSubjectId(val);
                       setSelectedTopicId("");
                     }}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">-- Pilih Mata Pelajaran --</option>
-                    {subjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.name} {sub.code ? `(${sub.code})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="-- Pilih Mata Pelajaran --"
+                    options={[
+                      { value: "", label: "-- Pilih Mata Pelajaran --" },
+                      ...subjects.map((sub) => ({
+                        value: sub.id,
+                        label: `${sub.name}${sub.code ? ` (${sub.code})` : ""}`,
+                      })),
+                    ]}
+                    triggerClassName="py-2 text-xs"
+                  />
                 </div>
 
                 <div>
@@ -581,27 +583,27 @@ export function QuestionAiModal({
                     <Folder className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Topik / Bab Materi <span className="text-rose-500">*</span></span>
                   </label>
-                  <select
+                  <CustomSelect
                     value={selectedTopicId}
-                    onChange={(e) => setSelectedTopicId(e.target.value)}
+                    onChange={(val) => setSelectedTopicId(val)}
                     disabled={!selectedSubjectId || filteredTopics.length === 0}
-                    className="w-full text-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    {filteredTopics.length === 0 ? (
-                      <option value="">
-                        {!selectedSubjectId ? "Pilih mapel terlebih dahulu" : "Belum ada topik pada mapel ini"}
-                      </option>
-                    ) : (
-                      <>
-                        <option value="">-- Pilih Topik / Bab --</option>
-                        {filteredTopics.map((top) => (
-                          <option key={top.id} value={top.id}>
-                            {top.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    placeholder={
+                      !selectedSubjectId
+                        ? "Pilih mapel terlebih dahulu"
+                        : filteredTopics.length === 0
+                        ? "Belum ada topik pada mapel ini"
+                        : "-- Pilih Topik / Bab --"
+                    }
+                    options={
+                      filteredTopics.length === 0
+                        ? []
+                        : [
+                            { value: "", label: "-- Pilih Topik / Bab --" },
+                            ...filteredTopics.map((top) => ({ value: top.id, label: top.name })),
+                          ]
+                    }
+                    triggerClassName="py-2 text-xs"
+                  />
                 </div>
               </div>
 
@@ -813,33 +815,32 @@ export function QuestionAiModal({
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">
                       Jumlah Soal
                     </label>
-                    <select
-                      value={questionCount}
-                      onChange={(e) => setQuestionCount(Number(e.target.value))}
-                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
-                    >
-                      {[1, 3, 5, 10, 15, 20].map((num) => (
-                        <option key={num} value={num}>
-                          {num} Butir Soal
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      value={String(questionCount)}
+                      onChange={(val) => setQuestionCount(Number(val))}
+                      options={[1, 3, 5, 10, 15, 20].map((num) => ({
+                        value: String(num),
+                        label: `${num} Butir Soal`,
+                      }))}
+                      triggerClassName="py-1.5 text-xs font-medium"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">
                       Tingkat Kesulitan
                     </label>
-                    <select
+                    <CustomSelect
                       value={difficulty}
-                      onChange={(e) => setDifficulty(e.target.value as any)}
-                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
-                    >
-                      <option value="MEDIUM">Sedang (Standar)</option>
-                      <option value="EASY">Mudah (Dasar)</option>
-                      <option value="HARD">Sukar / HOTS</option>
-                      <option value="MIXED">Campuran / Proporsional</option>
-                    </select>
+                      onChange={(val) => setDifficulty(val as any)}
+                      options={[
+                        { value: "MEDIUM", label: "Sedang (Standar)" },
+                        { value: "EASY", label: "Mudah (Dasar)" },
+                        { value: "HARD", label: "Sukar / HOTS" },
+                        { value: "MIXED", label: "Campuran / Proporsional" },
+                      ]}
+                      triggerClassName="py-1.5 text-xs font-medium"
+                    />
                   </div>
 
                   <div>
@@ -847,18 +848,19 @@ export function QuestionAiModal({
                       Format Pilihan
                     </label>
                     {questionType === "TRUE_FALSE" ? (
-                      <div className="w-full text-xs rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-slate-500 font-medium">
+                      <div className="w-full text-xs rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-slate-500 font-medium">
                         2 Opsi (Benar & Salah)
                       </div>
                     ) : (
-                      <select
-                        value={optionsCount}
-                        onChange={(e) => setOptionsCount(Number(e.target.value))}
-                        className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
-                      >
-                        <option value={5}>5 Opsi (A, B, C, D, E)</option>
-                        <option value={4}>4 Opsi (A, B, C, D)</option>
-                      </select>
+                      <CustomSelect
+                        value={String(optionsCount)}
+                        onChange={(val) => setOptionsCount(Number(val))}
+                        options={[
+                          { value: "5", label: "5 Opsi (A, B, C, D, E)" },
+                          { value: "4", label: "4 Opsi (A, B, C, D)" },
+                        ]}
+                        triggerClassName="py-1.5 text-xs font-medium"
+                      />
                     )}
                   </div>
 
@@ -866,18 +868,19 @@ export function QuestionAiModal({
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">
                       Tipe Program
                     </label>
-                    <select
+                    <CustomSelect
                       value={programType}
-                      onChange={(e) => setProgramType(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-purple-500 font-medium"
-                    >
-                      <option value="DAILY">Ulangan Harian</option>
-                      <option value="MID_TERM">Asesmen Tengah Smt</option>
-                      <option value="FINAL">Asesmen Akhir Smt</option>
-                      <option value="AKM">AKM Literasi/Numerasi</option>
-                      <option value="DIAGNOSTIC">Diagnostik Awal</option>
-                      <option value="GENERAL">Latihan Bebas</option>
-                    </select>
+                      onChange={(val) => setProgramType(val)}
+                      options={[
+                        { value: "DAILY", label: "Ulangan Harian" },
+                        { value: "MID_TERM", label: "Asesmen Tengah Smt" },
+                        { value: "FINAL", label: "Asesmen Akhir Smt" },
+                        { value: "AKM", label: "AKM Literasi/Numerasi" },
+                        { value: "DIAGNOSTIC", label: "Diagnostik Awal" },
+                        { value: "GENERAL", label: "Latihan Bebas" },
+                      ]}
+                      triggerClassName="py-1.5 text-xs font-medium"
+                    />
                   </div>
                 </div>
               </div>
@@ -938,24 +941,31 @@ export function QuestionAiModal({
                     <BrainCircuit className="w-3.5 h-3.5 text-amber-600" />
                     <span>Pilihan Model AI:</span>
                   </div>
-                  <select
-                    value={selectedCfModel}
-                    onChange={(e) => setSelectedCfModel(e.target.value)}
-                    className="text-xs rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-slate-800 focus:ring-2 focus:ring-amber-500 font-medium"
-                  >
-                    <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
-                      Meta Llama 3.3 70B (Sangat Cerdas & Direkomendasikan)
-                    </option>
-                    <option value="@cf/meta/llama-3.1-8b-instruct-fp8">
-                      Meta Llama 3.1 8B FP8 (Super Cepat 2 Detik)
-                    </option>
-                    <option value="@cf/meta/llama-3.2-3b-instruct">
-                      Meta Llama 3.2 3B (Ringan & Cepat)
-                    </option>
-                    <option value="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b">
-                      DeepSeek R1 Distill 32B (Penalaran Matematis & HOTS)
-                    </option>
-                  </select>
+                  <div className="w-full sm:w-80">
+                    <CustomSelect
+                      value={selectedCfModel}
+                      onChange={(val) => setSelectedCfModel(val)}
+                      options={[
+                        {
+                          value: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                          label: "Meta Llama 3.3 70B (Sangat Cerdas)",
+                        },
+                        {
+                          value: "@cf/meta/llama-3.1-8b-instruct-fp8",
+                          label: "Meta Llama 3.1 8B FP8 (Super Cepat 2 Detik)",
+                        },
+                        {
+                          value: "@cf/meta/llama-3.2-3b-instruct",
+                          label: "Meta Llama 3.2 3B (Ringan & Cepat)",
+                        },
+                        {
+                          value: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+                          label: "DeepSeek R1 Distill 32B (Penalaran & HOTS)",
+                        },
+                      ]}
+                      triggerClassName="py-1.5 text-xs font-medium"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

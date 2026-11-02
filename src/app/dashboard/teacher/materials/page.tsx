@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CustomSelect } from "@/components/ui/custom-select";
 import {
   MaterialFormModal,
   LearningMaterialItem,
@@ -206,32 +207,36 @@ export default function TeacherMaterialsPage() {
         </div>
 
         {/* Filter Mapel */}
-        <select
-          value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-600 shadow-2xs"
-        >
-          <option value="ALL">Semua Mata Pelajaran</option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <div className="w-full sm:w-auto min-w-[180px]">
+          <CustomSelect
+            value={subjectFilter}
+            onChange={(val) => setSubjectFilter(val)}
+            placeholder="Semua Mata Pelajaran"
+            options={[
+              { value: "ALL", label: "Semua Mata Pelajaran" },
+              ...subjects.map((s) => ({ value: s.id, label: s.name })),
+            ]}
+            triggerClassName="py-2.5 text-xs sm:text-sm"
+          />
+        </div>
 
         {/* Filter Tipe Media */}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-600 shadow-2xs"
-        >
-          <option value="ALL">Semua Jenis Media</option>
-          <option value="YOUTUBE">YouTube Video</option>
-          <option value="GOOGLE_DRIVE">Google Drive / Docs</option>
-          <option value="DOCUMENT">Dokumen / PDF</option>
-          <option value="ARTICLE">Artikel Web</option>
-          <option value="LINK">Tautan Umum</option>
-        </select>
+        <div className="w-full sm:w-auto min-w-[160px]">
+          <CustomSelect
+            value={typeFilter}
+            onChange={(val) => setTypeFilter(val)}
+            placeholder="Semua Jenis Media"
+            options={[
+              { value: "ALL", label: "Semua Jenis Media" },
+              { value: "YOUTUBE", label: "YouTube Video" },
+              { value: "GOOGLE_DRIVE", label: "Google Drive / Docs" },
+              { value: "DOCUMENT", label: "Dokumen / PDF" },
+              { value: "ARTICLE", label: "Artikel Web" },
+              { value: "LINK", label: "Tautan Umum" },
+            ]}
+            triggerClassName="py-2.5 text-xs sm:text-sm"
+          />
+        </div>
       </div>
 
       {/* List / Cards Content */}
