@@ -242,14 +242,13 @@ ${input.materialText ? `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.tr
 INSTRUKSI:
 Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
 
-    // Model Cloudflare terkemuka yang siap pakai
+    // Model Cloudflare terkemuka yang terbukti aktif & teruji
     const candidateModels = Array.from(
       new Set(
         [
           input.model?.startsWith("@cf/") ? input.model : undefined,
           process.env.CLOUDFLARE_MODEL,
           "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-          "@cf/qwen/qwen2.5-72b-instruct",
           "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
           "@cf/meta/llama-3.1-8b-instruct",
         ].filter(Boolean) as string[]

@@ -958,9 +958,6 @@ export function QuestionAiModal({
                         <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
                           Meta Llama 3.3 70B (Sangat Cerdas & Direkomendasikan)
                         </option>
-                        <option value="@cf/qwen/qwen2.5-72b-instruct">
-                          Qwen 2.5 72B (Unggul Kurikulum & Bahasa Indonesia)
-                        </option>
                         <option value="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b">
                           DeepSeek R1 Distill 32B (Penalaran Matematis & HOTS)
                         </option>
