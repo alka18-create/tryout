@@ -244,11 +244,28 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
               label="Kebijakan Tampilan Pembahasan Soal"
               value={formData.discussionVisibility}
               onChange={(val) => setFormData({ ...formData, discussionVisibility: val as any })}
+              helperText="Tentukan kapan siswa diizinkan melihat kunci jawaban dan pembahasan soal ujian"
               options={[
-                { value: "AFTER_SUBMIT", label: "Langsung Tampil Setelah Siswa Submit Ujian" },
-                { value: "ALWAYS", label: "Selalu Dapat Dilihat (Kapan Saja)" },
-                { value: "AFTER_TRYOUT_CLOSED", label: "Hanya Tampil Setelah Tryout Ditutup" },
-                { value: "NEVER", label: "Jangan Tampilkan Pembahasan" },
+                {
+                  value: "AFTER_SUBMIT",
+                  label: "Langsung Tampil Setelah Siswa Submit Ujian",
+                  description: "Siswa dapat langsung melihat pembahasan dan analisis jawaban segera setelah menyelesaikan ujian.",
+                },
+                {
+                  value: "ALWAYS",
+                  label: "Selalu Dapat Dilihat (Kapan Saja)",
+                  description: "Pembahasan selalu dapat diakses siswa dari menu riwayat pengerjaan kapan pun.",
+                },
+                {
+                  value: "AFTER_TRYOUT_CLOSED",
+                  label: "Hanya Tampil Setelah Tryout Ditutup",
+                  description: "Sangat direkomendasikan untuk ujian serentak guna mencegah kebocoran jawaban antar siswa saat sesi masih berlangsung.",
+                },
+                {
+                  value: "NEVER",
+                  label: "Jangan Pernah Tampilkan Pembahasan",
+                  description: "Siswa hanya akan mengetahui total nilai/skor kelulusan tanpa rincian kunci jawaban.",
+                },
               ]}
             />
           </CardContent>

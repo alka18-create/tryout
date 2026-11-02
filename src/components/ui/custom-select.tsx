@@ -41,10 +41,27 @@ export function CustomSelect({
   id,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Cari label dari value yang sedang aktif
   const selectedOption = options.find((opt) => opt.value === value);
+
+  const toggleOpen = () => {
+    if (disabled) return;
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // Jika ruang bawah sempit (< 260px) dan di atas lebih lega, buka ke atas
+      if (spaceBelow < 260 && spaceAbove > spaceBelow) {
+        setOpenUpwards(true);
+      } else {
+        setOpenUpwards(false);
+      }
+    }
+    setIsOpen(!isOpen);
+  };
 
   // Tutup menu jika pengguna klik di luar komponen
   useEffect(() => {
@@ -86,7 +103,10 @@ export function CustomSelect({
   };
 
   return (
-    <div className={`w-full space-y-1.5 relative ${className}`} ref={containerRef}>
+    <div
+      className={`w-full space-y-1.5 relative ${isOpen ? "z-30" : ""} ${className}`}
+      ref={containerRef}
+    >
       {label && (
         <label
           htmlFor={id}
@@ -101,7 +121,7 @@ export function CustomSelect({
         id={id}
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`w-full px-3.5 py-2.5 rounded-xl bg-white border text-left flex items-center justify-between gap-2 transition-all outline-none shadow-2xs cursor-pointer ${
@@ -123,16 +143,18 @@ export function CustomSelect({
         </span>
         <ChevronDown
           className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-blue-600" : ""
+            isOpen ? (openUpwards ? "rotate-0 text-blue-600" : "rotate-180 text-blue-600") : ""
           }`}
         />
       </button>
 
-      {/* In-DOM Popover Menu (Terkunci tepat di bawah tombol, 100% aman di smartphone) */}
+      {/* In-DOM Popover Menu (Terkunci tepat di bawah/atas tombol, 100% aman di smartphone) */}
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-100 ${menuClassName}`}
+          className={`absolute left-0 right-0 ${
+            openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          } z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 max-h-72 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-100 ${menuClassName}`}
         >
           {options.length === 0 ? (
             <div className="px-3.5 py-3 text-xs text-slate-400 text-center font-medium">
@@ -148,21 +170,21 @@ export function CustomSelect({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => handleSelect(option.value)}
-                  className={`w-full px-3.5 py-2.5 text-xs sm:text-sm text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                  className={`w-full px-4 py-3 text-xs sm:text-sm text-left flex items-start justify-between gap-3 transition-colors cursor-pointer border-b border-slate-100/70 last:border-b-0 ${
                     isSelected
-                      ? "bg-blue-50/80 text-blue-600 font-semibold"
+                      ? "bg-blue-50/90 text-blue-700 font-semibold"
                       : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate">{option.label}</div>
+                    <div className="leading-snug break-words">{option.label}</div>
                     {option.description && (
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                      <div className="text-[11px] font-normal text-slate-500 leading-relaxed mt-1 break-words">
                         {option.description}
                       </div>
                     )}
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-blue-600 shrink-0" />}
+                  {isSelected && <Check className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />}
                 </button>
               );
             })
