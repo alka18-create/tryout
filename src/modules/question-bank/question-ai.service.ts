@@ -18,35 +18,285 @@ const PROGRAM_LABELS: Record<string, string> = {
 };
 
 /**
- * Ekstraktor JSON yang tangguh dari teks respon AI
+ * Ekstraktor JSON yang sangat tangguh dari teks respon AI
  */
 function extractJsonFromAiText(text: string): any {
-  const trimmed = text.trim();
-
-  // 1. Coba parse langsung
-  try {
-    return JSON.parse(trimmed);
-  } catch {}
-
-  // 2. Ekstrak dari blok markdown ```json ... ```
-  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (codeBlockMatch && codeBlockMatch[1]) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim());
-    } catch {}
+  if (!text || !text.trim()) {
+    throw new Error("Respon teks dari AI kosong.");
   }
 
-  // 3. Ekstrak substring dari kurung kurawal pertama sampai terakhir
-  const firstBrace = trimmed.indexOf("{");
-  const lastBrace = trimmed.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    const candidate = trimmed.substring(firstBrace, lastBrace + 1);
+  const trimmed = text.trim();
+
+  // 1. Bersihkan reasoning/thinking tags (DeepSeek R1, Qwen, dll.)
+  let cleaned = trimmed
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, "")
+    .trim();
+
+  // 2. Coba parse langsung jika sudah valid JSON murni
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // 3. Ekstrak dari blok markdown ```json ... ``` (baik yang tertutup maupun terpotong)
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
+  if (codeBlockMatch && codeBlockMatch[1]?.trim()) {
+    const codeBlockContent = codeBlockMatch[1].trim();
+    try {
+      return JSON.parse(codeBlockContent);
+    } catch {
+      const repaired = tryRepairAndParseJson(codeBlockContent);
+      if (repaired) return repaired;
+    }
+  }
+
+  // 4. Cari batas kurung terluar objek {} atau array []
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  const firstBracket = cleaned.indexOf("[");
+  const lastBracket = cleaned.lastIndexOf("]");
+
+  let candidate = "";
+  if (firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace) && lastBracket > firstBracket) {
+    candidate = cleaned.substring(firstBracket, lastBracket + 1);
+  } else if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidate = cleaned.substring(firstBrace, lastBrace + 1);
+  } else {
+    // Jika tidak ada kurung penutup (misal terpotong token limit)
+    if (firstBrace !== -1) {
+      candidate = cleaned.substring(firstBrace);
+    } else if (firstBracket !== -1) {
+      candidate = cleaned.substring(firstBracket);
+    }
+  }
+
+  if (candidate) {
     try {
       return JSON.parse(candidate);
     } catch {}
+
+    const repaired = tryRepairAndParseJson(candidate);
+    if (repaired) return repaired;
   }
 
-  throw new Error("Gagal mengurai respon AI menjadi format JSON.");
+  // 5. Ekstraksi per butir soal individu (Fallback paling tangguh saat JSON terpotong/rusak)
+  const individualQuestions = extractIndividualQuestionObjects(cleaned);
+  if (individualQuestions.length > 0) {
+    console.log(
+      `[QuestionAiService] Berhasil memulihkan ${individualQuestions.length} butir soal via ekstraksi objek parsial.`
+    );
+    return { questions: individualQuestions };
+  }
+
+  console.error(
+    "[QuestionAiService] Gagal mengurai respon AI menjadi JSON. Cuplikan respon:\n",
+    trimmed.substring(0, 1000)
+  );
+
+  throw new Error("Gagal mengurai respon AI menjadi format JSON. Silakan coba kembali atau gunakan model AI yang lain.");
+}
+
+/**
+ * Mencoba memperbaiki kesalahan umum JSON yang dihasilkan LLM
+ */
+function tryRepairAndParseJson(jsonStr: string): any {
+  if (!jsonStr || !jsonStr.trim()) return null;
+
+  let cleaned = jsonStr.trim();
+
+  // A. Hapus komentar // dan /* */
+  cleaned = cleaned.replace(/\/\/[^\n\r]*/g, "");
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  // B. Perbaiki trailing commas sebelum } atau ]
+  cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+
+  // C. Perbaiki unescaped backslashes (misal rumus LaTeX: \alpha, \frac, dll.)
+  cleaned = cleaned.replace(/\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})/g, "\\\\");
+
+  // D. Perbaiki unescaped newlines/tabs di dalam string literal
+  cleaned = fixUnescapedControlCharsInStrings(cleaned);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // E. Coba perbaiki jika JSON terpotong di akhir
+  const repairedTruncated = repairTruncatedJson(cleaned);
+  if (repairedTruncated) {
+    try {
+      return JSON.parse(repairedTruncated);
+    } catch {}
+  }
+
+  return null;
+}
+
+/**
+ * Menormalkan karakter newline dan tab mentah di dalam string JSON
+ */
+function fixUnescapedControlCharsInStrings(str: string): string {
+  let result = "";
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+
+    if (inString) {
+      if (isEscaped) {
+        result += char;
+        isEscaped = false;
+      } else if (char === "\\") {
+        result += char;
+        isEscaped = true;
+      } else if (char === '"') {
+        result += char;
+        inString = false;
+      } else if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "\t") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      }
+      result += char;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Memperbaiki string JSON yang terpotong di tengah jalan (misal karena token limit)
+ */
+function repairTruncatedJson(str: string): string | null {
+  const lastCloseBrace = str.lastIndexOf("}");
+  const lastCloseBracket = str.lastIndexOf("]");
+  const lastValidCut = Math.max(lastCloseBrace, lastCloseBracket);
+
+  if (lastValidCut === -1) return null;
+
+  let truncated = str.substring(0, lastValidCut + 1).trim();
+  truncated = truncated.replace(/,\s*$/, "");
+
+  let openBraces = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < truncated.length; i++) {
+    const char = truncated[i];
+    if (inString) {
+      if (isEscaped) isEscaped = false;
+      else if (char === "\\") isEscaped = true;
+      else if (char === '"') inString = false;
+    } else {
+      if (char === '"') inString = true;
+      else if (char === "{") openBraces++;
+      else if (char === "}") openBraces = Math.max(0, openBraces - 1);
+      else if (char === "[") openBrackets++;
+      else if (char === "]") openBrackets = Math.max(0, openBrackets - 1);
+    }
+  }
+
+  let closing = "";
+  while (openBrackets > 0) {
+    closing += "]";
+    openBrackets--;
+  }
+  while (openBraces > 0) {
+    closing += "}";
+    openBraces--;
+  }
+
+  return truncated + closing;
+}
+
+/**
+ * Ekstraktor objek per butir soal independen jika struktur induk rusak
+ */
+function extractIndividualQuestionObjects(text: string): any[] {
+  const questions: any[] = [];
+  let pos = 0;
+
+  while (pos < text.length) {
+    const openBrace = text.indexOf("{", pos);
+    if (openBrace === -1) break;
+
+    let depth = 0;
+    let endBrace = -1;
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = openBrace; i < text.length; i++) {
+      const char = text[i];
+      if (inString) {
+        if (isEscaped) isEscaped = false;
+        else if (char === "\\") isEscaped = true;
+        else if (char === '"') inString = false;
+      } else {
+        if (char === '"') inString = true;
+        else if (char === "{") depth++;
+        else if (char === "}") {
+          depth--;
+          if (depth === 0) {
+            endBrace = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (endBrace !== -1) {
+      const block = text.substring(openBrace, endBrace + 1);
+      if (
+        (block.includes('"content"') || block.includes('"question"')) &&
+        (block.includes('"options"') || block.includes('"pilihan"') || block.includes('"choices"'))
+      ) {
+        const parsedItem = tryRepairAndParseJson(block);
+        if (parsedItem && typeof parsedItem === "object") {
+          questions.push(parsedItem);
+        }
+      }
+      pos = endBrace + 1;
+    } else {
+      pos = openBrace + 1;
+    }
+  }
+
+  return questions;
+}
+
+/**
+ * Ekstraksi array daftar soal dari objek JSON yang fleksibel
+ */
+function extractQuestionList(parsed: any): any[] {
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (parsed && typeof parsed === "object") {
+    if (Array.isArray(parsed.questions)) return parsed.questions;
+    if (Array.isArray(parsed.soal)) return parsed.soal;
+    if (Array.isArray(parsed.daftar_soal)) return parsed.daftar_soal;
+    if (Array.isArray(parsed.items)) return parsed.items;
+    if (Array.isArray(parsed.data)) return parsed.data;
+    if (Array.isArray(parsed.results)) return parsed.results;
+
+    // Cari properti apapun yang bernilai array of objects
+    for (const key of Object.keys(parsed)) {
+      if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+        return parsed[key];
+      }
+    }
+  }
+  return [];
 }
 
 /**
@@ -62,7 +312,16 @@ function normalizeQuestions(
     throw new Error("AI tidak menghasilkan butir soal dalam format array.");
   }
 
-  return rawQuestions.map((q, idx) => {
+  // Filter hanya butir soal yang memiliki konten pertanyaan
+  const filtered = rawQuestions.filter(
+    (q) => q && typeof q === "object" && Boolean(q.content || q.question || q.text)
+  );
+
+  if (filtered.length === 0) {
+    throw new Error("Struktur butir soal yang dihasilkan AI tidak lengkap.");
+  }
+
+  return filtered.map((q, idx) => {
     // Tentukan tipe soal (SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE)
     let itemType: QuestionType = QuestionType.SINGLE_CHOICE;
     const rawType = String(q.type || (requestedType !== "MIXED" ? requestedType : "") || "").toUpperCase().trim();
@@ -74,7 +333,21 @@ function normalizeQuestions(
       itemType = QuestionType.SINGLE_CHOICE;
     }
 
-    let rawOptions: any[] = Array.isArray(q.options) ? q.options : [];
+    let rawOptions: any[] = [];
+    if (Array.isArray(q.options)) {
+      rawOptions = q.options;
+    } else if (q.options && typeof q.options === "object") {
+      rawOptions = Object.entries(q.options).map(([label, content]) => ({
+        label,
+        content: typeof content === "object" && content !== null ? (content as any).content || (content as any).text : String(content),
+        isCorrect: typeof content === "object" && content !== null ? Boolean((content as any).isCorrect) : false,
+      }));
+    } else if (Array.isArray(q.choices)) {
+      rawOptions = q.choices;
+    } else if (Array.isArray(q.pilihan)) {
+      rawOptions = q.pilihan;
+    }
+
     let mappedOptions: { label: string; content: string; isCorrect: boolean }[] = [];
 
     if (itemType === QuestionType.TRUE_FALSE) {
@@ -112,18 +385,19 @@ function normalizeQuestions(
       });
 
       // Validasi atau inferensi kunci jawaban jika kunci disimpan di q.correctAnswer
-      if (q.correctAnswer) {
-        if (Array.isArray(q.correctAnswer)) {
-          const upperAnswers = q.correctAnswer.map((a: any) => String(a).trim().toUpperCase());
+      const answerVal = q.correctAnswer || q.answer || q.kunci || q.kunci_jawaban;
+      if (answerVal) {
+        if (Array.isArray(answerVal)) {
+          const upperAnswers = answerVal.map((a: any) => String(a).trim().toUpperCase());
           mappedOptions.forEach((o) => {
             if (upperAnswers.includes(o.label) || upperAnswers.includes(o.content.trim().toUpperCase())) {
               o.isCorrect = true;
             }
           });
-        } else if (typeof q.correctAnswer === "string") {
-          const targetLabel = q.correctAnswer.trim().toUpperCase();
+        } else if (typeof answerVal === "string") {
+          const targetLabel = answerVal.trim().toUpperCase();
           mappedOptions.forEach((o) => {
-            if (o.label === targetLabel || o.content.trim() === q.correctAnswer.trim()) {
+            if (o.label === targetLabel || o.content.trim() === answerVal.trim()) {
               o.isCorrect = true;
             }
           });
@@ -160,11 +434,11 @@ function normalizeQuestions(
 
     return {
       number: Number(q.number) || idx + 1,
-      content: String(q.content || q.question || "").trim(),
+      content: String(q.content || q.question || q.text || "").trim(),
       difficulty: validDiff,
       type: itemType,
       options: mappedOptions,
-      explanation: String(q.explanation || "").trim(),
+      explanation: String(q.explanation || q.pembahasan || "").trim(),
       bloomLevel: q.bloomLevel ? String(q.bloomLevel).trim() : undefined,
     };
   });
@@ -367,7 +641,7 @@ PANDUAN MUTU SOAL:
 2. Bahasa Indonesia baku, jelas, kontekstual, dan mendidik.
 3. ${typeRules}
 4. Pembahasan singkat, padat, dan jelas mengenai konsep dan alasan jawaban benar (1-3 kalimat).
-5. Format output HARUS berupa JSON valid tanpa teks atau penjelasan lain di luar JSON.
+5. Format output HARUS berupa JSON murni tanpa awalan teks, tanpa markdown blok lain, dan tanpa tag <think>. Awali respon langsung dengan { dan akhiri dengan }.
 
 Format JSON yang diwajibkan:
 {
@@ -391,7 +665,8 @@ ${documentText ? `MATERI DARI DOKUMEN:\n"""\n${documentText.substring(0, 18000)}
 ${input.materialText ? `MATERI PEMBELAJARAN ACUAN:\n"""\n${input.materialText.trim().substring(0, 18000)}\n"""\n` : ""}
 
 INSTRUKSI:
-Buatkan tepat ${input.questionCount} butir soal ${requestedType === "MULTIPLE_CHOICE" ? "pilihan ganda kompleks" : requestedType === "TRUE_FALSE" ? "benar/salah" : requestedType === "MIXED" ? "campuran" : "pilihan ganda"} bermutu tinggi sekarang juga sesuai struktur JSON di atas!`;
+Buatkan tepat ${input.questionCount} butir soal ${requestedType === "MULTIPLE_CHOICE" ? "pilihan ganda kompleks" : requestedType === "TRUE_FALSE" ? "benar/salah" : requestedType === "MIXED" ? "campuran" : "pilihan ganda"} bermutu tinggi sekarang juga sesuai struktur JSON di atas!
+Keluarkan HANYA JSON tanpa teks pengantar apapun.`;
 
     // Fungsi sanitasi model yang mungkin usang atau berganti nama di katalog Cloudflare
     const sanitizeCfModel = (name?: string): string | undefined => {
@@ -443,9 +718,9 @@ Buatkan tepat ${input.questionCount} butir soal ${requestedType === "MULTIPLE_CH
               { role: "user", content: userPrompt },
             ],
             temperature: 0.6,
-            max_tokens: 3800,
+            max_tokens: Math.max(4096, Math.min(8192, input.questionCount * 750)),
           }),
-          signal: AbortSignal.timeout(45000), // Batas 45 detik
+          signal: AbortSignal.timeout(60000), // Batas 60 detik
         });
 
         if (!res.ok) {
@@ -496,7 +771,8 @@ Buatkan tepat ${input.questionCount} butir soal ${requestedType === "MULTIPLE_CH
     }
 
     const parsed = extractJsonFromAiText(responseText);
-    const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels, input.questionType);
+    const rawQuestions = extractQuestionList(parsed);
+    const questions = normalizeQuestions(rawQuestions, optCount, optLabels, input.questionType);
 
     return {
       subjectName: topic.subject.name,
@@ -705,7 +981,8 @@ Buatkan tepat ${input.questionCount} butir soal pilihan ganda bermutu tinggi ber
       }
 
       const parsed = extractJsonFromAiText(responseText);
-      const questions = normalizeQuestions(parsed.questions || [], optCount, optLabels, input.questionType);
+      const rawQuestions = extractQuestionList(parsed);
+      const questions = normalizeQuestions(rawQuestions, optCount, optLabels, input.questionType);
 
       return {
         subjectName: topic.subject.name,

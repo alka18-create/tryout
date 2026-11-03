@@ -279,6 +279,64 @@ export async function runUnitTests(): Promise<boolean> {
     `Hasil aktual: ${calculatedScoreA}`
   );
 
+  // ---------------------------------------------------------------------------
+  // 7. UNIT TEST: AI JSON Response Parser & Auto-Repair Resilience
+  // ---------------------------------------------------------------------------
+  console.log("\n[7] Menguji Ekstraksi & Perbaikan JSON Respon AI (Resilience Parser)...");
+  const { sanitizeAndExtractJson } = await import("./test-ai-json-parser");
+
+  // Kasus A: Model DeepSeek R1 dengan tag <think>
+  const rawWithThink = `<think>
+Harus buat 1 soal pilihan ganda.
+Contoh: { "pikir": "analisis" }
+</think>
+\`\`\`json
+{
+  "questions": [
+    { "number": 1, "content": "Soal 1", "options": [{ "label": "A", "content": "Opsi", "isCorrect": true }] }
+  ]
+}
+\`\`\``;
+  const parsedA = sanitizeAndExtractJson(rawWithThink);
+  assert("Berhasil ekstrak JSON dari teks AI dengan tag <think>", parsedA?.questions?.length === 1);
+
+  // Kasus B: Trailing comma & LaTeX backslashes (\alpha, \sqrt, dll)
+  const rawWithLatex = `{
+    "questions": [
+      {
+        "number": 1,
+        "content": "Berapa \\alpha + \\frac{1}{2}?",
+        "options": [
+          { "label": "A", "content": "\\sqrt{9}", "isCorrect": true, },
+        ],
+        "explanation": "Simbol \\pm 3.",
+      },
+    ],
+  }`;
+  const parsedB = sanitizeAndExtractJson(rawWithLatex);
+  assert("Berhasil memulihkan trailing comma dan backslash LaTeX", parsedB?.questions?.length === 1);
+
+  // Kasus C: JSON terpotong akibat batas token (Truncated JSON recovery)
+  const rawTruncated = `\`\`\`json
+  {
+    "questions": [
+      {
+        "number": 1,
+        "content": "Soal lengkap 1",
+        "options": [{ "label": "A", "content": "A", "isCorrect": true }]
+      },
+      {
+        "number": 2,
+        "content": "Soal lengkap 2",
+        "options": [{ "label": "A", "content": "B", "isCorrect": true }]
+      },
+      {
+        "number": 3,
+        "content": "Soal terpotong di tengah jalan`;
+  const parsedC = sanitizeAndExtractJson(rawTruncated);
+  const countC = Array.isArray(parsedC) ? parsedC.length : parsedC?.questions?.length;
+  assert("Berhasil memulihkan butir soal utuh dari JSON yang terpotong", countC === 2);
+
   const allPassed = results.every((r) => r.pass);
   console.log(`\n=> Hasil Unit Tests: ${results.filter((r) => r.pass).length}/${results.length} Pengujian Berhasil.`);
   return allPassed;
