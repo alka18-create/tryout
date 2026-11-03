@@ -131,7 +131,11 @@ export default async function TeacherDashboardPage() {
                     <Clock className="w-3.5 h-3.5" /> {t.durationMinutes} Menit
                   </span>
                   <span>•</span>
-                  <span>{t._count.tryoutQuestions} Soal Terpilih</span>
+                  <span>
+                    {t.questionCount
+                      ? `${t.questionCount} Soal Tampil (${t._count.tryoutQuestions} Bank)`
+                      : `${t._count.tryoutQuestions} Soal Terpilih`}
+                  </span>
                   <span>•</span>
                   <span>{t._count.examSessions} Pengerjaan Peserta</span>
                 </p>

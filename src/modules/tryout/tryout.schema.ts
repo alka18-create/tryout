@@ -20,6 +20,13 @@ export const createTryoutSchema = z.object({
     .min(1, "Minimal 1 kali percobaan")
     .max(10, "Maksimal 10 kali percobaan")
     .optional(),
+  questionCount: z
+    .union([
+      z.coerce.number().int().min(1, "Jumlah butir soal ditampilkan minimal 1"),
+      z.literal(""),
+    ])
+    .nullish()
+    .transform((val) => (val === "" || val === undefined || val === null ? null : Number(val))),
   status: z.nativeEnum(TryoutStatus).default(TryoutStatus.DRAFT),
   discussionVisibility: z
     .nativeEnum(DiscussionVisibility)

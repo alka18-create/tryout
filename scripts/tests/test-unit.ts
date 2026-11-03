@@ -221,6 +221,64 @@ export async function runUnitTests(): Promise<boolean> {
   const isExpired10Min1 = idle10Min1Sec - baseTime >= INACTIVITY_TIMEOUT_MS;
   assert("Aktivitas di >10 menit: memicu auto logout seketika", isExpired10Min1);
 
+  // ---------------------------------------------------------------------------
+  // 6. UNIT TEST: Random Sampling & Weighted Scoring for Question Pool (questionCount)
+  // ---------------------------------------------------------------------------
+  console.log("\n[6] Menguji Fitur Kuota Soal Acak (Random Sampling 50 dari 100 Bank Soal)...");
+  const { shuffleArrayWithSeed } = await import("../../src/lib/randomizer");
+
+  // Bank soal berisi 100 butir soal
+  const bankOf100Questions = Array.from({ length: 100 }, (_, i) => ({
+    questionId: `question_${i + 1}`,
+    orderNumber: i + 1,
+    weight: 1.0,
+  }));
+
+  const questionCount = 50;
+
+  // Siswa A (Session A)
+  const sessionA_Id = "session_student_A_123";
+  const sampledQuestionsA = shuffleArrayWithSeed(
+    bankOf100Questions,
+    `${sessionA_Id}:selected_questions`
+  ).slice(0, questionCount);
+
+  // Siswa B (Session B)
+  const sessionB_Id = "session_student_B_456";
+  const sampledQuestionsB = shuffleArrayWithSeed(
+    bankOf100Questions,
+    `${sessionB_Id}:selected_questions`
+  ).slice(0, questionCount);
+
+  assert("Siswa A mendapatkan tepat 50 soal", sampledQuestionsA.length === 50);
+  assert("Siswa B mendapatkan tepat 50 soal", sampledQuestionsB.length === 50);
+
+  // Memastikan soal yang diterima siswa A dan siswa B berbeda susunan/isinya (acak)
+  const idsA = new Set(sampledQuestionsA.map((q) => q.questionId));
+  const idsB = new Set(sampledQuestionsB.map((q) => q.questionId));
+  let differentCount = 0;
+  for (const id of idsB) {
+    if (!idsA.has(id)) differentCount++;
+  }
+  assert("Siswa A dan Siswa B mendapatkan subset soal acak yang berbeda", differentCount > 0);
+
+  // Evaluasi Penilaian Siswa: Total bobot maksimal harus berbasis 50 soal (bukan 100 soal)
+  const studentAnswersA = sampledQuestionsA.map((q) => ({
+    questionId: q.questionId,
+    weight: q.weight,
+    isCorrect: true, // Semua 50 soal dijawab benar
+  }));
+
+  const totalEarnedA = studentAnswersA.filter((a) => a.isCorrect).reduce((sum, a) => sum + a.weight, 0);
+  const totalMaxWeightA = studentAnswersA.reduce((sum, a) => sum + a.weight, 0);
+  const calculatedScoreA = Math.round((totalEarnedA / totalMaxWeightA) * 1000) / 10;
+
+  assert(
+    "Menjawab benar 50 dari 50 soal yang ditampilkan menghasilkan skor 100.0 (bukan 50.0)",
+    calculatedScoreA === 100.0,
+    `Hasil aktual: ${calculatedScoreA}`
+  );
+
   const allPassed = results.every((r) => r.pass);
   console.log(`\n=> Hasil Unit Tests: ${results.filter((r) => r.pass).length}/${results.length} Pengujian Berhasil.`);
   return allPassed;

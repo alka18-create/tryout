@@ -33,6 +33,8 @@ export default async function EditTryoutPage({ params }: EditTryoutPageProps) {
     subjectId: tryout.subjectId,
     durationMinutes: tryout.durationMinutes,
     passingScore: tryout.passingScore,
+    maxAttempts: tryout.maxAttempts,
+    questionCount: tryout.questionCount,
     status: tryout.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
     discussionVisibility: tryout.discussionVisibility as "ALWAYS" | "AFTER_SUBMIT" | "AFTER_TRYOUT_CLOSED" | "NEVER",
     startDate: tryout.startDate ? tryout.startDate.toISOString() : null,

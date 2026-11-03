@@ -246,6 +246,7 @@ model Tryout {
   durationMinutes      Int                  @map("duration_minutes") // contoh: 60
   passingScore         Float                @default(75.0) @map("passing_score")
   maxAttempts          Int                  @default(3) @map("max_attempts") // batas percobaan tryout (default 3x)
+  questionCount        Int?                 @map("question_count") // Jumlah butir soal yang ditampilkan ke siswa (opsional, jika kosong = semua soal)
   status               TryoutStatus         @default(DRAFT)
   discussionVisibility DiscussionVisibility @default(AFTER_SUBMIT) @map("discussion_visibility")
   

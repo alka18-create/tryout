@@ -23,6 +23,7 @@ interface TryoutFormProps {
     durationMinutes: number;
     passingScore: number;
     maxAttempts?: number;
+    questionCount?: number | null;
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     discussionVisibility: "ALWAYS" | "AFTER_SUBMIT" | "AFTER_TRYOUT_CLOSED" | "NEVER";
     startDate?: string | null;
@@ -42,6 +43,10 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
     durationMinutes: initialData?.durationMinutes || 60,
     passingScore: initialData?.passingScore || 75,
     maxAttempts: initialData?.maxAttempts ?? 3,
+    questionCount:
+      initialData?.questionCount !== undefined && initialData?.questionCount !== null
+        ? initialData.questionCount
+        : "",
     status: initialData?.status || "DRAFT",
     discussionVisibility: initialData?.discussionVisibility || "AFTER_SUBMIT",
     startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : "",
@@ -89,6 +94,10 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
           durationMinutes: Number(formData.durationMinutes),
           passingScore: Number(formData.passingScore),
           maxAttempts: Number(formData.maxAttempts),
+          questionCount:
+            formData.questionCount !== "" && formData.questionCount !== null
+              ? Number(formData.questionCount)
+              : null,
           startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
           endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
         }),
@@ -202,10 +211,12 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
         <Card>
           <CardHeader>
             <CardTitle>Waktu & Standar Kelulusan</CardTitle>
-            <CardDescription>Aturan timer server dan ambang batas nilai kelulusan (KKM)</CardDescription>
+            <CardDescription>
+              Aturan timer server, kuota soal yang ditampilkan secara acak, dan ambang batas kelulusan
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Input
                 label="Durasi Pengerjaan (Menit)"
                 type="number"
@@ -215,6 +226,21 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                 value={formData.durationMinutes}
                 onChange={(e) => setFormData({ ...formData, durationMinutes: Number(e.target.value) })}
                 helperText="Contoh: 60 menit"
+              />
+
+              <Input
+                label="Jumlah Soal Ditampilkan"
+                type="number"
+                min={1}
+                value={formData.questionCount}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    questionCount: e.target.value === "" ? "" : Number(e.target.value),
+                  })
+                }
+                placeholder="Semua butir soal"
+                helperText="Diacak per siswa (kosongkan = semua)"
               />
 
               <Input
@@ -236,7 +262,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                 required
                 value={formData.maxAttempts}
                 onChange={(e) => setFormData({ ...formData, maxAttempts: Number(e.target.value) })}
-                helperText="Maksimal ujian (diambil nilai tertinggi)"
+                helperText="Maksimal pengerjaan ujian"
               />
             </div>
 

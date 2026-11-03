@@ -188,16 +188,18 @@ export class AnalyticsService {
     // 4. Analisis Butir Soal (% benar per nomor soal dari sesi terbaik masing-masing siswa)
     const questionStatsMap = new Map<
       string,
-      { correctCount: number; answeredCount: number }
+      { correctCount: number; answeredCount: number; presentedCount: number }
     >();
 
     sortedBestParticipants.forEach((s) => {
       s.answers.forEach((ans) => {
         if (!questionStatsMap.has(ans.questionId)) {
-          questionStatsMap.set(ans.questionId, { correctCount: 0, answeredCount: 0 });
+          questionStatsMap.set(ans.questionId, { correctCount: 0, answeredCount: 0, presentedCount: 0 });
         }
         const stat = questionStatsMap.get(ans.questionId)!;
-        if (ans.selectedOptionId) {
+        stat.presentedCount += 1;
+        const hasAnswer = (ans.selectedOptionIds && ans.selectedOptionIds.length > 0) || Boolean(ans.selectedOptionId);
+        if (hasAnswer) {
           stat.answeredCount += 1;
           if (ans.isCorrect) stat.correctCount += 1;
         }
@@ -205,9 +207,10 @@ export class AnalyticsService {
     });
 
     const itemAnalysis = tryout.tryoutQuestions.map((tq) => {
-      const stat = questionStatsMap.get(tq.questionId) || { correctCount: 0, answeredCount: 0 };
+      const stat = questionStatsMap.get(tq.questionId) || { correctCount: 0, answeredCount: 0, presentedCount: 0 };
+      const sampleBase = stat.presentedCount > 0 ? stat.presentedCount : totalParticipants;
       const correctPercentage =
-        totalParticipants > 0 ? Math.round((stat.correctCount / totalParticipants) * 100) : 0;
+        sampleBase > 0 ? Math.round((stat.correctCount / sampleBase) * 100) : 0;
 
       let absorptionCategory: "TINGGI" | "SEDANG" | "RENDAH" = "SEDANG";
       if (correctPercentage >= 75) absorptionCategory = "TINGGI";
@@ -221,7 +224,7 @@ export class AnalyticsService {
         difficulty: tq.question.difficulty,
         weight: tq.weight,
         correctCount: stat.correctCount,
-        totalParticipants,
+        totalParticipants: sampleBase,
         correctPercentage,
         absorptionCategory,
       };
@@ -234,7 +237,8 @@ export class AnalyticsService {
         subjectName: tryout.subject.name,
         durationMinutes: tryout.durationMinutes,
         passingScore: tryout.passingScore,
-        questionCount: tryout.tryoutQuestions.length,
+        questionCount: tryout.questionCount ?? tryout.tryoutQuestions.length,
+        bankQuestionCount: tryout.tryoutQuestions.length,
       },
       summary: {
         totalParticipants,
@@ -315,7 +319,8 @@ export class AnalyticsService {
         status: t.status,
         durationMinutes: t.durationMinutes,
         passingScore: t.passingScore,
-        questionCount: t._count.tryoutQuestions,
+        questionCount: t.questionCount ?? t._count.tryoutQuestions,
+        bankQuestionCount: t._count.tryoutQuestions,
         totalSessions: t._count.examSessions,
         completedCount: participantCount,
         averageScore: avgScore,

@@ -57,6 +57,7 @@ interface TryoutDetail {
   title: string;
   durationMinutes: number;
   passingScore: number;
+  questionCount?: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   subjectId: string;
   subject: {
@@ -355,8 +356,21 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Total Soal</span>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{questions.length} Butir</div>
+          <span className="text-xs text-slate-500 font-medium">
+            {tryout.questionCount ? "Soal Ditampilkan" : "Total Soal"}
+          </span>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">
+            {tryout.questionCount ? (
+              <div className="flex flex-col">
+                <span>{tryout.questionCount} Butir</span>
+                <span className="text-xs font-normal text-slate-500 mt-0.5">
+                  dari {questions.length} butir bank soal
+                </span>
+              </div>
+            ) : (
+              `${questions.length} Butir`
+            )}
+          </div>
         </Card>
         <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
           <span className="text-xs text-slate-500 font-medium">Total Bobot Nilai</span>
@@ -375,6 +389,19 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
           </div>
         </Card>
       </div>
+
+      {/* Warning banner jika soal kurang dari target tampil */}
+      {tryout.questionCount && questions.length < tryout.questionCount && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <p className="font-bold">Target Soal Belum Terpenuhi</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Paket ini diatur untuk menampilkan <strong>{tryout.questionCount} butir soal acak</strong> ke peserta, namun saat ini baru dipilih <strong>{questions.length} butir soal</strong> dari bank soal. Tambahkan minimal <strong>{tryout.questionCount - questions.length} butir soal lagi</strong> agar paket tryout dapat dipublikasikan.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main List of Attached Questions */}
       <Card className="bg-white border-slate-200/90 shadow-xs">

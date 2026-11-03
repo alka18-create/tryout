@@ -29,6 +29,7 @@ interface TryoutItem {
   description: string | null;
   durationMinutes: number;
   passingScore: number;
+  questionCount?: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   discussionVisibility: string;
   startDate: string | null;
@@ -286,7 +287,9 @@ export default function TeacherTryoutsPage() {
                         Soal
                       </div>
                       <div className="text-xs font-bold text-slate-800 mt-0.5">
-                        {tryout._count.tryoutQuestions} butir
+                        {tryout.questionCount
+                          ? `${tryout.questionCount} / ${tryout._count.tryoutQuestions} butir`
+                          : `${tryout._count.tryoutQuestions} butir`}
                       </div>
                     </div>
 
@@ -435,7 +438,9 @@ export default function TeacherTryoutsPage() {
               <div>
                 <span className="text-slate-500 text-xs">Jumlah Butir Soal:</span>
                 <p className="font-semibold text-slate-900">
-                  {previewTryout._count.tryoutQuestions} Butir Soal
+                  {previewTryout.questionCount
+                    ? `${previewTryout.questionCount} Butir Soal (Acak dari ${previewTryout._count.tryoutQuestions} Bank Soal)`
+                    : `${previewTryout._count.tryoutQuestions} Butir Soal`}
                 </p>
               </div>
               <div>

@@ -186,7 +186,12 @@ export default async function StudentDashboardPage() {
                       {tryout.durationMinutes} Menit
                     </span>
                     <span>•</span>
-                    <span>{tryout._count.tryoutQuestions} Soal</span>
+                    <span>
+                      {tryout.questionCount
+                        ? Math.min(tryout.questionCount, tryout._count.tryoutQuestions)
+                        : tryout._count.tryoutQuestions}{" "}
+                      Soal
+                    </span>
                   </div>
 
                   <Link href={`/dashboard/student/tryouts/${tryout.id}`}>

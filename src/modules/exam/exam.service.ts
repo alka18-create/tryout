@@ -113,7 +113,9 @@ export class ExamService {
         subject: t.subject,
         durationMinutes: t.durationMinutes,
         passingScore: t.passingScore,
-        questionCount: t._count.tryoutQuestions,
+        questionCount: t.questionCount
+          ? Math.min(t.questionCount, t._count.tryoutQuestions)
+          : t._count.tryoutQuestions,
         maxAttempts,
         attemptsUsed,
         attemptsRemaining,
@@ -255,7 +257,9 @@ export class ExamService {
       subject: tryout.subject,
       durationMinutes: tryout.durationMinutes,
       passingScore: tryout.passingScore,
-      questionCount: tryout._count.tryoutQuestions,
+      questionCount: tryout.questionCount
+        ? Math.min(tryout.questionCount, tryout._count.tryoutQuestions)
+        : tryout._count.tryoutQuestions,
       discussionVisibility: tryout.discussionVisibility,
       maxAttempts,
       attemptsUsed,
@@ -399,8 +403,22 @@ export class ExamService {
         },
       });
 
-      // Siapkan baris jawaban kosong untuk setiap soal tryout
-      const answersData = tryout.tryoutQuestions.map((tq) => ({
+      // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa
+      let assignedQuestions = tryout.tryoutQuestions;
+      if (
+        tryout.questionCount &&
+        tryout.questionCount > 0 &&
+        tryout.questionCount < tryout.tryoutQuestions.length
+      ) {
+        // Pengacakan Fisher-Yates dengan seed unik berbasis sessionId agar setiap siswa/percobaan mendapat paket acak unik
+        assignedQuestions = shuffleArrayWithSeed(
+          tryout.tryoutQuestions,
+          `${session.id}:selected_questions`
+        ).slice(0, tryout.questionCount);
+      }
+
+      // Siapkan baris jawaban kosong untuk setiap butir soal tryout yang terpilih
+      const answersData = assignedQuestions.map((tq) => ({
         examSessionId: session.id,
         questionId: tq.questionId,
         isFlagged: false,
@@ -671,10 +689,14 @@ export class ExamService {
 
     // 1. Buat map bobot soal berdasarkan tryoutQuestions
     const weightMap = new Map<string, number>();
-    let totalMaxWeight = 0;
     session.tryout.tryoutQuestions.forEach((tq) => {
       weightMap.set(tq.questionId, tq.weight);
-      totalMaxWeight += tq.weight;
+    });
+
+    // Hitung total bobot maksimal HANYA dari butir soal yang diujikan dalam sesi ini (session.answers)
+    let totalMaxWeight = 0;
+    session.answers.forEach((ans) => {
+      totalMaxWeight += weightMap.get(ans.questionId) || 1.0;
     });
 
     // 2. Evaluasi setiap butir jawaban

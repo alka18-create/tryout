@@ -81,6 +81,7 @@ export class TryoutService {
         durationMinutes: input.durationMinutes,
         passingScore: input.passingScore,
         maxAttempts: input.maxAttempts ?? 3,
+        questionCount: input.questionCount ?? null,
         status: input.status,
         discussionVisibility: input.discussionVisibility,
         startDate,
@@ -124,6 +125,14 @@ export class TryoutService {
           "Paket tryout tidak dapat dipublikasikan karena belum memiliki soal. Silakan susun soal terlebih dahulu.",
         );
       }
+      const targetQuestionCount =
+        input.questionCount !== undefined ? input.questionCount : tryout.questionCount;
+      if (targetQuestionCount && tryout._count.tryoutQuestions < targetQuestionCount) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Paket tryout tidak dapat dipublikasikan karena jumlah butir soal (${tryout._count.tryoutQuestions}) masih kurang dari target soal yang ditampilkan (${targetQuestionCount}). Silakan tambahkan butir soal terlebih dahulu.`,
+        );
+      }
     }
 
     const startDate = input.startDate !== undefined ? (input.startDate ? new Date(input.startDate) : null) : undefined;
@@ -138,6 +147,7 @@ export class TryoutService {
         ...(input.durationMinutes ? { durationMinutes: input.durationMinutes } : {}),
         ...(input.passingScore !== undefined ? { passingScore: input.passingScore } : {}),
         ...(input.maxAttempts !== undefined ? { maxAttempts: input.maxAttempts } : {}),
+        ...(input.questionCount !== undefined ? { questionCount: input.questionCount } : {}),
         ...(input.status ? { status: input.status } : {}),
         ...(input.discussionVisibility ? { discussionVisibility: input.discussionVisibility } : {}),
         ...(startDate !== undefined ? { startDate } : {}),

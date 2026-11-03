@@ -49,6 +49,7 @@ export default async function TryoutQuestionsPage({ params }: TryoutQuestionsPag
     title: tryout.title,
     durationMinutes: tryout.durationMinutes,
     passingScore: tryout.passingScore,
+    questionCount: tryout.questionCount,
     status: tryout.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
     subjectId: tryout.subjectId,
     subject: {
