@@ -45,7 +45,7 @@ export default function AdminUsersPage() {
   const [createForm, setCreateForm] = useState({
     name: "",
     email: "",
-    password: "Password123!",
+    password: "TryoutKu@2026",
     role: "TEACHER" as "TEACHER" | "ADMIN" | "STUDENT",
   });
 
@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
         text: `Akun ${createForm.role} "${createForm.name}" berhasil dibuat dengan kata sandi default!`,
       });
       setIsCreateModalOpen(false);
-      setCreateForm({ name: "", email: "", password: "Password123!", role: "TEACHER" });
+      setCreateForm({ name: "", email: "", password: "TryoutKu@2026", role: "TEACHER" });
       setIsCreating(false);
       fetchUsers();
     } catch {

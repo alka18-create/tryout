@@ -88,7 +88,7 @@ export class AdminService {
       throw new AppError("EMAIL_ALREADY_REGISTERED", "Email tersebut telah digunakan.");
     }
 
-    const defaultPassword = data.password || "Password123!";
+    const defaultPassword = data.password || "TryoutKu@2026";
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
     const user = await prisma.user.create({

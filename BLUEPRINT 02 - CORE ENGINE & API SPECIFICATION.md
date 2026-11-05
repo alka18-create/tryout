@@ -152,7 +152,7 @@ Format Error Standar:
   {
     "name": "Ahmad Fauzi",
     "email": "ahmad@example.com",
-    "password": "Password123!",
+    "password": "TryoutKu@2026",
     "schoolName": "SMA Negeri 1",
     "schoolClass": "XII IPA 2"
   }

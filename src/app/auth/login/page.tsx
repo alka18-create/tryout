@@ -88,7 +88,7 @@ function LoginForm() {
 
   const handleDemoFill = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword("Password123!");
+    setPassword("TryoutKu@2026");
     setErrorMsg("");
   };
 

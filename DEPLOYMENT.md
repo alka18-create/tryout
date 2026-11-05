@@ -133,7 +133,7 @@ Akun Administrator telah siap digunakan untuk login di halaman `/auth/login`.
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app node scripts/seed-demo.js
 ```
-Password untuk semua akun demo adalah `Password123!`.
+Password untuk semua akun demo adalah `TryoutKu@2026`.
 
 ---
 

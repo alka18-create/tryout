@@ -57,7 +57,7 @@ async function main() {
 
   // 3. Users (Admin, Teacher, Students)
   console.log("👥 Creating users...");
-  const defaultPasswordHash = await bcrypt.hash("Password123!", 10);
+  const defaultPasswordHash = await bcrypt.hash("TryoutKu@2026", 10);
 
   const admin = await prisma.user.create({
     data: {
@@ -472,7 +472,7 @@ async function main() {
       teacher: teacher.email,
       student1: student1.email,
       student2: student2.email,
-      defaultPassword: "Password123!",
+      defaultPassword: "TryoutKu@2026",
     },
     subject: sosiologi.name,
     topicsCount: 4,

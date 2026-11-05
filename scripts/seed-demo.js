@@ -10,13 +10,13 @@ async function main() {
 
   console.log("======================================================");
   console.log("[Seed Demo] Menyiapkan Akun Demo Khusus Siswa...");
-  console.log("Password akun demo siswa: Password123!");
+  console.log("Password akun demo siswa: TryoutKu@2026");
   console.log("======================================================\n");
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
 
-  const hash = await bcrypt.hash("Password123!", 10);
+  const hash = await bcrypt.hash("TryoutKu@2026", 10);
 
   // Hanya akun demo role STUDENT
   const demoStudents = [
@@ -65,7 +65,7 @@ async function main() {
   console.log("\n🎉 Akun Demo Siswa berhasil di-seed (Admin/Guru demo tidak dibuat demi keamanan).");
   console.log("Silakan login dengan:");
   console.log("Email    : ahmad@tryoutku.com");
-  console.log("Password : Password123!\n");
+  console.log("Password : TryoutKu@2026\n");
 }
 
 main().catch((err) => {
