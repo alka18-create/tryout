@@ -138,6 +138,15 @@ export class QuestionImportService {
         "Keterangan / Aturan":
           "Jika kolom Opsi A & B dikosongkan, sistem otomatis mengisinya dengan 'Benar' & 'Salah'.",
       },
+      {
+        "Jenis Soal": "MATRIKS / TABEL",
+        "Format Opsi Jawaban":
+          "Tidak tersedia melalui Excel karena membutuhkan beberapa kolom jawaban (mis. Sesuai / Tidak Sesuai).",
+        "Format Kunci Jawaban":
+          "Ditentukan per baris pada formulir (satu kolom kunci untuk setiap pernyataan).",
+        "Keterangan / Aturan":
+          "Buat soal matriks lewat menu Bank Soal → Tambah Soal → pilih tipe 'Matriks / Tabel'. Penilaian dilakukan proporsional per baris pernyataan.",
+      },
     ];
 
     const wsInstructions = XLSX.utils.json_to_sheet(instructions);
@@ -211,6 +220,15 @@ export class QuestionImportService {
 
     if (!rawRows || rawRows.length === 0) {
       throw new AppError("VALIDATION_ERROR", "Tidak ada data baris yang ditemukan pada file Excel.");
+    }
+
+    // Batasi jumlah baris untuk mencegah pemrosesan file berukuran ekstrem
+    const MAX_IMPORT_ROWS = 2000;
+    if (rawRows.length > MAX_IMPORT_ROWS) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `File berisi ${rawRows.length} baris, melebihi batas maksimal ${MAX_IMPORT_ROWS} baris per impor.`,
+      );
     }
 
     // Ambil data referensi subject & topic untuk validasi relasi

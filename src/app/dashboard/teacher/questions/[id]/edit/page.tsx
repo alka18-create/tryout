@@ -33,7 +33,7 @@ export default async function EditQuestionPage({
     explanation: question.explanation || "",
     explanationImageUrl: question.explanationImageUrl || "",
     options: question.options.map((opt) => ({
-      label: opt.label as "A" | "B" | "C" | "D" | "E",
+      label: opt.label,
       content: opt.content,
       imageUrl: opt.imageUrl || "",
       isCorrect: opt.isCorrect,

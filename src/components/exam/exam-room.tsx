@@ -23,6 +23,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  isMatrixFullyAnswered,
+  parseMatrixLabel,
+  parseMatrixQuestion,
+} from "@/lib/matrix-question";
 
 interface QuestionOption {
   id: string;
@@ -35,7 +40,7 @@ interface ExamQuestion {
   orderNumber: number;
   weight: number;
   questionId: string;
-  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
   content: string;
   imageUrl?: string | null;
   options: QuestionOption[];
@@ -95,6 +100,8 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   } | null>(null);
 
   const currentQuestion = questions[currentIndex];
+  const currentMatrix =
+    currentQuestion?.type === "MATRIX" ? parseMatrixQuestion(currentQuestion.options) : null;
 
   // 1. Timer Countdown & Server Synchronization
   useEffect(() => {
@@ -226,6 +233,35 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
     }, 100);
   };
 
+  // 4b. Pilih Opsi Jawaban Matriks (satu pilihan per baris pernyataan)
+  const handleSelectMatrixOption = (optionId: string) => {
+    const updated = [...questions];
+    const q = updated[currentIndex];
+    const targetOption = q.options.find((option) => option.id === optionId);
+    if (!targetOption) return;
+
+    const { rowNumber } = parseMatrixLabel(targetOption.label);
+    const rowOptionIds = q.options
+      .filter((option) => parseMatrixLabel(option.label).rowNumber === rowNumber)
+      .map((option) => option.id);
+
+    const currentList = q.selectedOptionIds || (q.selectedOptionId ? [q.selectedOptionId] : []);
+    const newSelectedIds = [
+      ...currentList.filter((id) => !rowOptionIds.includes(id)),
+      optionId,
+    ];
+
+    q.selectedOptionIds = newSelectedIds;
+    q.selectedOptionId = newSelectedIds[0] ?? null;
+    setQuestions(updated);
+
+    // Autosave dengan debounce 100ms
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      triggerSaveAnswer(q.questionId, newSelectedIds[0] ?? null, newSelectedIds, q.isFlagged);
+    }, 100);
+  };
+
   // 5. Toggle Flag Ragu-Ragu
   const handleToggleFlag = () => {
     const updated = [...questions];
@@ -279,9 +315,17 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   };
 
   // Statistik Jawaban
-  const answeredCount = questions.filter(
-    (q) => (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null
-  ).length;
+  const isQuestionAnswered = (q: ExamQuestion) => {
+    if (q.type === "MATRIX") {
+      const selected = q.selectedOptionIds || (q.selectedOptionId ? [q.selectedOptionId] : []);
+      return isMatrixFullyAnswered(q.options, selected);
+    }
+    return Boolean(
+      (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null
+    );
+  };
+
+  const answeredCount = questions.filter(isQuestionAnswered).length;
   const flaggedCount = questions.filter((q) => q.isFlagged).length;
   const unansweredCount = questions.length - answeredCount;
   const isTimeCritical = remainingSeconds <= 300; // < 5 menit
@@ -478,11 +522,13 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 <span className="text-sm text-slate-400 font-semibold">/ {questions.length}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
+                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" || currentQuestion.type === "MATRIX" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "PG Kompleks"
                     : currentQuestion.type === "TRUE_FALSE"
                     ? "Benar / Salah"
+                    : currentQuestion.type === "MATRIX"
+                    ? "Matriks / Tabel"
                     : "Pilihan Ganda"}
                 </Badge>
                 <Badge variant="default" className="text-xs sm:text-sm px-3 py-1 font-semibold">
@@ -516,6 +562,8 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 <span className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider block">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "Pilih Satu atau Lebih Jawaban Benar:"
+                    : currentQuestion.type === "MATRIX"
+                    ? "Pilih satu jawaban pada setiap baris pernyataan:"
                     : "Pilih Jawaban:"}
                 </span>
                 {currentQuestion.type === "MULTIPLE_CHOICE" && (
@@ -524,7 +572,72 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                   </span>
                 )}
               </div>
-              {currentQuestion.options.map((option) => {
+              {currentQuestion.type === "MATRIX" && currentMatrix ? (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead>
+                      <tr className="bg-slate-100/90 text-slate-700">
+                        <th className="text-left font-bold px-4 py-3 min-w-[220px]">Pernyataan</th>
+                        {currentMatrix.columnNames.map((columnName) => (
+                          <th key={columnName} className="px-3 py-3 text-center font-bold whitespace-nowrap">
+                            {columnName}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentMatrix.rows.map((row) => {
+                        const selectedIds =
+                          currentQuestion.selectedOptionIds ||
+                          (currentQuestion.selectedOptionId ? [currentQuestion.selectedOptionId] : []);
+
+                        return (
+                          <tr key={row.rowNumber} className="border-t border-slate-200 align-top">
+                            <td className="px-4 py-4 text-slate-900 leading-relaxed">
+                              <div className="flex items-start gap-2">
+                                <span className="font-bold text-slate-500 shrink-0">{row.rowNumber}.</span>
+                                <div className="space-y-2">
+                                  <span>{row.statement}</span>
+                                  {row.imageUrl && (
+                                    <div className="rounded-xl overflow-hidden border border-slate-200 max-w-xs">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={row.imageUrl}
+                                        alt={`Pernyataan ${row.rowNumber}`}
+                                        className="max-h-40 object-contain"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            {row.columns.map((column) => {
+                              const isSelected = selectedIds.includes(column.optionId);
+                              return (
+                                <td key={column.optionId} className="px-3 py-4 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectMatrixOption(column.optionId)}
+                                    aria-label={`Pilih ${column.columnName} untuk pernyataan ${row.rowNumber}`}
+                                    className={`mx-auto w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer ${
+                                      isSelected
+                                        ? "bg-blue-600 border-blue-600 text-white shadow-xs ring-2 ring-blue-200"
+                                        : "bg-white border-slate-300 hover:border-blue-400 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                currentQuestion.options.map((option) => {
                 const isSelected = currentQuestion.type === "MULTIPLE_CHOICE"
                   ? (currentQuestion.selectedOptionIds || []).includes(option.id) || currentQuestion.selectedOptionId === option.id
                   : currentQuestion.selectedOptionId === option.id;
@@ -572,7 +685,8 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                     </div>
                   </button>
                 );
-              })}
+              })
+              )}
             </div>
           </div>
 
@@ -702,8 +816,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
               <div className="grid grid-cols-5 gap-2">
                 {questions.map((q, idx) => {
                   const isCurrent = idx === currentIndex;
-                  const isAnswered =
-                    (q.selectedOptionIds && q.selectedOptionIds.length > 0) || q.selectedOptionId !== null;
+                  const isAnswered = isQuestionAnswered(q);
                   const isFlagged = q.isFlagged;
 
                   // Tentukan warna dasar tombol

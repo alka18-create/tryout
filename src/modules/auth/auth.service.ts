@@ -2,6 +2,8 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
+import { env } from "@/lib/env";
+import { sendMail } from "@/lib/mailer";
 import { UserRole } from "@/generated/prisma/client";
 import type { RegisterInput } from "./auth.schema";
 
@@ -78,21 +80,48 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
 
-    await prisma.verificationToken.upsert({
-      where: {
-        identifier_token: {
-          identifier: normalizedEmail,
-          token,
-        },
-      },
-      update: { token, expires },
-      create: { identifier: normalizedEmail, token, expires },
+    // Hanya satu token aktif per email: cabut token lama agar link lama tidak berlaku.
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: normalizedEmail },
+    });
+
+    await prisma.verificationToken.create({
+      data: { identifier: normalizedEmail, token, expires },
+    });
+
+    const resetUrl = `${env.APP_URL.replace(/\/$/, "")}/auth/reset-password?token=${token}`;
+
+    await sendMail({
+      to: normalizedEmail,
+      subject: "Reset Kata Sandi TryoutKu",
+      text: `Kami menerima permintaan reset kata sandi untuk akun Anda.\n\nBuka tautan berikut untuk membuat kata sandi baru (berlaku 1 jam):\n${resetUrl}\n\nJika Anda tidak meminta reset, abaikan email ini.`,
+      html: `
+        <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0f172a">
+          <h2 style="margin:0 0 12px">Reset Kata Sandi TryoutKu</h2>
+          <p style="margin:0 0 16px;line-height:1.6">
+            Kami menerima permintaan reset kata sandi untuk akun <strong>${normalizedEmail}</strong>.
+            Tautan di bawah berlaku selama <strong>1 jam</strong>.
+          </p>
+          <p style="margin:0 0 24px">
+            <a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">
+              Buat Kata Sandi Baru
+            </a>
+          </p>
+          <p style="margin:0 0 8px;font-size:13px;color:#475569">
+            Jika tombol tidak berfungsi, salin tautan berikut ke browser Anda:
+          </p>
+          <p style="margin:0 0 24px;font-size:13px;word-break:break-all;color:#2563eb">${resetUrl}</p>
+          <p style="margin:0;font-size:13px;color:#64748b">
+            Jika Anda tidak meminta reset kata sandi, abaikan email ini. Kata sandi Anda tidak akan berubah.
+          </p>
+        </div>
+      `,
     });
 
     // Logging di konsol server hanya di mode development
     if (process.env.NODE_ENV !== "production") {
       console.log(`[AUTH] Password reset token for ${normalizedEmail}: ${token}`);
-      console.log(`[AUTH] Reset URL: /auth/reset-password?token=${token}`);
+      console.log(`[AUTH] Reset URL: ${resetUrl}`);
     }
 
     return {
@@ -125,8 +154,9 @@ export class AuthService {
         where: { email: record.identifier },
         data: { passwordHash },
       }),
-      prisma.verificationToken.delete({
-        where: { token },
+      // Cabut seluruh token reset milik email ini (termasuk token yang baru dipakai)
+      prisma.verificationToken.deleteMany({
+        where: { identifier: record.identifier },
       }),
     ]);
 

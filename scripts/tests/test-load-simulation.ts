@@ -28,12 +28,12 @@ export async function runLoadSimulation(): Promise<boolean> {
   }
 
   // Buat user simulasi beban
-  let loadUser = await prisma.user.findUnique({ where: { email: "load_test_user@tryoutku.com" } });
+  let loadUser = await prisma.user.findUnique({ where: { email: "load_test_user@example.test" } });
   if (!loadUser) {
     loadUser = await prisma.user.create({
       data: {
         name: "User Simulasi Beban",
-        email: "load_test_user@tryoutku.com",
+        email: "load_test_user@example.test",
         role: "STUDENT",
       },
     });

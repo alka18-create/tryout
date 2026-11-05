@@ -33,6 +33,7 @@ import { QuestionImportModal } from "@/components/teacher/question-import-modal"
 import { QuestionAiModal } from "@/components/teacher/question-ai-modal";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Sparkles } from "lucide-react";
+import { formatMatrixOptionLabel, parseMatrixQuestion } from "@/lib/matrix-question";
 
 interface Option {
   id: string;
@@ -45,6 +46,7 @@ interface Question {
   id: string;
   content: string;
   imageUrl?: string | null;
+  type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
   difficulty: "EASY" | "MEDIUM" | "HARD";
   explanation?: string | null;
   topic: {
@@ -772,30 +774,52 @@ function TeacherQuestionsContent() {
                   )}
 
                   {/* Opsi Jawaban */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                    {q.options.map((opt) => (
-                      <div
-                        key={opt.id}
-                        className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
-                          opt.isCorrect
-                            ? "border-emerald-300 bg-emerald-50/80 text-emerald-950 font-semibold"
-                            : "border-slate-200 bg-slate-50/60 text-slate-700"
-                        }`}
-                      >
-                        <span
-                          className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                  {q.type === "MATRIX" ? (
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <Badge variant="info" className="text-[11px]">Matriks</Badge>
+                      <span className="text-xs text-slate-600">
+                        {(() => {
+                          const parsed = parseMatrixQuestion(
+                            q.options.map((opt) => ({
+                              id: opt.id,
+                              label: opt.label,
+                              content: opt.content ?? "",
+                              isCorrect: opt.isCorrect,
+                            })),
+                          );
+                          return `${parsed.rows.length} baris × ${parsed.columnNames.length} kolom`;
+                        })()}
+                      </span>
+                      <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Kunci: per baris
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                      {q.options.map((opt) => (
+                        <div
+                          key={opt.id}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
                             opt.isCorrect
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-200 text-slate-700"
+                              ? "border-emerald-300 bg-emerald-50/80 text-emerald-950 font-semibold"
+                              : "border-slate-200 bg-slate-50/60 text-slate-700"
                           }`}
                         >
-                          {opt.label}
-                        </span>
-                        <span className="flex-1 truncate">{opt.content}</span>
-                        {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                      </div>
-                    ))}
-                  </div>
+                          <span
+                            className={`min-w-5 h-5 px-1.5 rounded-md flex items-center justify-center text-[10px] font-bold whitespace-nowrap ${
+                              opt.isCorrect
+                                ? "bg-emerald-600 text-white"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {formatMatrixOptionLabel(opt.label)}
+                          </span>
+                          <span className="flex-1 truncate">{opt.content}</span>
+                          {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Pembahasan Soal */}
                   {q.explanation && (

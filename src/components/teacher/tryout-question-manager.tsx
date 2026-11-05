@@ -22,6 +22,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { formatMatrixOptionLabel } from "@/lib/matrix-question";
 
 interface QuestionOption {
   id: string;
@@ -35,6 +36,7 @@ interface Question {
   id: string;
   content: string;
   imageUrl?: string | null;
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
   difficulty: "EASY" | "MEDIUM" | "HARD";
   topicId: string;
   topic: {
@@ -478,7 +480,10 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                           </Badge>
                           {correctOpt && (
                             <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              Kunci: {correctOpt.label}
+                              Kunci:{" "}
+                              {item.question.type === "MATRIX"
+                                ? "per baris"
+                                : formatMatrixOptionLabel(correctOpt.label)}
                             </span>
                           )}
                         </div>
@@ -701,7 +706,10 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                           </Badge>
                           {correctOpt && (
                             <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                              Kunci: {correctOpt.label}
+                              Kunci:{" "}
+                              {q.type === "MATRIX"
+                                ? "per baris"
+                                : formatMatrixOptionLabel(correctOpt.label)}
                             </span>
                           )}
                         </div>
@@ -804,13 +812,13 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                   }`}
                 >
                   <span
-                    className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs ${
+                    className={`min-w-6 h-6 px-1.5 rounded-md flex items-center justify-center font-bold text-[10px] whitespace-nowrap ${
                       opt.isCorrect
                         ? "bg-emerald-600 text-white"
                         : "bg-slate-200 text-slate-700"
                     }`}
                   >
-                    {opt.label}
+                    {formatMatrixOptionLabel(opt.label)}
                   </span>
                   <div className="flex-1 space-y-1">
                     <span>{opt.content}</span>
@@ -908,13 +916,13 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                       }`}
                     >
                       <span
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        className={`min-w-7 h-7 px-1.5 rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 whitespace-nowrap ${
                           opt.isCorrect
                             ? "bg-emerald-600 text-white"
                             : "bg-slate-100 text-slate-700"
                         }`}
                       >
-                        {opt.label}
+                        {formatMatrixOptionLabel(opt.label)}
                       </span>
                       <div className="flex-1 space-y-1">
                         <span className="leading-snug">{opt.content}</span>

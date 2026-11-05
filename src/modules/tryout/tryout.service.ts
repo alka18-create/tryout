@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { UserRole, TryoutStatus } from "@/generated/prisma/client";
+import { UserRole, TryoutStatus, QuestionType } from "@/generated/prisma/client";
+import { sortMatrixOptions } from "@/lib/matrix-question";
 import type { CreateTryoutInput, SetTryoutQuestionsInput } from "./tryout.schema";
 
 export class TryoutService {
@@ -28,8 +29,9 @@ export class TryoutService {
 
   /**
    * Mengambil detail tryout beserta daftar soal yang terhubung.
+   * Otorisasi: guru hanya boleh mengakses tryout miliknya sendiri; Admin bebas.
    */
-  static async getTryoutById(id: string) {
+  static async getTryoutById(id: string, requesterId?: string, role?: UserRole) {
     const tryout = await prisma.tryout.findUnique({
       where: { id },
       include: {
@@ -58,7 +60,20 @@ export class TryoutService {
       throw new AppError("NOT_FOUND", "Paket tryout tidak ditemukan.");
     }
 
-    return tryout;
+    if (requesterId && role !== UserRole.ADMIN && tryout.createdById !== requesterId) {
+      throw new AppError("FORBIDDEN", "Anda tidak memiliki izin melihat paket tryout ini.");
+    }
+
+    return {
+      ...tryout,
+      tryoutQuestions: tryout.tryoutQuestions.map((item) => ({
+        ...item,
+        question:
+          item.question.type === QuestionType.MATRIX
+            ? { ...item.question, options: sortMatrixOptions(item.question.options) }
+            : item.question,
+      })),
+    };
   }
 
   /**

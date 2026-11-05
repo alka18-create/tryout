@@ -20,6 +20,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const MAX_IMPORT_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_IMPORT_FILE_SIZE) {
+      return fail(
+        "VALIDATION_ERROR",
+        "Ukuran file melebihi batas maksimal 5 MB. Pecah file menjadi beberapa bagian.",
+        undefined,
+        400,
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

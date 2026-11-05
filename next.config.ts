@@ -35,6 +35,21 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      {
+        // File upload disajikan dari folder public (static handler Next.js),
+        // sehingga header keamanan tambahan perlu dipasang di level config.
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          },
+          {
+            key: "Cross-Origin-Resource-Policy",
+            value: "same-origin",
+          },
+        ],
+      },
     ];
   },
 };

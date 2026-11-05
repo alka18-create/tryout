@@ -6,6 +6,7 @@
 
 import { runUnitTests } from "./tests/test-unit";
 import { runIntegrationRbacTests } from "./tests/test-integration-rbac";
+import { runMatrixE2ETests } from "./tests/test-matrix-e2e";
 import { runLoadSimulation } from "./tests/test-load-simulation";
 
 async function main() {
@@ -25,7 +26,11 @@ async function main() {
     const intPass = await runIntegrationRbacTests();
     suiteResults.push({ name: "Integration & RBAC Tests (Exam Lifecycle, Guards, Edge Cases)", passed: intPass });
 
-    // 3. Jalankan Load & Concurrency Simulation
+    // 3. Jalankan E2E Soal Matriks
+    const matrixPass = await runMatrixE2ETests();
+    suiteResults.push({ name: "E2E Soal Matriks (Buat, Kerjakan, Nilai, Pembahasan)", passed: matrixPass });
+
+    // 4. Jalankan Load & Concurrency Simulation
     const loadPass = await runLoadSimulation();
     suiteResults.push({ name: "Load & Concurrency (100 Concurrent Autosaves)", passed: loadPass });
 

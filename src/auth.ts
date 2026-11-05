@@ -6,6 +6,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { UserRole } from "@/generated/prisma/client";
+import {
+  assertLoginAllowed,
+  getRequestIp,
+  recordLoginFailure,
+  resetLoginFailures,
+} from "@/lib/login-rate-limit";
 
 // Augment session types so user.id and user.role are strongly typed
 declare module "next-auth" {
@@ -58,26 +64,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
         const email = String(credentials.email).toLowerCase().trim();
         const password = String(credentials.password);
+        const ip = getRequestIp(request);
+
+        // Proteksi brute-force: batasi kegagalan per email & per IP.
+        assertLoginAllowed(ip, email);
 
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user || !user.passwordHash) {
+          recordLoginFailure(ip, email);
           return null;
         }
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) {
+          recordLoginFailure(ip, email);
           return null;
         }
+
+        resetLoginFailures(email);
 
         return {
           id: user.id,

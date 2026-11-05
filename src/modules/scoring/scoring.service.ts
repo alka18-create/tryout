@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { ExamSessionStatus, DiscussionVisibility } from "@/generated/prisma/client";
+import { ExamSessionStatus, DiscussionVisibility, QuestionType } from "@/generated/prisma/client";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
+import { parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
 
 export class ScoringService {
   /**
@@ -212,13 +213,26 @@ export class ScoringService {
         isCorrect: opt.isCorrect,
       }));
 
-      // Acak opsi jawaban dengan seed yang sama persis
-      const shuffledOptions = shuffleQuestionOptions(rawOptions, optionSeed);
+      // Acak opsi jawaban dengan seed yang sama persis (matriks mempertahankan urutan asli)
+      const isMatrix = ans.question.type === QuestionType.MATRIX;
+      const shuffledOptions = isMatrix
+        ? sortMatrixOptions(rawOptions)
+        : shuffleQuestionOptions(rawOptions, optionSeed);
 
       // Cari seluruh opsi yang benar di dalam urutan yang sudah teracak
       const correctOptions = shuffledOptions.filter((o) => o.isCorrect);
       const correctLabels = correctOptions.map((o) => o.label).join(", ");
       const correctOptionIds = correctOptions.map((o) => o.id);
+
+      // Untuk matriks, tampilkan kunci per baris (mis. "1. Sesuai; 2. Tidak Sesuai")
+      const matrixKeyLabel = isMatrix
+        ? parseMatrixQuestion(shuffledOptions)
+            .rows.map((row) => {
+              const correctColumn = row.columns.find((column) => column.isCorrect);
+              return `${row.rowNumber}. ${correctColumn?.columnName ?? "-"}`;
+            })
+            .join("; ")
+        : "";
 
       const selectedIds = ans.selectedOptionIds && ans.selectedOptionIds.length > 0
         ? ans.selectedOptionIds
@@ -249,7 +263,7 @@ export class ScoringService {
         selectedOptionIds: selectedIds,
         correctOptionId: correctOptions[0]?.id || null,
         correctOptionIds,
-        correctLabel: correctLabels || "-", // Huruf kunci jawaban (misal "B, D" atau "A")
+        correctLabel: (isMatrix ? matrixKeyLabel : correctLabels) || "-", // Huruf kunci jawaban (misal "B, D") atau kunci per baris matriks
         answerStatus,
         isFlagged: ans.isFlagged,
         scoreObtained: ans.scoreObtained,

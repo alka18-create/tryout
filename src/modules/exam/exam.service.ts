@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { ExamSessionStatus, TryoutStatus, QuestionType } from "@/generated/prisma/client";
 import { SaveAnswerInput } from "./exam.schema";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
+import { parseMatrixLabel, parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
 import { isDemoStudentEmail, getDemoAllowedTryoutId } from "@/lib/demo";
 
 export class ExamService {
@@ -286,7 +287,20 @@ export class ExamService {
   /**
    * Memulai sesi ujian baru atau menyambung sesi yang sedang berjalan (Idempotent Resume).
    */
-  static async startOrResumeExamSession(studentId: string, tryoutId: string) {
+  static async startOrResumeExamSession(
+    studentId: string,
+    tryoutId: string,
+    retryCount = 0,
+  ): Promise<{
+    sessionId: string;
+    tryoutId: string;
+    attemptNumber: number;
+    maxAttempts: number;
+    startedAt: string;
+    expiresAt: string;
+    remainingSeconds: number;
+    isResumed: boolean;
+  }> {
     const student = await prisma.user.findUnique({
       where: { id: studentId },
       select: { id: true, email: true },
@@ -391,45 +405,57 @@ export class ExamService {
     const startedAt = new Date();
     const expiresAt = new Date(startedAt.getTime() + tryout.durationMinutes * 60 * 1000);
 
-    const newSession = await prisma.$transaction(async (tx) => {
-      const session = await tx.examSession.create({
-        data: {
-          tryoutId,
-          userId: studentId,
-          attemptNumber,
-          startedAt,
-          expiresAt,
-          status: ExamSessionStatus.IN_PROGRESS,
-        },
-      });
+    let newSession;
+    try {
+      newSession = await prisma.$transaction(async (tx) => {
+        const session = await tx.examSession.create({
+          data: {
+            tryoutId,
+            userId: studentId,
+            attemptNumber,
+            startedAt,
+            expiresAt,
+            status: ExamSessionStatus.IN_PROGRESS,
+          },
+        });
 
-      // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa
-      let assignedQuestions = tryout.tryoutQuestions;
-      if (
-        tryout.questionCount &&
-        tryout.questionCount > 0 &&
-        tryout.questionCount < tryout.tryoutQuestions.length
-      ) {
-        // Pengacakan Fisher-Yates dengan seed unik berbasis sessionId agar setiap siswa/percobaan mendapat paket acak unik
-        assignedQuestions = shuffleArrayWithSeed(
-          tryout.tryoutQuestions,
-          `${session.id}:selected_questions`
-        ).slice(0, tryout.questionCount);
+        // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa
+        let assignedQuestions = tryout.tryoutQuestions;
+        if (
+          tryout.questionCount &&
+          tryout.questionCount > 0 &&
+          tryout.questionCount < tryout.tryoutQuestions.length
+        ) {
+          // Pengacakan Fisher-Yates dengan seed unik berbasis sessionId agar setiap siswa/percobaan mendapat paket acak unik
+          assignedQuestions = shuffleArrayWithSeed(
+            tryout.tryoutQuestions,
+            `${session.id}:selected_questions`
+          ).slice(0, tryout.questionCount);
+        }
+
+        // Siapkan baris jawaban kosong untuk setiap butir soal tryout yang terpilih
+        const answersData = assignedQuestions.map((tq) => ({
+          examSessionId: session.id,
+          questionId: tq.questionId,
+          isFlagged: false,
+        }));
+
+        await tx.examAnswer.createMany({
+          data: answersData,
+        });
+
+        return session;
+      });
+    } catch (error) {
+      // Race condition: dua request start bersamaan menghitung attemptNumber yang
+      // sama. Unique constraint menolak salah satunya (P2002) — ulangi sekali
+      // agar request tersebut menyambung sesi yang baru dibuat.
+      const isUniqueViolation = (error as { code?: string })?.code === "P2002";
+      if (isUniqueViolation && retryCount < 1) {
+        return this.startOrResumeExamSession(studentId, tryoutId, retryCount + 1);
       }
-
-      // Siapkan baris jawaban kosong untuk setiap butir soal tryout yang terpilih
-      const answersData = assignedQuestions.map((tq) => ({
-        examSessionId: session.id,
-        questionId: tq.questionId,
-        isFlagged: false,
-      }));
-
-      await tx.examAnswer.createMany({
-        data: answersData,
-      });
-
-      return session;
-    });
+      throw error;
+    }
 
     const remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
 
@@ -520,8 +546,11 @@ export class ExamService {
         // STRICT SECURITY: isCorrect DIHAPUS DARI PAYLOAD
       }));
 
-      // Acak opsi jawaban dan berikan label A–E baru sesuai urutan acak
-      const shuffledOptions = shuffleQuestionOptions(rawOptions, optionSeed);
+      // Soal matriks mempertahankan urutan baris/kolom aslinya; soal lain diacak.
+      const shuffledOptions =
+        ans.question.type === QuestionType.MATRIX
+          ? sortMatrixOptions(rawOptions)
+          : shuffleQuestionOptions(rawOptions, optionSeed);
 
       return {
         orderNumber: index + 1, // Nomor 1 .. N teracak untuk siswa ini
@@ -600,16 +629,57 @@ export class ExamService {
 
     // Validasi apakah opsi yang dipilih benar-benar milik soal tersebut
     if (resolvedOptionIds.length > 0) {
-      const validCount = await prisma.questionOption.count({
-        where: {
-          id: { in: resolvedOptionIds },
-          questionId: input.questionId,
-        },
-      });
+      const [question, selectedOptions] = await Promise.all([
+        prisma.question.findUnique({
+          where: { id: input.questionId },
+          select: { type: true },
+        }),
+        prisma.questionOption.findMany({
+          where: {
+            id: { in: resolvedOptionIds },
+            questionId: input.questionId,
+          },
+          select: { id: true, label: true },
+        }),
+      ]);
 
-      if (validCount !== resolvedOptionIds.length) {
+      if (!question) {
+        throw new AppError("NOT_FOUND", "Soal tidak ditemukan.");
+      }
+
+      if (selectedOptions.length !== resolvedOptionIds.length) {
         throw new AppError("VALIDATION_ERROR", "Pilihan opsi tidak valid untuk soal ini.");
       }
+
+      // Soal matriks hanya boleh memiliki satu pilihan per baris.
+      if (question.type === QuestionType.MATRIX) {
+        const rowsSeen = new Set<number>();
+        for (const option of selectedOptions) {
+          const { rowNumber } = parseMatrixLabel(option.label);
+          if (rowsSeen.has(rowNumber)) {
+            throw new AppError(
+              "VALIDATION_ERROR",
+              "Setiap baris matriks hanya boleh memiliki satu pilihan jawaban.",
+            );
+          }
+          rowsSeen.add(rowNumber);
+        }
+      }
+    }
+
+    // Pastikan soal memang termasuk dalam sesi ujian ini (bukan soal dari paket lain).
+    const existingAnswer = await prisma.examAnswer.findUnique({
+      where: {
+        examSessionId_questionId: {
+          examSessionId: sessionId,
+          questionId: input.questionId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!existingAnswer) {
+      throw new AppError("VALIDATION_ERROR", "Soal tidak termasuk dalam sesi ujian ini.");
     }
 
     const hasAnswer = resolvedOptionIds.length > 0;
@@ -741,6 +811,45 @@ export class ExamService {
           isCorrect: false,
           score: 0,
         });
+      } else if (qType === QuestionType.MATRIX) {
+        // Matriks: skor parsial proporsional per baris pernyataan.
+        const parsedMatrix = parseMatrixQuestion(ans.question.options);
+        const selectedSet = new Set(selectedIds);
+
+        let correctRows = 0;
+        for (const row of parsedMatrix.rows) {
+          const chosenInRow = row.columns.filter((column) => selectedSet.has(column.optionId));
+          if (chosenInRow.length === 1 && chosenInRow[0].isCorrect) {
+            correctRows++;
+          }
+        }
+
+        const totalRows = parsedMatrix.rows.length;
+        const ratio = totalRows > 0 ? correctRows / totalRows : 0;
+        // Akumulasi skor total memakai nilai presisi penuh; pembulatan 2 desimal
+        // hanya untuk nilai per butir yang disimpan, agar skor akhir tidak
+        // kehilangan presisi (mis. 1 dari 3 baris benar tetap 33.3, bukan 33.0).
+        const exactEarnedScore = ratio * qWeight;
+        const earnedScore = Math.round(exactEarnedScore * 100) / 100;
+        totalEarnedScore += exactEarnedScore;
+
+        const isFullyCorrect = totalRows > 0 && correctRows === totalRows;
+        if (isFullyCorrect) {
+          correctCount++;
+          stat.correct += 1;
+        } else {
+          wrongCount++;
+          stat.wrong += 1;
+          if (ratio > 0) {
+            stat.correct += ratio;
+          }
+        }
+
+        answerUpdates.push({
+          id: ans.id,
+          isCorrect: isFullyCorrect,
+          score: earnedScore,
+        });
       } else if (qType === QuestionType.MULTIPLE_CHOICE) {
         // Pilihan Ganda Kompleks: Skor Parsial Proporsional
         const correctOptions = ans.question.options.filter((o) => o.isCorrect);
@@ -765,7 +874,7 @@ export class ExamService {
           : 0;
 
         const earnedScore = Math.round(ratio * qWeight * 100) / 100;
-        totalEarnedScore += earnedScore;
+        totalEarnedScore += ratio * qWeight;
 
         const isFullyCorrect = ratio === 1.0;
         if (isFullyCorrect) {

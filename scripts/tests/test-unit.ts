@@ -6,6 +6,14 @@
 
 import { ScoringService } from "../../src/modules/scoring/scoring.service";
 import { ExamService } from "../../src/modules/exam/exam.service";
+import {
+  buildMatrixOptions,
+  formatMatrixOptionLabel,
+  isMatrixFullyAnswered,
+  parseMatrixLabel,
+  parseMatrixQuestion,
+} from "../../src/lib/matrix-question";
+import { safeCallbackUrl } from "../../src/lib/safe-redirect";
 
 interface Assertion {
   description: string;
@@ -336,6 +344,102 @@ Contoh: { "pikir": "analisis" }
   const parsedC = sanitizeAndExtractJson(rawTruncated);
   const countC = Array.isArray(parsedC) ? parsedC.length : parsedC?.questions?.length;
   assert("Berhasil memulihkan butir soal utuh dari JSON yang terpotong", countC === 2);
+
+  // ---------------------------------------------------------------------------
+  // 5. UNIT TEST: Helper Soal Matriks (build / parse / format / completeness)
+  // ---------------------------------------------------------------------------
+  console.log("\n[5] Menguji Helper Soal Matriks (Tabel Pernyataan)...");
+
+  const matrixOptions = buildMatrixOptions(
+    [
+      { statement: "Pernyataan pertama", correctColumn: "Sesuai" },
+      { statement: "Pernyataan kedua", correctColumn: "Tidak Sesuai" },
+      { statement: "Pernyataan ketiga", correctColumn: "Sesuai" },
+    ],
+    ["Sesuai", "Tidak Sesuai"],
+  );
+
+  assert("Matriks 3 baris x 2 kolom menghasilkan 6 opsi", matrixOptions.length === 6);
+  assert(
+    "Label opsi matriks memuat nomor baris & indeks kolom",
+    matrixOptions[0].label === "1:1:Sesuai" && matrixOptions[3].label === "2:2:Tidak Sesuai",
+  );
+  assert(
+    "Setiap baris matriks memiliki tepat satu kunci benar",
+    ["1", "2", "3"].every(
+      (row) =>
+        matrixOptions.filter((opt) => opt.label.startsWith(`${row}:`) && opt.isCorrect).length === 1,
+    ),
+  );
+
+  const parsedMatrix = parseMatrixQuestion(
+    matrixOptions.map((opt, index) => ({ id: `m${index}`, ...opt })),
+  );
+  assert("Parser matriks mengembalikan 3 baris", parsedMatrix.rows.length === 3);
+  assert(
+    "Parser matriks mengembalikan urutan kolom yang benar",
+    parsedMatrix.columnNames[0] === "Sesuai" && parsedMatrix.columnNames[1] === "Tidak Sesuai",
+  );
+  assert(
+    "Parser matriks mempertahankan teks pernyataan per baris",
+    parsedMatrix.rows[1].statement === "Pernyataan kedua",
+  );
+  assert(
+    "Parser matriks membaca format label lama (tanpa indeks kolom)",
+    parseMatrixLabel("4:Tidak Sesuai").rowNumber === 4 &&
+      parseMatrixLabel("4:Tidak Sesuai").columnName === "Tidak Sesuai",
+  );
+  assert(
+    "Label matriks diformat ramah baca (1. Sesuai)",
+    formatMatrixOptionLabel("1:2:Tidak Sesuai") === "1. Tidak Sesuai" &&
+      formatMatrixOptionLabel("A") === "A",
+  );
+
+  const matrixOptionObjects = matrixOptions.map((opt, index) => ({ id: `m${index}`, ...opt }));
+  assert(
+    "Jawaban matriks parsial belum dianggap selesai",
+    isMatrixFullyAnswered(matrixOptionObjects, ["m0", "m2"]) === false,
+  );
+  assert(
+    "Jawaban matriks dengan satu pilihan per baris dianggap selesai",
+    isMatrixFullyAnswered(matrixOptionObjects, ["m0", "m3", "m4"]) === true,
+  );
+
+  // --- Sanitasi callbackUrl (open redirect) ---
+  assert(
+    "callbackUrl null memakai fallback /dashboard",
+    safeCallbackUrl(null) === "/dashboard",
+  );
+  assert(
+    "callbackUrl path internal yang sah dipertahankan",
+    safeCallbackUrl("/dashboard/teacher") === "/dashboard/teacher" &&
+      safeCallbackUrl("/dashboard/student?tab=hasil") === "/dashboard/student?tab=hasil",
+  );
+  assert(
+    "callbackUrl absolut ke domain lain ditolak",
+    safeCallbackUrl("https://evil.com") === "/dashboard",
+  );
+  assert(
+    "callbackUrl protocol-relative (//evil.com) ditolak",
+    safeCallbackUrl("//evil.com") === "/dashboard",
+  );
+  assert(
+    "callbackUrl dengan backslash (/) ditolak",
+    safeCallbackUrl("/\\evil.com") === "/dashboard" &&
+      safeCallbackUrl("/dashboard\\..\\evil") === "/dashboard",
+  );
+  assert(
+    "callbackUrl ter-encode (%2F%2Fevil.com) ditolak",
+    safeCallbackUrl("%2F%2Fevil.com") === "/dashboard",
+  );
+  assert(
+    "callbackUrl kembali ke halaman login ditolak",
+    safeCallbackUrl("/auth/login?callbackUrl=/dashboard") === "/dashboard",
+  );
+  assert(
+    "callbackUrl berisi karakter kontrol ditolak",
+    safeCallbackUrl("/dashboard\nSet-Cookie: x=1") === "/dashboard",
+  );
 
   const allPassed = results.every((r) => r.pass);
   console.log(`\n=> Hasil Unit Tests: ${results.filter((r) => r.pass).length}/${results.length} Pengujian Berhasil.`);

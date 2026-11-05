@@ -8,6 +8,8 @@ import { prisma } from "../../src/lib/prisma";
 import { ExamService } from "../../src/modules/exam/exam.service";
 import { ScoringService } from "../../src/modules/scoring/scoring.service";
 import { AnalyticsService } from "../../src/modules/analytics/analytics.service";
+import { TryoutService } from "../../src/modules/tryout/tryout.service";
+import { UserRole } from "../../src/generated/prisma/client";
 import { AppError } from "../../src/lib/errors";
 
 interface Assertion {
@@ -46,19 +48,19 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
   }
 
   // Buat siswa pengujian kedua untuk uji isolasi kepemilikan sesi
-  let studentB = await prisma.user.findUnique({ where: { email: "student_b_test@tryoutku.com" } });
+  let studentB = await prisma.user.findUnique({ where: { email: "student_b_test@example.test" } });
   if (!studentB) {
     studentB = await prisma.user.create({
       data: {
         name: "Siswa Pengujian B",
-        email: "student_b_test@tryoutku.com",
+        email: "student_b_test@example.test",
         role: "STUDENT",
       },
     });
   }
 
   // Ambil tryout yang sudah published
-  let tryout = await prisma.tryout.findFirst({
+  const tryout = await prisma.tryout.findFirst({
     where: {
       status: "PUBLISHED",
       tryoutQuestions: { some: {} },
@@ -79,7 +81,36 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
     throw new Error("Tidak ada tryout berstatus PUBLISHED dengan soal di database!");
   }
 
+  // Guru pengujian kedua untuk uji isolasi kepemilikan tryout (IDOR)
+  let teacherB = await prisma.user.findUnique({
+    where: { email: "teacher_b_test@example.test" },
+  });
+  if (!teacherB) {
+    teacherB = await prisma.user.create({
+      data: {
+        name: "Guru Pengujian B",
+        email: "teacher_b_test@example.test",
+        role: "TEACHER",
+      },
+    });
+  }
+
   console.log(`\n[Info] Menggunakan Tryout: "${tryout.title}" (ID: ${tryout.id}, ${tryout.tryoutQuestions.length} Soal)`);
+
+  // ---------------------------------------------------------------------------
+  // 0. OTORISASI: Guru lain tidak boleh membaca detail tryout milik guru pemilik
+  // ---------------------------------------------------------------------------
+  console.log("\n[0] Menguji Isolasi Kepemilikan Tryout (IDOR)...");
+  let idorBlocked = false;
+  try {
+    await TryoutService.getTryoutById(tryout.id, teacherB.id, UserRole.TEACHER);
+  } catch (error) {
+    idorBlocked = error instanceof AppError && error.code === "FORBIDDEN";
+  }
+  assert("Guru lain ditolak saat membuka detail tryout guru pemilik", idorBlocked);
+
+  const adminView = await TryoutService.getTryoutById(tryout.id, admin.id, UserRole.ADMIN);
+  assert("Admin tetap dapat membuka detail tryout guru", adminView.id === tryout.id);
 
   // Bersihkan sesi lama dari studentB pada tryout ini agar test reproducible
   await prisma.examSession.deleteMany({
@@ -208,6 +239,9 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
     data: {
       userId: studentB.id,
       tryoutId: tryout.id,
+      // Nomor percobaan unik (di luar 1-3 yang sudah dipakai) karena
+      // (userId, tryoutId, attemptNumber) kini unik di level database.
+      attemptNumber: 4,
       status: "IN_PROGRESS",
       startedAt: new Date(Date.now() - 4000 * 1000),
       expiresAt: new Date(Date.now() - 3600 * 1000), // Kedaluwarsa 1 jam lalu
@@ -271,6 +305,7 @@ export async function runIntegrationRbacTests(): Promise<boolean> {
     await prisma.examSession.delete({ where: { id: s.id } });
   }
   await prisma.user.delete({ where: { id: studentB.id } });
+  await prisma.user.delete({ where: { id: teacherB.id } });
 
   const allPassed = results.every((r) => r.pass);
   console.log(`\n=> Hasil Integration & RBAC Tests: ${results.filter((r) => r.pass).length}/${results.length} Pengujian Berhasil.`);

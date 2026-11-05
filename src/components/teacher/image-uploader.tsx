@@ -52,10 +52,9 @@ export function ImageUploader({
       "image/png",
       "image/webp",
       "image/gif",
-      "image/svg+xml",
     ];
     if (!validMimes.includes(file.type.toLowerCase())) {
-      setErrorMessage("Harap unggah file gambar (JPG, PNG, WebP, GIF, atau SVG).");
+      setErrorMessage("Harap unggah file gambar (JPG, PNG, WebP, atau GIF).");
       return;
     }
 
@@ -170,7 +169,7 @@ export function ImageUploader({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={(e) => {
               if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
@@ -188,7 +187,7 @@ export function ImageUploader({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
@@ -275,7 +274,7 @@ export function ImageUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+        accept="image/jpeg,image/png,image/webp,image/gif"
         className="hidden"
         onChange={(e) => {
           if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);

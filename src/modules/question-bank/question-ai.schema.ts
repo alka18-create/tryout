@@ -56,13 +56,16 @@ export const GeneratedQuestionItemSchema = z.object({
 
 export type GeneratedQuestionItem = z.infer<typeof GeneratedQuestionItemSchema>;
 
+/** Tipe soal yang boleh dihasilkan AI (matriks hanya dibuat manual lewat form guru). */
+const AiGeneratedQuestionTypeEnum = z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE", "TRUE_FALSE"]);
+
 export const SaveGeneratedQuestionsInputSchema = z.object({
   topicId: z.string().min(1, "Topik wajib dipilih"),
   questions: z.array(
     z.object({
       content: z.string().min(1),
       difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
-      type: z.nativeEnum(QuestionType).default(QuestionType.SINGLE_CHOICE),
+      type: AiGeneratedQuestionTypeEnum.default("SINGLE_CHOICE"),
       explanation: z.string().optional().nullable(),
       options: z
         .array(

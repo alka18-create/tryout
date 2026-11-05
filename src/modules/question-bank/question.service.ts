@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { UserRole } from "@/generated/prisma/client";
+import { UserRole, QuestionType } from "@/generated/prisma/client";
+import { sortMatrixOptions } from "@/lib/matrix-question";
 import type {
   SubjectInput,
   TopicInput,
@@ -168,7 +169,11 @@ export class QuestionBankService {
     ]);
 
     return {
-      questions,
+      questions: questions.map((question) =>
+        question.type === QuestionType.MATRIX
+          ? { ...question, options: sortMatrixOptions(question.options) }
+          : question,
+      ),
       pagination: {
         total,
         page,
@@ -203,7 +208,9 @@ export class QuestionBankService {
       throw new AppError("NOT_FOUND", "Soal tidak ditemukan atau telah dihapus.");
     }
 
-    return question;
+    return question.type === QuestionType.MATRIX
+      ? { ...question, options: sortMatrixOptions(question.options) }
+      : question;
   }
 
   static async createQuestion(teacherId: string, input: QuestionInput) {

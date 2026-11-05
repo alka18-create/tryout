@@ -10,9 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole([UserRole.TEACHER, UserRole.ADMIN]);
+    const user = await requireRole([UserRole.TEACHER, UserRole.ADMIN]);
     const { id } = await params;
-    const tryout = await TryoutService.getTryoutById(id);
+    const tryout = await TryoutService.getTryoutById(id, user.id, user.role);
     return ok(tryout);
   } catch (error) {
     return handleApiError(error);

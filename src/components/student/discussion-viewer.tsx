@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { parseMatrixQuestion } from "@/lib/matrix-question";
 
 interface OptionItem {
   id: string;
@@ -27,7 +28,7 @@ interface QuestionDiscussion {
   orderNumber: number;
   weight: number;
   questionId: string;
-  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
   topicName: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   content: string;
@@ -64,6 +65,8 @@ export function DiscussionViewer({
   });
 
   const currentQuestion = initialQuestions[activeIndex];
+  const currentMatrix =
+    currentQuestion?.type === "MATRIX" ? parseMatrixQuestion(currentQuestion.options) : null;
 
   const correctCount = initialQuestions.filter((q) => q.answerStatus === "CORRECT").length;
   const partialCount = initialQuestions.filter((q) => q.answerStatus === "PARTIAL").length;
@@ -195,6 +198,8 @@ export function DiscussionViewer({
                   ? "PG Kompleks"
                   : currentQuestion.type === "TRUE_FALSE"
                   ? "Benar / Salah"
+                  : currentQuestion.type === "MATRIX"
+                  ? "Matriks / Tabel"
                   : "Pilihan Ganda"}
               </Badge>
               <Badge variant="default">{currentQuestion.topicName}</Badge>
@@ -257,15 +262,125 @@ export function DiscussionViewer({
 
           {/* Pilihan Opsi */}
           <div className="space-y-3.5 pt-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider block">
-                Pilihan Jawaban & Analisis Kunci:
+                {currentQuestion.type === "MATRIX"
+                  ? "Matriks Jawaban & Analisis Kunci:"
+                  : "Pilihan Jawaban & Analisis Kunci:"}
               </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-700">
-                Kunci Benar: <span className="text-emerald-700 font-black">{currentQuestion.correctLabel}</span>
-              </span>
+              {currentQuestion.type === "MATRIX" ? (
+                <span className="text-xs text-slate-500 font-medium">
+                  Kunci benar ditandai{" "}
+                  <span className="text-emerald-700 font-bold">hijau</span>, pilihan Anda{" "}
+                  <span className="text-blue-700 font-bold">biru</span>
+                </span>
+              ) : (
+                <span className="text-xs sm:text-sm font-bold text-slate-700">
+                  Kunci Benar:{" "}
+                  <span className="text-emerald-700 font-black">{currentQuestion.correctLabel}</span>
+                </span>
+              )}
             </div>
-            {currentQuestion.options.map((option) => {
+
+            {currentQuestion.type === "MATRIX" && currentMatrix ? (
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="bg-slate-100/90 text-slate-700">
+                      <th className="text-left font-bold px-4 py-3 min-w-[220px]">Pernyataan</th>
+                      {currentMatrix.columnNames.map((columnName) => (
+                        <th key={columnName} className="px-3 py-3 text-center font-bold whitespace-nowrap">
+                          {columnName}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentMatrix.rows.map((row) => {
+                      const selectedIds =
+                        currentQuestion.selectedOptionIds &&
+                        currentQuestion.selectedOptionIds.length > 0
+                          ? currentQuestion.selectedOptionIds
+                          : currentQuestion.selectedOptionId
+                          ? [currentQuestion.selectedOptionId]
+                          : [];
+                      const correctIds =
+                        currentQuestion.correctOptionIds &&
+                        currentQuestion.correctOptionIds.length > 0
+                          ? currentQuestion.correctOptionIds
+                          : row.columns.filter((c) => c.isCorrect).map((c) => c.optionId);
+
+                      return (
+                        <tr key={row.rowNumber} className="border-t border-slate-200 align-top">
+                          <td className="px-4 py-4 text-slate-900 leading-relaxed">
+                            <div className="flex items-start gap-2">
+                              <span className="font-bold text-slate-500 shrink-0">{row.rowNumber}.</span>
+                              <div className="space-y-2">
+                                <span>{row.statement}</span>
+                                {row.imageUrl && (
+                                  <div className="rounded-xl overflow-hidden border border-slate-200 max-w-xs">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={row.imageUrl}
+                                      alt={`Pernyataan ${row.rowNumber}`}
+                                      className="max-h-40 object-contain"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          {row.columns.map((column) => {
+                            const isSelected = selectedIds.includes(column.optionId);
+                            const isKey = correctIds.includes(column.optionId);
+                            const isWrongPick = isSelected && !isKey;
+
+                            return (
+                              <td key={column.optionId} className="px-3 py-4 text-center">
+                                <div className="flex flex-col items-center gap-1">
+                                  <div
+                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                                      isKey
+                                        ? "bg-emerald-600 border-emerald-600 text-white"
+                                        : isWrongPick
+                                        ? "bg-rose-600 border-rose-600 text-white"
+                                        : isSelected
+                                        ? "bg-blue-600 border-blue-600 text-white"
+                                        : "bg-white border-slate-300"
+                                    }`}
+                                  >
+                                    {isKey ? (
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    ) : isSelected ? (
+                                      <XCircle className="w-4 h-4" />
+                                    ) : null}
+                                  </div>
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    {isKey && (
+                                      <span className="text-[9px] font-extrabold text-emerald-800">KUNCI</span>
+                                    )}
+                                    {isSelected && (
+                                      <span
+                                        className={`text-[9px] font-extrabold ${
+                                          isWrongPick ? "text-rose-700" : "text-blue-700"
+                                        }`}
+                                      >
+                                        ANDA
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              currentQuestion.options.map((option) => {
               const isStudentChoice = (currentQuestion.selectedOptionIds && currentQuestion.selectedOptionIds.length > 0)
                 ? currentQuestion.selectedOptionIds.includes(option.id)
                 : currentQuestion.selectedOptionId === option.id;
@@ -332,7 +447,8 @@ export function DiscussionViewer({
                   </div>
                 </div>
               );
-            })}
+              })
+            )}
           </div>
 
           {/* Kotak Pembahasan */}

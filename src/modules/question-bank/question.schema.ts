@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DifficultyLevel, QuestionType } from "@/generated/prisma/client";
+import { parseMatrixQuestion } from "@/lib/matrix-question";
 
 export const subjectSchema = z.object({
   name: z.string().min(2, "Nama mata pelajaran minimal 2 karakter"),
@@ -92,6 +93,61 @@ export const questionSchema = z
           path: ["options"],
         });
       }
+    } else if (data.type === QuestionType.MATRIX) {
+      const parsed = parseMatrixQuestion(
+        data.options.map((opt, index) => ({
+          id: String(index),
+          label: opt.label,
+          content: opt.content ?? "",
+          imageUrl: opt.imageUrl,
+          isCorrect: opt.isCorrect,
+        })),
+      );
+      const totalRows = parsed.rows.length;
+      const totalColumns = parsed.columnNames.length;
+
+      if (totalRows < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Soal matriks wajib memiliki minimal 1 baris pernyataan",
+          path: ["options"],
+        });
+      }
+      if (totalColumns < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Soal matriks wajib memiliki minimal 2 kolom jawaban",
+          path: ["options"],
+        });
+      }
+
+      const uniqueLabels = new Set(data.options.map((opt) => opt.label.trim()));
+      if (uniqueLabels.size !== data.options.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Label opsi matriks tidak boleh duplikat",
+          path: ["options"],
+        });
+      }
+
+      if (totalRows > 0 && totalColumns > 0 && data.options.length !== totalRows * totalColumns) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Setiap baris matriks harus memiliki opsi untuk seluruh kolom jawaban",
+          path: ["options"],
+        });
+      }
+
+      parsed.rows.forEach((row, rowIndex) => {
+        const correctInRow = row.columns.filter((column) => column.isCorrect).length;
+        if (correctInRow !== 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Baris ${rowIndex + 1} matriks wajib memiliki tepat 1 kolom kunci jawaban`,
+            path: ["options"],
+          });
+        }
+      });
     }
   });
 

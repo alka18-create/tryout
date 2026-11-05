@@ -175,7 +175,7 @@ export function StartTryoutButton({
                 </div>
                 <div>
                   <span className="font-semibold text-slate-900">{questionCount} Butir Soal</span>
-                  <p className="text-[11px] text-slate-500">Pilihan ganda biasa, kompleks, dan benar/salah.</p>
+                  <p className="text-[11px] text-slate-500">Pilihan ganda, kompleks, benar/salah, dan matriks/tabel.</p>
                 </div>
               </div>
 

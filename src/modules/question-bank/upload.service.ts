@@ -5,6 +5,11 @@ import { AppError } from "@/lib/errors";
 
 export const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 
+/**
+ * Format gambar yang diizinkan.
+ * SVG sengaja TIDAK diizinkan karena dapat memuat <script> dan dieksekusi
+ * sebagai same-origin content (stored XSS).
+ */
 export const ALLOWED_IMAGE_MIME_TYPES: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/jpg": ".jpg",
@@ -13,7 +18,6 @@ export const ALLOWED_IMAGE_MIME_TYPES: Record<string, string> = {
   "image/x-png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
-  "image/svg+xml": ".svg",
 };
 
 const EXTENSION_MIME_FALLBACK: Record<string, string> = {
@@ -22,13 +26,50 @@ const EXTENSION_MIME_FALLBACK: Record<string, string> = {
   ".png": ".png",
   ".webp": ".webp",
   ".gif": ".gif",
-  ".svg": ".svg",
 };
+
+/**
+ * Memeriksa signature (magic bytes) file agar tipe MIME dari client tidak bisa
+ * dipalsukan (mis. file HTML diberi nama .png).
+ */
+function detectImageExtension(buffer: Buffer): string | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return ".jpg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return ".png";
+  }
+  if (
+    buffer.length >= 6 &&
+    buffer.subarray(0, 4).toString("ascii") === "GIF8"
+  ) {
+    return ".gif";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return ".webp";
+  }
+  return null;
+}
 
 export class QuestionUploadService {
   /**
    * Memvalidasi dan menyimpan file gambar ke direktori publik lokal.
-   * Batas ukuran: 1 MB. Format: JPG, PNG, WebP, GIF, SVG.
+   * Batas ukuran: 1 MB. Format: JPG, PNG, WebP, GIF (SVG tidak diizinkan).
+   * Ekstensi akhir ditentukan dari magic bytes, bukan dari MIME/nama file client.
    */
   static async uploadImage(file: File): Promise<{
     url: string;
@@ -48,7 +89,7 @@ export class QuestionUploadService {
       );
     }
 
-    // 2. Validasi tipe file & ekstensi
+    // 2. Validasi tipe file & ekstensi (gate awal, bukan penentu akhir)
     const mimeType = (file.type || "").toLowerCase();
     let extension = ALLOWED_IMAGE_MIME_TYPES[mimeType];
 
@@ -61,16 +102,28 @@ export class QuestionUploadService {
     if (!extension) {
       throw new AppError(
         "VALIDATION_ERROR",
-        "Format file tidak didukung. Harap unggah file gambar (JPG, PNG, WebP, GIF, atau SVG).",
+        "Format file tidak didukung. Harap unggah file gambar (JPG, PNG, WebP, atau GIF).",
       );
     }
 
-    // 3. Nama file acak dan unik
+    // 3. Baca isi file & validasi signature asli (cegah MIME spoofing)
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const detectedExtension = detectImageExtension(buffer);
+    if (!detectedExtension) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Isi file bukan gambar yang valid. Pastikan file benar-benar berformat JPG, PNG, WebP, atau GIF.",
+      );
+    }
+
+    // 4. Nama file acak dan unik (ekstensi mengikuti isi file, bukan nama dari client)
     const uniqueId = crypto.randomUUID().slice(0, 12);
     const timestamp = Date.now();
-    const filename = `img_${timestamp}_${uniqueId}${extension}`;
+    const filename = `img_${timestamp}_${uniqueId}${detectedExtension}`;
 
-    // 4. Pastikan direktori tujuan tersedia
+    // 5. Pastikan direktori tujuan tersedia
     const uploadDir = path.join(process.cwd(), "public", "uploads", "questions");
     try {
       await fs.mkdir(uploadDir, { recursive: true });
@@ -82,11 +135,9 @@ export class QuestionUploadService {
       );
     }
 
-    // 5. Simpan file
+    // 6. Simpan file
     try {
       const filePath = path.join(uploadDir, filename);
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
       await fs.writeFile(filePath, buffer);
     } catch (err) {
       console.error("[QuestionUploadService] Gagal menulis file gambar:", err);
@@ -100,7 +151,7 @@ export class QuestionUploadService {
       url: `/uploads/questions/${filename}`,
       filename,
       size: file.size,
-      mimeType: mimeType || "image/jpeg",
+      mimeType: `image/${detectedExtension === ".jpg" ? "jpeg" : detectedExtension.slice(1)}`,
     };
   }
 }

@@ -52,6 +52,7 @@ enum QuestionType {
   SINGLE_CHOICE
   MULTIPLE_CHOICE
   TRUE_FALSE
+  MATRIX
 }
 
 // -----------------------------------------------------------------------------
@@ -317,7 +318,7 @@ model ExamSession {
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   @@index([userId, tryoutId])
-  @@index([userId, tryoutId, attemptNumber])
+  @@unique([userId, tryoutId, attemptNumber])
   @@index([status])
   @@map("exam_sessions")
 }

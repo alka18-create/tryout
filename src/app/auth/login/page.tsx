@@ -4,13 +4,13 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { safeCallbackUrl } from "@/lib/safe-redirect";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallbackUrl = searchParams.get("callbackUrl");
-  const callbackUrl =
-    rawCallbackUrl && !rawCallbackUrl.includes("/auth/login") ? rawCallbackUrl : "/dashboard";
+  const callbackUrl = safeCallbackUrl(rawCallbackUrl, "/dashboard");
   const reason = searchParams.get("reason");
 
   const [mounted, setMounted] = useState(false);
@@ -36,7 +36,11 @@ function LoginForm() {
       });
 
       if (res?.error) {
-        setErrorMsg("Email atau password tidak sesuai.");
+        setErrorMsg(
+          res.code === "rate_limited"
+            ? "Terlalu banyak percobaan login. Silakan tunggu 15 menit sebelum mencoba lagi."
+            : "Email atau password tidak sesuai.",
+        );
         setIsLoading(false);
         return;
       }
@@ -56,22 +60,19 @@ function LoginForm() {
         const role = sessionData?.user?.role;
 
         if (role === "ADMIN") {
-          destination =
-            !rawCallbackUrl || rawCallbackUrl.startsWith("/dashboard/student")
-              ? "/dashboard/admin"
-              : rawCallbackUrl;
+          destination = callbackUrl.startsWith("/dashboard/student")
+            ? "/dashboard/admin"
+            : callbackUrl;
         } else if (role === "TEACHER") {
-          destination =
-            !rawCallbackUrl || rawCallbackUrl.startsWith("/dashboard/student")
-              ? "/dashboard/teacher"
-              : rawCallbackUrl;
+          destination = callbackUrl.startsWith("/dashboard/student")
+            ? "/dashboard/teacher"
+            : callbackUrl;
         } else {
           destination =
-            !rawCallbackUrl ||
-            rawCallbackUrl.startsWith("/dashboard/admin") ||
-            rawCallbackUrl.startsWith("/dashboard/teacher")
+            callbackUrl.startsWith("/dashboard/admin") ||
+            callbackUrl.startsWith("/dashboard/teacher")
               ? "/dashboard/student"
-              : rawCallbackUrl;
+              : callbackUrl;
         }
       } catch {
         destination = "/dashboard";

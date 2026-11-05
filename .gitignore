@@ -50,3 +50,7 @@ yarn-error.log*
 !/public/uploads/.gitkeep
 /uploads/
 /backups/
+
+# kredensial akun demo (jangan di-commit)
+4 Akun Pengguna.txt
+*Akun Pengguna*.txt
