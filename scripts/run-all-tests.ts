@@ -8,6 +8,7 @@ import { runUnitTests } from "./tests/test-unit";
 import { runIntegrationRbacTests } from "./tests/test-integration-rbac";
 import { runMatrixE2ETests } from "./tests/test-matrix-e2e";
 import { runLoadSimulation } from "./tests/test-load-simulation";
+import { runAdminFeaturesTests } from "./tests/test-admin-features";
 
 async function main() {
   console.log("=================================================================");
@@ -33,6 +34,10 @@ async function main() {
     // 4. Jalankan Load & Concurrency Simulation
     const loadPass = await runLoadSimulation();
     suiteResults.push({ name: "Load & Concurrency (100 Concurrent Autosaves)", passed: loadPass });
+
+    // 5. Jalankan Fitur Admin (Reset Password & Hapus Pengguna)
+    const adminPass = await runAdminFeaturesTests();
+    suiteResults.push({ name: "Admin Features (Reset Password & Hapus Pengguna)", passed: adminPass });
 
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
     const allPassed = suiteResults.every((s) => s.passed);

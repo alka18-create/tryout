@@ -7,12 +7,14 @@ import {
   Search,
   Plus,
   ArrowLeft,
-  GraduationCap,
-  Shield,
   CheckCircle2,
   AlertCircle,
-  MoreVertical,
   UserCheck,
+  KeyRound,
+  Trash2,
+  Copy,
+  RefreshCw,
+  Shield,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,18 @@ export default function AdminUsersPage() {
     password: "TryoutKu@2026",
     role: "TEACHER" as "TEACHER" | "ADMIN" | "STUDENT",
   });
+
+  // Modal Reset Password
+  const [resetTarget, setResetTarget] = useState<UserItem | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetMode, setResetMode] = useState<"auto" | "manual">("auto");
+  const [resetResult, setResetResult] = useState<{ newPassword?: string } | null>(null);
+
+  // Modal Hapus Pengguna
+  const [deleteTarget, setDeleteTarget] = useState<UserItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -126,6 +140,104 @@ export default function AdminUsersPage() {
     } catch {
       setFeedback({ type: "error", text: "Terjadi kesalahan saat membuat akun." });
       setIsCreating(false);
+    }
+  };
+
+  // Buka modal reset password
+  const openResetModal = (user: UserItem) => {
+    setResetTarget(user);
+    setResetMode("auto");
+    setResetPassword("");
+    setResetResult(null);
+    setCopied(false);
+  };
+
+  // Submit Reset Password
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+
+    setIsResetting(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`/api/admin/users/${resetTarget.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: resetMode === "manual" ? resetPassword.trim() : undefined,
+        }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setFeedback({ type: "error", text: json.error?.message || "Gagal mereset password." });
+        setIsResetting(false);
+        return;
+      }
+
+      if (json.data?.newPassword) {
+        // Password sementara dibuat server — tampilkan satu kali
+        setResetResult({ newPassword: json.data.newPassword });
+        setFeedback({
+          type: "success",
+          text: `Password "${resetTarget.name}" berhasil direset. Salin password sementara lalu teruskan ke pengguna.`,
+        });
+      } else {
+        setFeedback({ type: "success", text: `Password "${resetTarget.name}" berhasil direset.` });
+        setResetTarget(null);
+        setResetResult(null);
+      }
+      setIsResetting(false);
+    } catch {
+      setFeedback({ type: "error", text: "Terjadi kesalahan jaringan saat mereset password." });
+      setIsResetting(false);
+    }
+  };
+
+  const copyResetPassword = async () => {
+    if (!resetResult?.newPassword) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.newPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setFeedback({ type: "error", text: "Gagal menyalin password. Salin secara manual." });
+    }
+  };
+
+  const closeResetModal = () => {
+    setResetTarget(null);
+    setResetResult(null);
+    fetchUsers();
+  };
+
+  // Submit Hapus Pengguna
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`/api/admin/users/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setFeedback({ type: "error", text: json.error?.message || "Gagal menghapus pengguna." });
+        setIsDeleting(false);
+        return;
+      }
+
+      setFeedback({ type: "success", text: `Pengguna "${deleteTarget.name}" berhasil dihapus.` });
+      setDeleteTarget(null);
+      setIsDeleting(false);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+    } catch {
+      setFeedback({ type: "error", text: "Terjadi kesalahan jaringan saat menghapus pengguna." });
+      setIsDeleting(false);
     }
   };
 
@@ -222,18 +334,19 @@ export default function AdminUsersPage() {
                   <th className="py-3 px-4 text-center">Aktivitas</th>
                   <th className="py-3 px-4 text-center">Ubah Hak Role</th>
                   <th className="py-3 px-4 text-right">Terdaftar</th>
+                  <th className="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                    <td colSpan={8} className="py-8 text-center text-slate-500 text-xs">
                       Memuat data pengguna...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                    <td colSpan={8} className="py-8 text-center text-slate-500 text-xs">
                       Tidak ada pengguna yang cocok dengan filter.
                     </td>
                   </tr>
@@ -286,6 +399,36 @@ export default function AdminUsersPage() {
                           month: "short",
                           year: "numeric",
                         })}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {u.role !== "ADMIN" ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="px-2 py-1"
+                              title="Reset password"
+                              onClick={() => openResetModal(u)}
+                            >
+                              <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                              <span className="hidden md:inline">Reset</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="px-2 py-1 hover:border-rose-300 hover:bg-rose-50"
+                              title="Hapus pengguna"
+                              onClick={() => setDeleteTarget(u)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                              <span className="hidden md:inline">Hapus</span>
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">
+                            <Shield className="w-4 h-4 inline-block" />
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -371,6 +514,187 @@ export default function AdminUsersPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reset Password */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+                Reset Password
+              </h3>
+              <button
+                onClick={closeResetModal}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs">
+              <p className="font-bold text-slate-900">{resetTarget.name}</p>
+              <p className="text-slate-600 font-mono text-[11px] mt-0.5">{resetTarget.email}</p>
+              <Badge
+                variant={resetTarget.role === "TEACHER" ? "warning" : "info"}
+                className="text-[10px] mt-1.5"
+              >
+                {resetTarget.role}
+              </Badge>
+            </div>
+
+            {resetResult?.newPassword ? (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-xs font-bold text-emerald-800 mb-2">
+                    Password sementara untuk pengguna ini:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 break-all">
+                      {resetResult.newPassword}
+                    </code>
+                    <Button
+                      variant={copied ? "success" : "primary"}
+                      size="sm"
+                      onClick={copyResetPassword}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      {copied ? "Tersalin" : "Salin"}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 leading-relaxed">
+                  <AlertCircle className="w-3.5 h-3.5 inline-block mr-1" />
+                  Password hanya ditampilkan sekali. Teruskan ke pengguna secara aman (WhatsApp/lisan).
+                  Pengguna sebaiknya mengganti password setelah login.
+                </p>
+                <div className="flex justify-end">
+                  <Button variant="primary" size="sm" onClick={closeResetModal}>
+                    Selesai
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleResetSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Cara Reset
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setResetMode("auto")}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-colors flex items-center justify-center gap-1.5 ${
+                        resetMode === "auto"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Buat Otomatis
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetMode("manual")}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
+                        resetMode === "manual"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      Tentukan Sendiri
+                    </button>
+                  </div>
+                </div>
+
+                {resetMode === "manual" && (
+                  <Input
+                    label="Password Baru"
+                    type="text"
+                    required
+                    minLength={6}
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    helperText="Minimal 6 karakter"
+                  />
+                )}
+
+                {resetMode === "auto" && (
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Server akan membuat password acak yang aman (12 karakter), lalu menampilkannya
+                    sekali untuk Anda teruskan ke pengguna.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={closeResetModal}
+                  >
+                    Batal
+                  </Button>
+                  <Button type="submit" variant="primary" size="sm" isLoading={isResetting}>
+                    <KeyRound className="w-3.5 h-3.5" />
+                    Reset Sekarang
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Hapus Pengguna */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+                Hapus Pengguna
+              </h3>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs leading-relaxed">
+              <p className="font-bold text-slate-900">{deleteTarget.name}</p>
+              <p className="text-slate-600 font-mono text-[11px] mt-0.5">{deleteTarget.email}</p>
+              <p className="text-rose-800 mt-3 flex items-start gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  Tindakan ini <b>permanen</b>. Seluruh sesi ujian, jawaban, dan hasil{" "}
+                  {deleteTarget.role === "STUDENT"
+                    ? "milik siswa ini"
+                    : "yang terkait akun ini"}{" "}
+                  akan ikut terhapus dan tidak dapat dikembalikan.
+                </span>
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                isLoading={isDeleting}
+                onClick={handleDeleteUser}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus Pengguna
+              </Button>
+            </div>
           </div>
         </div>
       )}

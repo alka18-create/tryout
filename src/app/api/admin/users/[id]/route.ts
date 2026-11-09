@@ -27,3 +27,25 @@ export async function PUT(
     return handleApiError(err);
   }
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.id) {
+      return fail("UNAUTHENTICATED", "Silakan login terlebih dahulu.");
+    }
+
+    if (session.user.role !== UserRole.ADMIN) {
+      return fail("FORBIDDEN", "Hanya Administrator yang dapat menghapus pengguna.");
+    }
+
+    const { id: userId } = await context.params;
+    const result = await AdminService.deleteUser(userId, session.user.id);
+    return ok(result, "Pengguna berhasil dihapus.");
+  } catch (error: unknown) {
+    return handleApiError(error);
+  }
+}

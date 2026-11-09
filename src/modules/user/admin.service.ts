@@ -1,7 +1,13 @@
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { UserRole } from "@/generated/prisma/client";
 import bcrypt from "bcryptjs";
+
+/** Password sementara: 12 karakter acak (base64url) yang aman diketik. */
+function generateTemporaryPassword(): string {
+  return crypto.randomBytes(9).toString("base64url");
+}
 
 export class AdminService {
   /**
@@ -140,6 +146,113 @@ export class AdminService {
         ...(data.schoolClass !== undefined ? { schoolClass: data.schoolClass } : {}),
       },
     });
+  }
+
+  /**
+   * Reset password pengguna (STUDENT/TEACHER) oleh Admin.
+   * Jika `data.password` tidak diberikan, server membuat password sementara
+   * yang dikembalikan satu kali di response agar Admin bisa meneruskannya
+   * ke pengguna (via WA/lisan). Admin tidak bisa mereset password akun sendiri
+   * maupun akun Administrator lain.
+   */
+  static async resetUserPassword(
+    userId: string,
+    requesterId: string,
+    data: { password?: string },
+  ) {
+    if (userId === requesterId) {
+      throw new AppError("FORBIDDEN", "Anda tidak dapat mereset password akun Anda sendiri.");
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError("NOT_FOUND", "Pengguna tidak ditemukan.");
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Password akun Administrator tidak dapat direset dari menu ini.",
+      );
+    }
+
+    const customPassword = data.password?.trim();
+    if (customPassword && customPassword.length < 6) {
+      throw new AppError("VALIDATION_ERROR", "Password baru minimal 6 karakter.");
+    }
+
+    const newPassword = customPassword || generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashedPassword },
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      // Password sementara hanya dikirim bila dibuatkan otomatis (satu kali tampil).
+      newPassword: customPassword ? undefined : newPassword,
+    };
+  }
+
+  /**
+   * Menghapus akun pengguna oleh Admin (khusus STUDENT/TEACHER).
+   * - Admin tidak bisa menghapus akun sendiri maupun akun Administrator lain.
+   * - Guru yang masih memiliki tryout/soal diblokir supaya data bank soal
+   *   tidak hilang; tentukan dulu nasib data tersebut.
+   * - Sesi ujian, jawaban, dan nilai siswa ikut terhapus (cascade).
+   */
+  static async deleteUser(userId: string, requesterId: string) {
+    if (userId === requesterId) {
+      throw new AppError("FORBIDDEN", "Anda tidak dapat menghapus akun Anda sendiri.");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        _count: {
+          select: {
+            createdTryouts: true,
+            createdQuestions: true,
+            examSessions: true,
+          },
+        },
+      },
+    });
+    if (!user) {
+      throw new AppError("NOT_FOUND", "Pengguna tidak ditemukan.");
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      throw new AppError("FORBIDDEN", "Akun Administrator tidak dapat dihapus dari menu ini.");
+    }
+
+    if (user.role === UserRole.TEACHER) {
+      if (user._count.createdTryouts > 0) {
+        throw new AppError(
+          "CONFLICT",
+          `Guru "${user.name}" masih memiliki ${user._count.createdTryouts} paket tryout. ` +
+            "Hapus atau alihkan tryout tersebut sebelum menghapus akun.",
+        );
+      }
+      if (user._count.createdQuestions > 0) {
+        throw new AppError(
+          "CONFLICT",
+          `Guru "${user.name}" masih memiliki ${user._count.createdQuestions} soal di bank soal.`,
+        );
+      }
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
+
+    return {
+      id: userId,
+      deleted: true,
+    };
   }
 
   /**
