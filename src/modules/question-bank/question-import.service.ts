@@ -18,8 +18,9 @@ export interface ImportResult {
 export class QuestionImportService {
   /**
    * Menghasilkan file Excel template untuk import soal lengkap dengan
-   * contoh data valid untuk Pilihan Ganda, PG Kompleks, dan Benar/Salah,
-   * serta lembar petunjuk pengisian & referensi topik materi aktif.
+   * contoh data valid untuk Pilihan Ganda, PG Kompleks, Benar/Salah, dan
+   * TKP (opsi berbobot), serta lembar petunjuk pengisian & referensi topik
+   * materi aktif.
    */
   static async generateQuestionExcelTemplate(): Promise<Uint8Array> {
     const subjects = await prisma.subject.findMany({
@@ -50,6 +51,11 @@ export class QuestionImportService {
         "Opsi C": "Identitas sekunder",
         "Opsi D": "Identitas komunal",
         "Opsi E": "Identitas profesional",
+        "Skor A": "",
+        "Skor B": "",
+        "Skor C": "",
+        "Skor D": "",
+        "Skor E": "",
         "Kunci Jawaban": "B",
         Pembahasan:
           "Identitas primer merupakan fondasi kepribadian dasar yang pertama kali dibentuk dalam lingkungan sosialisasi primer, yaitu keluarga.",
@@ -67,6 +73,11 @@ export class QuestionImportService {
         "Opsi C": "Sikap etnosentrisme yang berlebihan",
         "Opsi D": "Sikap saling menghargai orang lain dan kebudayaannya",
         "Opsi E": "",
+        "Skor A": "",
+        "Skor B": "",
+        "Skor C": "",
+        "Skor D": "",
+        "Skor E": "",
         "Kunci Jawaban": "A, B, D",
         Pembahasan:
           "Faktor pendorong integrasi sosial meliputi toleransi budaya, kesempatan ekonomi yang seimbang, dan sikap saling menghargai. Sikap etnosentrisme justru merupakan faktor penghambat integrasi.",
@@ -84,9 +95,39 @@ export class QuestionImportService {
         "Opsi C": "",
         "Opsi D": "",
         "Opsi E": "",
+        "Skor A": "",
+        "Skor B": "",
+        "Skor C": "",
+        "Skor D": "",
+        "Skor E": "",
         "Kunci Jawaban": "B",
         Pembahasan:
           "Pernyataan tersebut Salah. Dalam perspektif sosiologi, konflik sosial tidak selalu destruktif; konflik juga dapat mempererat kohesi kelompok internal (in-group solidarity) dan mendorong perubahan sosial yang konstruktif.",
+      },
+      {
+        No: 4,
+        "Jenis Soal": "TKP / OPSI BERBOBOT",
+        "Mata Pelajaran": defaultSubject,
+        "Topik Materi": defaultTopic,
+        "Tingkat Kesulitan": "SEDANG",
+        "Teks Soal":
+          "Anda seorang petugas layanan publik. Seorang warga datang dengan keluhan yang sama untuk ketiga kalinya dan mulai emosional. Tindakan yang paling tepat Anda lakukan adalah...",
+        "Opsi A":
+          "Mendengarkan keluhan dengan saksama, meminta maaf atas ketidaknyamanan, lalu mencarikan solusi bersama.",
+        "Opsi B":
+          "Menjelaskan prosedur yang berlaku dan meminta warga mengikuti alur yang ada.",
+        "Opsi C": "Mengalihkan warga ke petugas lain karena bukan tugas Anda.",
+        "Opsi D":
+          "Menyarankan warga menuliskan keluhan dan menunggu tanpa batas waktu.",
+        "Opsi E": "Meninggalkan warga karena Anda sedang sibuk.",
+        "Skor A": 5,
+        "Skor B": 4,
+        "Skor C": 2,
+        "Skor D": 3,
+        "Skor E": 1,
+        "Kunci Jawaban": "",
+        Pembahasan:
+          "TKP menilai kualitas respons. Opsi A menunjukkan empati, pelayanan prima, dan orientasi solusi; opsi lain kurang optimal.",
       },
     ];
 
@@ -108,6 +149,11 @@ export class QuestionImportService {
       { wch: 28 }, // Opsi C
       { wch: 28 }, // Opsi D
       { wch: 28 }, // Opsi E
+      { wch: 8 },  // Skor A
+      { wch: 8 },  // Skor B
+      { wch: 8 },  // Skor C
+      { wch: 8 },  // Skor D
+      { wch: 8 },  // Skor E
       { wch: 16 }, // Kunci Jawaban
       { wch: 55 }, // Pembahasan
     ];
@@ -137,6 +183,15 @@ export class QuestionImportService {
           "Isi 'A' (atau 'Benar') jika benar, atau 'B' (atau 'Salah') jika pernyataan salah.",
         "Keterangan / Aturan":
           "Jika kolom Opsi A & B dikosongkan, sistem otomatis mengisinya dengan 'Benar' & 'Salah'.",
+      },
+      {
+        "Jenis Soal": "TKP / OPSI BERBOBOT",
+        "Format Opsi Jawaban":
+          "Wajib mengisi lengkap Opsi A–E dan kolom Skor A–E (bilangan bulat 1–5, tidak boleh sama).",
+        "Format Kunci Jawaban":
+          "Tidak perlu diisi. Skor ditentukan per opsi, bukan oleh satu kunci jawaban.",
+        "Keterangan / Aturan":
+          "Khas soal TKP SKD. Setiap opsi diberi skor 1–5; jawaban kosong bernilai 0. Contoh: Skor A=5, B=4, C=3, D=2, E=1.",
       },
       {
         "Jenis Soal": "MATRIKS / TABEL",
@@ -196,7 +251,8 @@ export class QuestionImportService {
   }
 
   /**
-   * Mengimpor soal pilihan ganda (Biasa, Kompleks, Benar/Salah) dari file Excel (.xlsx / .xls / .csv)
+   * Mengimpor soal Pilihan Ganda, PG Kompleks, Benar/Salah, dan TKP
+   * (opsi berbobot) dari file Excel (.xlsx / .xls / .csv)
    */
   static async importQuestionsFromExcel(
     userId: string,
@@ -270,8 +326,18 @@ export class QuestionImportService {
         label: string;
         content: string;
         isCorrect: boolean;
+        score?: number | null;
       }>;
     }> = [];
+
+    // Mengubah nilai sel skor menjadi angka. Sel kosong / tidak valid -> null.
+    const parseOptionalScore = (raw: unknown): number | null => {
+      if (raw === "" || raw === null || raw === undefined) return null;
+      const normalized = String(raw).trim().replace(",", ".");
+      if (!normalized) return null;
+      const value = Number(normalized);
+      return Number.isFinite(value) ? value : null;
+    };
 
     rawRows.forEach((row, index) => {
       const rowNumber = index + 2; // Baris 1 adalah header di Excel
@@ -299,6 +365,17 @@ export class QuestionImportService {
       const optC = String(row["Opsi C"] || row["opsi_c"] || row["C"] || "").trim();
       const optD = String(row["Opsi D"] || row["opsi_d"] || row["D"] || "").trim();
       const optE = String(row["Opsi E"] || row["opsi_e"] || row["E"] || "").trim();
+
+      const rawScoreA =
+        row["Skor A"] ?? row["skor_a"] ?? row["Score A"] ?? row["score_a"] ?? row["Skor Opsi A"] ?? "";
+      const rawScoreB =
+        row["Skor B"] ?? row["skor_b"] ?? row["Score B"] ?? row["score_b"] ?? row["Skor Opsi B"] ?? "";
+      const rawScoreC =
+        row["Skor C"] ?? row["skor_c"] ?? row["Score C"] ?? row["score_c"] ?? row["Skor Opsi C"] ?? "";
+      const rawScoreD =
+        row["Skor D"] ?? row["skor_d"] ?? row["Score D"] ?? row["score_d"] ?? row["Skor Opsi D"] ?? "";
+      const rawScoreE =
+        row["Skor E"] ?? row["skor_e"] ?? row["Score E"] ?? row["score_e"] ?? row["Skor Opsi E"] ?? "";
 
       const rawCorrectKey = String(
         row["Kunci Jawaban"] || row["kunci_jawaban"] || row["Kunci"] || row["Answer"] || "",
@@ -354,6 +431,12 @@ export class QuestionImportService {
       if (rawType.includes("KOMPLEKS") || rawType.includes("MULTIPLE") || rawType.includes("COMPLEX")) {
         questionType = QuestionType.MULTIPLE_CHOICE;
       } else if (
+        rawType.includes("TKP") ||
+        rawType.includes("BERBOBOT") ||
+        rawType.includes("WEIGHTED")
+      ) {
+        questionType = QuestionType.WEIGHTED_CHOICE;
+      } else if (
         rawType.includes("BENAR") ||
         rawType.includes("SALAH") ||
         rawType.includes("TRUE") ||
@@ -363,7 +446,12 @@ export class QuestionImportService {
       }
 
       // Validasi Opsi & Kunci Jawaban Berdasarkan Tipe Soal
-      const questionOptions: Array<{ label: string; content: string; isCorrect: boolean }> = [];
+      const questionOptions: Array<{
+        label: string;
+        content: string;
+        isCorrect: boolean;
+        score?: number;
+      }> = [];
 
       if (questionType === QuestionType.SINGLE_CHOICE) {
         // --- 1. PILIHAN GANDA BIASA ---
@@ -481,6 +569,55 @@ export class QuestionImportService {
           { label: "A", content: labelAContent, isCorrect: isCorrectA },
           { label: "B", content: labelBContent, isCorrect: isCorrectB },
         );
+      } else if (questionType === QuestionType.WEIGHTED_CHOICE) {
+        // --- 4. TKP / OPSI BERBOBOT ---
+        const optionContents = [optA, optB, optC, optD, optE];
+        if (optionContents.some((c) => !c)) {
+          errors.push({
+            row: rowNumber,
+            error:
+              "Untuk TKP (opsi berbobot), Opsi jawaban A, B, C, D, dan E seluruhnya wajib diisi.",
+          });
+          return;
+        }
+
+        const rawScores = [rawScoreA, rawScoreB, rawScoreC, rawScoreD, rawScoreE];
+        const parsedScores = rawScores.map(parseOptionalScore);
+        if (parsedScores.some((s) => s === null)) {
+          errors.push({
+            row: rowNumber,
+            error: "Untuk TKP, kolom Skor A sampai Skor E wajib diisi.",
+          });
+          return;
+        }
+
+        const scores = parsedScores as number[];
+        if (scores.some((s) => !Number.isInteger(s) || s < 1 || s > 5)) {
+          errors.push({
+            row: rowNumber,
+            error: "Skor opsi TKP harus berupa bilangan bulat 1 sampai 5.",
+          });
+          return;
+        }
+
+        if (new Set(scores).size !== 5) {
+          errors.push({
+            row: rowNumber,
+            error:
+              "Skor opsi TKP tidak boleh sama. Setiap opsi harus memiliki skor unik 1-5.",
+          });
+          return;
+        }
+
+        const labels = ["A", "B", "C", "D", "E"];
+        for (let i = 0; i < labels.length; i++) {
+          questionOptions.push({
+            label: labels[i],
+            content: optionContents[i],
+            isCorrect: false,
+            score: scores[i],
+          });
+        }
       }
 
       // Validasi Tingkat Kesulitan

@@ -144,8 +144,17 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
             <Award className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-            <span className="text-[11px] text-slate-500 font-medium">Standar KKM</span>
-            <p className="text-sm font-bold text-emerald-700 mt-0.5">{tryout.passingScore} / 100</p>
+            <span className="text-[11px] text-slate-500 font-medium">
+              {tryout.scoringMode === "RAW" ? "Ambang Batas" : "Standar KKM"}
+            </span>
+            {tryout.scoringMode === "RAW" ? (
+              <p className="text-[11px] font-bold text-emerald-700 mt-0.5 leading-tight">
+                TWK {tryout.passingTwk ?? "-"} • TIU {tryout.passingTiu ?? "-"} • TKP{" "}
+                {tryout.passingTkp ?? "-"}
+              </p>
+            ) : (
+              <p className="text-sm font-bold text-emerald-700 mt-0.5">{tryout.passingScore} / 100</p>
+            )}
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
@@ -167,9 +176,11 @@ export default async function StudentTryoutDetailPage({ params }: StudentTryoutD
                   <span className="text-3xl font-black text-slate-900">
                     {tryout.highestScore ?? tryout.latestScore}
                   </span>
-                  <span className="text-xs text-slate-500">dari 100 poin</span>
+                  <span className="text-xs text-slate-500">
+                    {tryout.scoringMode === "RAW" ? "poin (skor mentah)" : "dari 100 poin"}
+                  </span>
                   <Badge variant={tryout.isPassed ? "success" : "danger"} className="ml-2">
-                    {tryout.isPassed ? "LULUS KKM" : "DI BAWAH KKM"}
+                    {tryout.isPassed ? "LULUS" : "BELUM LULUS"}
                   </Badge>
                 </div>
               </div>

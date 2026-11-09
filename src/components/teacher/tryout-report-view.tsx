@@ -67,6 +67,10 @@ interface TryoutReportData {
     subjectName: string;
     durationMinutes: number;
     passingScore: number;
+    scoringMode: "NORMALIZED" | "RAW";
+    passingTwk?: number | null;
+    passingTiu?: number | null;
+    passingTkp?: number | null;
     questionCount: number;
   };
   summary: {
@@ -118,7 +122,10 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
             <Badge variant="info">{data.tryout.subjectName}</Badge>
           </div>
           <p className="text-xs text-slate-500">
-            {data.tryout.questionCount} Butir Soal • Durasi {data.tryout.durationMinutes} Menit • Standar KKM {data.tryout.passingScore}
+            {data.tryout.questionCount} Butir Soal • Durasi {data.tryout.durationMinutes} Menit •{" "}
+            {data.tryout.scoringMode === "RAW"
+              ? `Ambang TWK ${data.tryout.passingTwk ?? "-"} / TIU ${data.tryout.passingTiu ?? "-"} / TKP ${data.tryout.passingTkp ?? "-"}`
+              : `Standar KKM ${data.tryout.passingScore}`}
           </p>
         </div>
 
@@ -229,8 +236,8 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                   placeholder="Semua Status"
                   options={[
                     { value: "ALL", label: "Semua Status" },
-                    { value: "PASSED", label: "Lulus KKM" },
-                    { value: "FAILED", label: "Di Bawah KKM" },
+                    { value: "PASSED", label: "Lulus" },
+                    { value: "FAILED", label: "Belum Lulus" },
                   ]}
                   triggerClassName="py-1.5 text-xs"
                 />
@@ -253,7 +260,9 @@ export function TryoutReportView({ data }: { data: TryoutReportData }) {
                       <th className="py-3 px-4">Asal Sekolah</th>
                       <th className="py-3 px-4 text-center">Skor Tertinggi</th>
                       <th className="py-3 px-4 text-center">Status</th>
-                      <th className="py-3 px-4 text-center">B / S / K</th>
+                      <th className="py-3 px-4 text-center">
+                        {data.tryout.scoringMode === "RAW" ? "Penuh / Kurang / Kosong" : "B / S / K"}
+                      </th>
                       <th className="py-3 px-4 text-center">Durasi</th>
                       <th className="py-3 px-4 text-right">Tanggal Selesai</th>
                     </tr>

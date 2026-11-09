@@ -237,6 +237,10 @@ export class AnalyticsService {
         subjectName: tryout.subject.name,
         durationMinutes: tryout.durationMinutes,
         passingScore: tryout.passingScore,
+        scoringMode: tryout.scoringMode,
+        passingTwk: tryout.passingTwk,
+        passingTiu: tryout.passingTiu,
+        passingTkp: tryout.passingTkp,
         questionCount: tryout.questionCount ?? tryout.tryoutQuestions.length,
         bankQuestionCount: tryout.tryoutQuestions.length,
       },
@@ -319,6 +323,10 @@ export class AnalyticsService {
         status: t.status,
         durationMinutes: t.durationMinutes,
         passingScore: t.passingScore,
+        scoringMode: t.scoringMode,
+        passingTwk: t.passingTwk,
+        passingTiu: t.passingTiu,
+        passingTkp: t.passingTkp,
         questionCount: t.questionCount ?? t._count.tryoutQuestions,
         bankQuestionCount: t._count.tryoutQuestions,
         totalSessions: t._count.examSessions,
@@ -336,6 +344,11 @@ export class AnalyticsService {
   static async generateTryoutCsv(tryoutId: string, currentUserId: string, currentUserRole: UserRole) {
     const report = await this.getTryoutReport(tryoutId, currentUserId, currentUserRole);
 
+    const answerHeaders =
+      report.tryout.scoringMode === "RAW"
+        ? ["Skor Penuh", "Kurang Maksimal", "Kosong"]
+        : ["Benar", "Salah", "Kosong"];
+
     const headers = [
       "Peringkat",
       "Nama Siswa",
@@ -345,11 +358,9 @@ export class AnalyticsService {
       "Skor Ujian (Tertinggi)",
       "Percobaan Terbaik",
       "Total Percobaan",
-      "KKM",
+      "Ambang Batas",
       "Status",
-      "Benar",
-      "Salah",
-      "Kosong",
+      ...answerHeaders,
       "Durasi (Menit)",
       "Tanggal Selesai",
     ];
@@ -363,7 +374,9 @@ export class AnalyticsService {
       p.totalScore,
       `"Percobaan ke-${p.attemptNumber}"`,
       `"${p.totalAttempts}x"`,
-      report.tryout.passingScore,
+      report.tryout.scoringMode === "RAW"
+        ? `"TWK ${report.tryout.passingTwk ?? "-"} / TIU ${report.tryout.passingTiu ?? "-"} / TKP ${report.tryout.passingTkp ?? "-"}"`
+        : report.tryout.passingScore,
       p.isPassed ? "LULUS" : "BELUM LULUS",
       p.correctCount,
       p.wrongCount,

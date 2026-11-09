@@ -110,6 +110,10 @@ export class ScoringService {
       })),
       totalScore: session.totalScore,
       passingScore: session.tryout.passingScore,
+      scoringMode: session.tryout.scoringMode,
+      passingTwk: session.tryout.passingTwk,
+      passingTiu: session.tryout.passingTiu,
+      passingTkp: session.tryout.passingTkp,
       isPassed: session.isPassed,
       correctCount: session.correctCount,
       wrongCount: session.wrongCount,
@@ -211,18 +215,31 @@ export class ScoringService {
         content: opt.content,
         imageUrl: opt.imageUrl,
         isCorrect: opt.isCorrect,
+        score: opt.score,
       }));
 
       // Acak opsi jawaban dengan seed yang sama persis (matriks mempertahankan urutan asli)
       const isMatrix = ans.question.type === QuestionType.MATRIX;
+      const isWeighted = ans.question.type === QuestionType.WEIGHTED_CHOICE;
       const shuffledOptions = isMatrix
         ? sortMatrixOptions(rawOptions)
         : shuffleQuestionOptions(rawOptions, optionSeed);
 
-      // Cari seluruh opsi yang benar di dalam urutan yang sudah teracak
-      const correctOptions = shuffledOptions.filter((o) => o.isCorrect);
+      // Skor maksimum opsi untuk soal berbobot (TKP).
+      const maxOptionScore = isWeighted
+        ? Math.max(0, ...shuffledOptions.map((o) => o.score ?? 0))
+        : 0;
+
+      // Cari seluruh opsi yang benar di dalam urutan yang sudah teracak.
+      // Untuk opsi berbobot, "kunci" adalah opsi dengan skor tertinggi.
+      const correctOptions = isWeighted
+        ? shuffledOptions.filter((o) => maxOptionScore > 0 && (o.score ?? 0) === maxOptionScore)
+        : shuffledOptions.filter((o) => o.isCorrect);
       const correctLabels = correctOptions.map((o) => o.label).join(", ");
       const correctOptionIds = correctOptions.map((o) => o.id);
+      const weightedScoreLabel = isWeighted
+        ? shuffledOptions.map((o) => `${o.label}=${o.score ?? 0}`).join(", ")
+        : "";
 
       // Untuk matriks, tampilkan kunci per baris (mis. "1. Sesuai; 2. Tidak Sesuai")
       const matrixKeyLabel = isMatrix
@@ -263,7 +280,12 @@ export class ScoringService {
         selectedOptionIds: selectedIds,
         correctOptionId: correctOptions[0]?.id || null,
         correctOptionIds,
-        correctLabel: (isMatrix ? matrixKeyLabel : correctLabels) || "-", // Huruf kunci jawaban (misal "B, D") atau kunci per baris matriks
+        correctLabel:
+          (isWeighted
+            ? `Skor opsi: ${weightedScoreLabel}`
+            : isMatrix
+              ? matrixKeyLabel
+              : correctLabels) || "-", // Huruf kunci jawaban, kunci per baris matriks, atau skor opsi TKP
         answerStatus,
         isFlagged: ans.isFlagged,
         scoreObtained: ans.scoreObtained,
@@ -342,6 +364,10 @@ export class ScoringService {
         totalScore: s.totalScore,
         highestScore: best?.highestScore ?? s.totalScore,
         passingScore: s.tryout.passingScore,
+        scoringMode: s.tryout.scoringMode,
+        passingTwk: s.tryout.passingTwk,
+        passingTiu: s.tryout.passingTiu,
+        passingTkp: s.tryout.passingTkp,
         isPassed: s.isPassed,
         correctCount: s.correctCount,
         wrongCount: s.wrongCount,

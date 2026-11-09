@@ -29,6 +29,10 @@ interface TryoutItem {
   description: string | null;
   durationMinutes: number;
   passingScore: number;
+  scoringMode?: "NORMALIZED" | "RAW";
+  passingTwk?: number | null;
+  passingTiu?: number | null;
+  passingTkp?: number | null;
   questionCount?: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   discussionVisibility: string;
@@ -432,8 +436,17 @@ export default function TeacherTryoutsPage() {
                 <p className="font-semibold text-slate-900">{previewTryout.durationMinutes} Menit</p>
               </div>
               <div>
-                <span className="text-slate-500 text-xs">Standar KKM:</span>
-                <p className="font-semibold text-emerald-600">{previewTryout.passingScore} / 100</p>
+                <span className="text-slate-500 text-xs">
+                  {previewTryout.scoringMode === "RAW" ? "Ambang Batas:" : "Standar KKM:"}
+                </span>
+                {previewTryout.scoringMode === "RAW" ? (
+                  <p className="font-semibold text-emerald-600">
+                    TWK {previewTryout.passingTwk ?? "-"} / TIU {previewTryout.passingTiu ?? "-"} / TKP{" "}
+                    {previewTryout.passingTkp ?? "-"}
+                  </p>
+                ) : (
+                  <p className="font-semibold text-emerald-600">{previewTryout.passingScore} / 100</p>
+                )}
               </div>
               <div>
                 <span className="text-slate-500 text-xs">Jumlah Butir Soal:</span>

@@ -7,6 +7,8 @@
 import { runUnitTests } from "./tests/test-unit";
 import { runIntegrationRbacTests } from "./tests/test-integration-rbac";
 import { runMatrixE2ETests } from "./tests/test-matrix-e2e";
+import { runSkdE2ETests } from "./tests/test-skd-e2e";
+import { runExcelImportTests } from "./tests/test-excel-import-complex";
 import { runLoadSimulation } from "./tests/test-load-simulation";
 import { runAdminFeaturesTests } from "./tests/test-admin-features";
 
@@ -31,11 +33,22 @@ async function main() {
     const matrixPass = await runMatrixE2ETests();
     suiteResults.push({ name: "E2E Soal Matriks (Buat, Kerjakan, Nilai, Pembahasan)", passed: matrixPass });
 
-    // 4. Jalankan Load & Concurrency Simulation
+    // 4. Jalankan E2E Soal SKD (TKP & Skor Mentah)
+    const skdPass = await runSkdE2ETests();
+    suiteResults.push({ name: "E2E SKD (TKP Berbobot, Skor Mentah, Ambang Subtes)", passed: skdPass });
+
+    // 5. Jalankan Integrasi Impor Excel (termasuk TKP)
+    const excelImportPass = await runExcelImportTests();
+    suiteResults.push({
+      name: "Impor Excel (PG, PG Kompleks, Benar/Salah, TKP)",
+      passed: excelImportPass,
+    });
+
+    // 6. Jalankan Load & Concurrency Simulation
     const loadPass = await runLoadSimulation();
     suiteResults.push({ name: "Load & Concurrency (100 Concurrent Autosaves)", passed: loadPass });
 
-    // 5. Jalankan Fitur Admin (Reset Password & Hapus Pengguna)
+    // 7. Jalankan Fitur Admin (Reset Password & Hapus Pengguna)
     const adminPass = await runAdminFeaturesTests();
     suiteResults.push({ name: "Admin Features (Reset Password & Hapus Pengguna)", passed: adminPass });
 

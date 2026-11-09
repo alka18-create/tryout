@@ -22,6 +22,10 @@ interface TryoutFormProps {
     subjectId: string;
     durationMinutes: number;
     passingScore: number;
+    scoringMode?: "NORMALIZED" | "RAW";
+    passingTwk?: number | null;
+    passingTiu?: number | null;
+    passingTkp?: number | null;
     maxAttempts?: number;
     questionCount?: number | null;
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -42,6 +46,10 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
     subjectId: initialData?.subjectId || "",
     durationMinutes: initialData?.durationMinutes || 60,
     passingScore: initialData?.passingScore || 75,
+    scoringMode: initialData?.scoringMode || "NORMALIZED",
+    passingTwk: initialData?.passingTwk ?? null,
+    passingTiu: initialData?.passingTiu ?? null,
+    passingTkp: initialData?.passingTkp ?? null,
     maxAttempts: initialData?.maxAttempts ?? 3,
     questionCount:
       initialData?.questionCount !== undefined && initialData?.questionCount !== null
@@ -93,6 +101,19 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
           ...formData,
           durationMinutes: Number(formData.durationMinutes),
           passingScore: Number(formData.passingScore),
+          scoringMode: formData.scoringMode,
+          passingTwk:
+            formData.scoringMode === "RAW" && formData.passingTwk !== null
+              ? Number(formData.passingTwk)
+              : null,
+          passingTiu:
+            formData.scoringMode === "RAW" && formData.passingTiu !== null
+              ? Number(formData.passingTiu)
+              : null,
+          passingTkp:
+            formData.scoringMode === "RAW" && formData.passingTkp !== null
+              ? Number(formData.passingTkp)
+              : null,
           maxAttempts: Number(formData.maxAttempts),
           questionCount:
             formData.questionCount !== "" && formData.questionCount !== null
@@ -148,7 +169,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
           {isEditing ? "Edit Pengaturan Tryout" : "Buat Paket Tryout Baru"}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Tentukan judul, durasi pengerjaan, KKM, dan kebijakan visibilitas pembahasan
+          Tentukan judul, durasi pengerjaan, mode penilaian, ambang kelulusan, dan kebijakan visibilitas pembahasan
         </p>
       </div>
 
@@ -216,6 +237,69 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Mode Penilaian */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Mode Penilaian
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, scoringMode: "NORMALIZED" })}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    formData.scoringMode === "NORMALIZED"
+                      ? "border-blue-600 bg-blue-50/80 text-blue-900 ring-1 ring-blue-500"
+                      : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="text-xs font-bold">Nilai 0–100 (Reguler)</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Skor akhir dinormalisasi ke skala 0–100.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isRaw = formData.scoringMode === "RAW";
+                    setFormData({
+                      ...formData,
+                      scoringMode: "RAW",
+                      ...(isRaw
+                        ? {}
+                        : {
+                            durationMinutes: 100,
+                            questionCount: "" as const,
+                            passingTwk: 65,
+                            passingTiu: 80,
+                            passingTkp: 166,
+                          }),
+                    });
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    formData.scoringMode === "RAW"
+                      ? "border-blue-600 bg-blue-50/80 text-blue-900 ring-1 ring-blue-500"
+                      : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="text-xs font-bold">Skor Mentah / SKD CASN</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Total skor mentah + ambang batas per subtes.
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {formData.scoringMode === "RAW" && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 leading-relaxed">
+                <p className="font-bold">Preset SKD CASN</p>
+                <p className="mt-0.5">
+                  110 soal / 100 menit: TWK 30 soal (maks 150), TIU 35 soal (maks 175), TKP 45
+                  soal (maks 225). Total maksimum 550. Kategori tiap soal diatur di halaman{" "}
+                  <b>Susun Soal</b>.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Input
                 label="Durasi Pengerjaan (Menit)"
@@ -225,7 +309,7 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                 required
                 value={formData.durationMinutes}
                 onChange={(e) => setFormData({ ...formData, durationMinutes: Number(e.target.value) })}
-                helperText="Contoh: 60 menit"
+                helperText={formData.scoringMode === "RAW" ? "SKD: 100 menit" : "Contoh: 60 menit"}
               />
 
               <Input
@@ -240,19 +324,25 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                   })
                 }
                 placeholder="Semua butir soal"
-                helperText="Diacak per siswa (kosongkan = semua)"
+                helperText={
+                  formData.scoringMode === "RAW"
+                    ? "Kosongkan = tampilkan semua (SKD: 110 soal)"
+                    : "Diacak per siswa (kosongkan = semua)"
+                }
               />
 
-              <Input
-                label="KKM / Kelulusan (0 - 100)"
-                type="number"
-                min={0}
-                max={100}
-                required
-                value={formData.passingScore}
-                onChange={(e) => setFormData({ ...formData, passingScore: Number(e.target.value) })}
-                helperText="Nilai minimum kelulusan"
-              />
+              {formData.scoringMode === "NORMALIZED" ? (
+                <Input
+                  label="KKM / Kelulusan (0 - 100)"
+                  type="number"
+                  min={0}
+                  max={100}
+                  required
+                  value={formData.passingScore}
+                  onChange={(e) => setFormData({ ...formData, passingScore: Number(e.target.value) })}
+                  helperText="Nilai minimum kelulusan"
+                />
+              ) : null}
 
               <Input
                 label="Batas Percobaan Siswa"
@@ -265,6 +355,53 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                 helperText="Maksimal pengerjaan ujian"
               />
             </div>
+
+            {formData.scoringMode === "RAW" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Input
+                  label="Ambang Batas TWK"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={formData.passingTwk ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      passingTwk: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                  helperText="SKD: minimal 65"
+                />
+                <Input
+                  label="Ambang Batas TIU"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={formData.passingTiu ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      passingTiu: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                  helperText="SKD: minimal 80"
+                />
+                <Input
+                  label="Ambang Batas TKP"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={formData.passingTkp ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      passingTkp: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                  helperText="SKD: minimal 166"
+                />
+              </div>
+            )}
 
             <CustomSelect
               label="Kebijakan Tampilan Pembahasan Soal"

@@ -73,7 +73,7 @@ export default async function StudentHistoryPage() {
           <div>
             <span className="text-xs text-slate-500 font-medium">Rata-rata Skor Anda</span>
             <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
-              {data.totalCompleted > 0 ? `${data.averageScore} / 100` : "—"}
+              {data.totalCompleted > 0 ? data.averageScore : "—"}
             </p>
           </div>
         </Card>
@@ -83,7 +83,7 @@ export default async function StudentHistoryPage() {
             <TrendingUp className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-500 font-medium">Tingkat Kelulusan KKM</span>
+            <span className="text-xs text-slate-500 font-medium">Tingkat Kelulusan</span>
             <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">
               {data.totalCompleted > 0 ? `${data.passingRate}%` : "—"}
             </p>
@@ -167,7 +167,7 @@ export default async function StudentHistoryPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="info">{item.subjectName}</Badge>
                       <Badge variant={item.isPassed ? "success" : "danger"}>
-                        {item.isPassed ? "LULUS KKM" : "DI BAWAH KKM"}
+                        {item.isPassed ? "LULUS" : "BELUM LULUS"}
                       </Badge>
                       <span className="text-xs text-slate-500 font-medium">
                         {new Date(item.submittedAt).toLocaleDateString("id-ID", {

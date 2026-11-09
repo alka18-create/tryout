@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { UserRole, TryoutStatus, QuestionType } from "@/generated/prisma/client";
+import { UserRole, TryoutStatus, QuestionType, ScoringMode } from "@/generated/prisma/client";
 import { sortMatrixOptions } from "@/lib/matrix-question";
 import type { CreateTryoutInput, SetTryoutQuestionsInput } from "./tryout.schema";
 
@@ -95,6 +95,10 @@ export class TryoutService {
         createdById: teacherId,
         durationMinutes: input.durationMinutes,
         passingScore: input.passingScore,
+        scoringMode: input.scoringMode,
+        passingTwk: input.passingTwk ?? null,
+        passingTiu: input.passingTiu ?? null,
+        passingTkp: input.passingTkp ?? null,
         maxAttempts: input.maxAttempts ?? 3,
         questionCount: input.questionCount ?? null,
         status: input.status,
@@ -148,6 +152,20 @@ export class TryoutService {
           `Paket tryout tidak dapat dipublikasikan karena jumlah butir soal (${tryout._count.tryoutQuestions}) masih kurang dari target soal yang ditampilkan (${targetQuestionCount}). Silakan tambahkan butir soal terlebih dahulu.`,
         );
       }
+
+      // Mode RAW/SKD: seluruh soal wajib memiliki kategori subtes.
+      const targetScoringMode = input.scoringMode ?? tryout.scoringMode;
+      if (targetScoringMode === ScoringMode.RAW) {
+        const missingSectionCount = await prisma.tryoutQuestion.count({
+          where: { tryoutId, section: null },
+        });
+        if (missingSectionCount > 0) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `Paket tryout SKD belum dapat dipublikasikan: ${missingSectionCount} soal belum memiliki kategori subtes (TWK/TIU/TKP).`,
+          );
+        }
+      }
     }
 
     const startDate = input.startDate !== undefined ? (input.startDate ? new Date(input.startDate) : null) : undefined;
@@ -161,6 +179,10 @@ export class TryoutService {
         ...(input.subjectId ? { subjectId: input.subjectId } : {}),
         ...(input.durationMinutes ? { durationMinutes: input.durationMinutes } : {}),
         ...(input.passingScore !== undefined ? { passingScore: input.passingScore } : {}),
+        ...(input.scoringMode ? { scoringMode: input.scoringMode } : {}),
+        ...(input.passingTwk !== undefined ? { passingTwk: input.passingTwk } : {}),
+        ...(input.passingTiu !== undefined ? { passingTiu: input.passingTiu } : {}),
+        ...(input.passingTkp !== undefined ? { passingTkp: input.passingTkp } : {}),
         ...(input.maxAttempts !== undefined ? { maxAttempts: input.maxAttempts } : {}),
         ...(input.questionCount !== undefined ? { questionCount: input.questionCount } : {}),
         ...(input.status ? { status: input.status } : {}),
@@ -206,6 +228,18 @@ export class TryoutService {
       );
     }
 
+    // Mode skor mentah (mis. SKD) wajib menandai kategori subtes setiap soal
+    // agar skor per subtes dan ambang batas dapat dihitung dengan benar.
+    if (tryout.scoringMode === ScoringMode.RAW) {
+      const missingSection = input.questions.find((q) => !q.section);
+      if (missingSection) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Setiap soal pada tryout dengan mode skor mentah (SKD) wajib memiliki kategori subtes (TWK/TIU/TKP).",
+        );
+      }
+    }
+
     return prisma.$transaction(async (tx) => {
       // 1. Hapus relasi soal lama pada tryout ini
       await tx.tryoutQuestion.deleteMany({
@@ -221,6 +255,7 @@ export class TryoutService {
               questionId: q.questionId,
               orderNumber: q.orderNumber,
               weight: q.weight ?? 1.0,
+              section: q.section ?? null,
             },
           }),
         ),

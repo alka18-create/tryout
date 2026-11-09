@@ -22,13 +22,14 @@ interface OptionItem {
   content: string;
   imageUrl?: string | null;
   isCorrect: boolean;
+  score?: number | null;
 }
 
 interface QuestionDiscussion {
   orderNumber: number;
   weight: number;
   questionId: string;
-  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX" | "WEIGHTED_CHOICE";
   topicName: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   content: string;
@@ -67,6 +68,11 @@ export function DiscussionViewer({
   const currentQuestion = initialQuestions[activeIndex];
   const currentMatrix =
     currentQuestion?.type === "MATRIX" ? parseMatrixQuestion(currentQuestion.options) : null;
+  const currentMaxScore = currentQuestion
+    ? currentQuestion.type === "WEIGHTED_CHOICE"
+      ? Math.max(0, ...currentQuestion.options.map((o) => o.score ?? 0))
+      : currentQuestion.weight
+    : 0;
 
   const correctCount = initialQuestions.filter((q) => q.answerStatus === "CORRECT").length;
   const partialCount = initialQuestions.filter((q) => q.answerStatus === "PARTIAL").length;
@@ -200,6 +206,8 @@ export function DiscussionViewer({
                   ? "Benar / Salah"
                   : currentQuestion.type === "MATRIX"
                   ? "Matriks / Tabel"
+                  : currentQuestion.type === "WEIGHTED_CHOICE"
+                  ? "Opsi Berbobot"
                   : "Pilihan Ganda"}
               </Badge>
               <Badge variant="default">{currentQuestion.topicName}</Badge>
@@ -226,7 +234,7 @@ export function DiscussionViewer({
               ) : currentQuestion.answerStatus === "PARTIAL" ? (
                 <Badge variant="warning" className="gap-1.5 py-1">
                   <AlertCircle className="w-3.5 h-3.5" />
-                  <span>Benar Sebagian (+{currentQuestion.scoreObtained} / {currentQuestion.weight} Poin)</span>
+                  <span>Benar Sebagian (+{currentQuestion.scoreObtained} / {currentMaxScore} Poin)</span>
                 </Badge>
               ) : currentQuestion.answerStatus === "WRONG" ? (
                 <Badge variant="danger" className="gap-1.5 py-1">
@@ -266,11 +274,19 @@ export function DiscussionViewer({
               <span className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-wider block">
                 {currentQuestion.type === "MATRIX"
                   ? "Matriks Jawaban & Analisis Kunci:"
+                  : currentQuestion.type === "WEIGHTED_CHOICE"
+                  ? "Pilihan Jawaban & Skor Opsi:"
                   : "Pilihan Jawaban & Analisis Kunci:"}
               </span>
               {currentQuestion.type === "MATRIX" ? (
                 <span className="text-xs text-slate-500 font-medium">
                   Kunci benar ditandai{" "}
+                  <span className="text-emerald-700 font-bold">hijau</span>, pilihan Anda{" "}
+                  <span className="text-blue-700 font-bold">biru</span>
+                </span>
+              ) : currentQuestion.type === "WEIGHTED_CHOICE" ? (
+                <span className="text-xs text-slate-500 font-medium">
+                  Skor tertinggi ditandai{" "}
                   <span className="text-emerald-700 font-bold">hijau</span>, pilihan Anda{" "}
                   <span className="text-blue-700 font-bold">biru</span>
                 </span>
@@ -381,15 +397,24 @@ export function DiscussionViewer({
               </div>
             ) : (
               currentQuestion.options.map((option) => {
+              const isWeighted = currentQuestion.type === "WEIGHTED_CHOICE";
               const isStudentChoice = (currentQuestion.selectedOptionIds && currentQuestion.selectedOptionIds.length > 0)
                 ? currentQuestion.selectedOptionIds.includes(option.id)
                 : currentQuestion.selectedOptionId === option.id;
               const isCorrectAnswer = (currentQuestion.correctOptionIds && currentQuestion.correctOptionIds.length > 0)
                 ? currentQuestion.correctOptionIds.includes(option.id)
                 : option.isCorrect;
+              const isTopScore =
+                isWeighted && currentMaxScore > 0 && (option.score ?? 0) === currentMaxScore;
 
               let style = "bg-white border-slate-200 text-slate-800 shadow-xs";
-              if (isCorrectAnswer) {
+              if (isWeighted) {
+                if (isTopScore) {
+                  style = "bg-emerald-50/90 border-emerald-300 text-emerald-950 ring-1 ring-emerald-400/50 shadow-xs";
+                } else if (isStudentChoice) {
+                  style = "bg-blue-50/90 border-blue-300 text-blue-950 ring-1 ring-blue-400/50 shadow-xs";
+                }
+              } else if (isCorrectAnswer) {
                 style = "bg-emerald-50/90 border-emerald-300 text-emerald-950 ring-1 ring-emerald-400/50 shadow-xs";
               } else if (isStudentChoice && !isCorrectAnswer) {
                 style = "bg-rose-50/90 border-rose-300 text-rose-950 ring-1 ring-rose-400/50 shadow-xs";
@@ -402,7 +427,13 @@ export function DiscussionViewer({
                 >
                   <div
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-black text-sm sm:text-base shrink-0 ${
-                      isCorrectAnswer
+                      isWeighted
+                        ? isTopScore
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : isStudentChoice
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "bg-slate-100 text-slate-700"
+                        : isCorrectAnswer
                         ? "bg-emerald-600 text-white shadow-xs"
                         : isStudentChoice
                         ? "bg-rose-600 text-white shadow-xs"
@@ -428,21 +459,41 @@ export function DiscussionViewer({
 
                   {/* Badges Status Opsi */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    {isCorrectAnswer && (
-                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
-                        KUNCI JAWABAN
-                      </span>
-                    )}
-                    {isStudentChoice && (
-                      <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded border ${
-                          isCorrectAnswer
-                            ? "text-emerald-800 bg-emerald-100 border-emerald-200"
-                            : "text-rose-800 bg-rose-100 border-rose-200"
-                        }`}
-                      >
-                        PILIHAN ANDA
-                      </span>
+                    {isWeighted ? (
+                      <>
+                        <span className="text-[10px] font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
+                          SKOR {option.score ?? 0}
+                        </span>
+                        {isTopScore && (
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                            SKOR TERTINGGI
+                          </span>
+                        )}
+                        {isStudentChoice && (
+                          <span className="text-[10px] font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
+                            PILIHAN ANDA
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {isCorrectAnswer && (
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                            KUNCI JAWABAN
+                          </span>
+                        )}
+                        {isStudentChoice && (
+                          <span
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded border ${
+                              isCorrectAnswer
+                                ? "text-emerald-800 bg-emerald-100 border-emerald-200"
+                                : "text-rose-800 bg-rose-100 border-rose-200"
+                            }`}
+                          >
+                            PILIHAN ANDA
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

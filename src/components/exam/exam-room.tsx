@@ -40,7 +40,7 @@ interface ExamQuestion {
   orderNumber: number;
   weight: number;
   questionId: string;
-  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX" | "WEIGHTED_CHOICE";
   content: string;
   imageUrl?: string | null;
   options: QuestionOption[];
@@ -57,6 +57,7 @@ interface ExamSheetData {
   attemptNumber?: number;
   maxAttempts?: number;
   status: string;
+  scoringMode?: "NORMALIZED" | "RAW";
   durationMinutes: number;
   startedAt: string;
   expiresAt: string;
@@ -67,6 +68,7 @@ interface ExamSheetData {
 
 export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   const router = useRouter();
+  const isRawMode = initialData.scoringMode === "RAW";
 
   // Questions state
   const [questions, setQuestions] = useState<ExamQuestion[]>(initialData.questions);
@@ -371,7 +373,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 variant={submitResult.isPassed ? "success" : "danger"}
                 className="text-xs sm:text-sm px-4 py-1.5 font-black uppercase tracking-wider rounded-xl shadow-2xs"
               >
-                {submitResult.isPassed ? "LULUS STANDAR KKM" : "DI BAWAH KKM"}
+                {submitResult.isPassed ? "LULUS" : "BELUM LULUS"}
               </Badge>
             </div>
 
@@ -381,13 +383,19 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 <span className="text-xl sm:text-2xl font-black text-emerald-600 block">
                   {submitResult.correctCount}
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-emerald-800">Benar</span>
+                <span className="text-xs sm:text-sm font-bold text-emerald-800">
+                  {isRawMode ? "Skor Penuh" : "Benar"}
+                </span>
               </div>
               <div className="p-2 sm:p-3 rounded-2xl bg-rose-50/60 border border-rose-100">
                 <span className="text-xl sm:text-2xl font-black text-rose-600 block">
-                  {submitResult.wrongCount}
+                  {isRawMode
+                    ? submitResult.correctCount + submitResult.wrongCount
+                    : submitResult.wrongCount}
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-rose-800">Salah</span>
+                <span className="text-xs sm:text-sm font-bold text-rose-800">
+                  {isRawMode ? "Dijawab" : "Salah"}
+                </span>
               </div>
               <div className="p-2 sm:p-3 rounded-2xl bg-slate-100/70 border border-slate-200/80">
                 <span className="text-xl sm:text-2xl font-black text-slate-600 block">
@@ -522,18 +530,22 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 <span className="text-sm text-slate-400 font-semibold">/ {questions.length}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" || currentQuestion.type === "MATRIX" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
+                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" || currentQuestion.type === "MATRIX" || currentQuestion.type === "WEIGHTED_CHOICE" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "PG Kompleks"
                     : currentQuestion.type === "TRUE_FALSE"
                     ? "Benar / Salah"
                     : currentQuestion.type === "MATRIX"
                     ? "Matriks / Tabel"
+                    : currentQuestion.type === "WEIGHTED_CHOICE"
+                    ? "Opsi Berbobot"
                     : "Pilihan Ganda"}
                 </Badge>
-                <Badge variant="default" className="text-xs sm:text-sm px-3 py-1 font-semibold">
-                  Bobot: {currentQuestion.weight} Poin
-                </Badge>
+                {currentQuestion.type !== "WEIGHTED_CHOICE" && (
+                  <Badge variant="default" className="text-xs sm:text-sm px-3 py-1 font-semibold">
+                    Bobot: {currentQuestion.weight} Poin
+                  </Badge>
+                )}
               </div>
             </div>
 

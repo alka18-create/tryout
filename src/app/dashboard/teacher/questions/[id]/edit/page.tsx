@@ -37,6 +37,7 @@ export default async function EditQuestionPage({
       content: opt.content,
       imageUrl: opt.imageUrl || "",
       isCorrect: opt.isCorrect,
+      score: opt.score,
     })),
   };
 

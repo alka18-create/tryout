@@ -80,7 +80,10 @@ export default async function TeacherReportsPage() {
                 <div>
                   <h3 className="font-bold text-lg text-slate-900 line-clamp-2">{tryout.title}</h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    {tryout.questionCount} Butir Soal • Durasi {tryout.durationMinutes} Menit • KKM {tryout.passingScore}
+                    {tryout.questionCount} Butir Soal • Durasi {tryout.durationMinutes} Menit •{" "}
+                    {tryout.scoringMode === "RAW"
+                      ? `SKD (TWK ${tryout.passingTwk ?? "-"} / TIU ${tryout.passingTiu ?? "-"} / TKP ${tryout.passingTkp ?? "-"})`
+                      : `KKM ${tryout.passingScore}`}
                   </p>
                 </div>
 

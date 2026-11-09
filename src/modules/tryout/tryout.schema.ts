@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { TryoutStatus, DiscussionVisibility } from "@/generated/prisma/client";
+import {
+  TryoutStatus,
+  DiscussionVisibility,
+  ScoringMode,
+  SkdSection,
+} from "@/generated/prisma/client";
 
 export const createTryoutSchema = z.object({
   title: z.string().min(3, "Judul tryout minimal 3 karakter"),
@@ -12,8 +17,14 @@ export const createTryoutSchema = z.object({
   passingScore: z.coerce
     .number()
     .min(0, "Nilai KKM minimal 0")
-    .max(100, "Nilai KKM maksimal 100")
+    .max(1000, "Nilai ambang batas maksimal 1000")
     .default(75),
+  // Mode penilaian: NORMALIZED (0-100) atau RAW (skor mentah, mis. SKD)
+  scoringMode: z.nativeEnum(ScoringMode).default(ScoringMode.NORMALIZED),
+  // Ambang batas per subtes (dipakai mode RAW)
+  passingTwk: z.number().min(0).max(1000).nullable().optional(),
+  passingTiu: z.number().min(0).max(1000).nullable().optional(),
+  passingTkp: z.number().min(0).max(1000).nullable().optional(),
   maxAttempts: z.coerce
     .number()
     .int()
@@ -41,6 +52,7 @@ export const tryoutQuestionItemSchema = z.object({
   questionId: z.string().min(1),
   orderNumber: z.number().min(1),
   weight: z.number().min(0.1).default(1.0),
+  section: z.nativeEnum(SkdSection).nullable().optional(),
 });
 
 export const setTryoutQuestionsSchema = z.object({

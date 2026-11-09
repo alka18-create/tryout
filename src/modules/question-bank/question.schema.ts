@@ -24,6 +24,8 @@ const optionItemSchema = z
     content: z.string().nullable().optional().default(""),
     imageUrl: z.string().nullable().optional().or(z.literal("")),
     isCorrect: z.boolean().default(false),
+    // Skor opsi untuk soal WEIGHTED_CHOICE (TKP): 1-5
+    score: z.number().int().min(1, "Skor opsi minimal 1").max(5, "Skor opsi maksimal 5").nullable().optional(),
   })
   .refine(
     (opt) =>
@@ -148,6 +150,30 @@ export const questionSchema = z
           });
         }
       });
+    } else if (data.type === QuestionType.WEIGHTED_CHOICE) {
+      // Opsi berbobot (TKP): tepat 5 opsi dengan skor unik 1-5.
+      if (data.options.length !== 5) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Soal opsi berbobot (TKP) wajib memiliki tepat 5 opsi jawaban (A-E)",
+          path: ["options"],
+        });
+      }
+
+      const scores = data.options.map((opt) => opt.score);
+      if (scores.some((s) => typeof s !== "number" || !Number.isInteger(s) || s < 1 || s > 5)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Setiap opsi wajib memiliki skor bilangan bulat 1 sampai 5",
+          path: ["options"],
+        });
+      } else if (new Set(scores).size !== data.options.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Skor antar opsi tidak boleh sama (harus unik 1-5)",
+          path: ["options"],
+        });
+      }
     }
   });
 

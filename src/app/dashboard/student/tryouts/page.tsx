@@ -31,6 +31,10 @@ interface TryoutStudentItem {
   };
   durationMinutes: number;
   passingScore: number;
+  scoringMode?: "NORMALIZED" | "RAW";
+  passingTwk?: number | null;
+  passingTiu?: number | null;
+  passingTkp?: number | null;
   questionCount: number;
   maxAttempts?: number;
   attemptsUsed?: number;
@@ -390,10 +394,10 @@ export default function StudentTryoutsPage() {
                     <div>
                       <span className="text-[11px] text-slate-500 flex items-center justify-center gap-1 font-medium">
                         <Award className="w-3 h-3 text-slate-400" />
-                        KKM
+                        {tryout.scoringMode === "RAW" ? "Ambang" : "KKM"}
                       </span>
                       <p className="text-xs font-bold text-emerald-700 mt-0.5">
-                        {tryout.passingScore}
+                        {tryout.scoringMode === "RAW" ? "SKD" : tryout.passingScore}
                       </p>
                     </div>
                   </div>
@@ -408,7 +412,8 @@ export default function StudentTryoutsPage() {
                             tryout.isPassed ? "text-emerald-700" : "text-rose-600"
                           }`}
                         >
-                          {tryout.highestScore ?? tryout.latestScore} / 100
+                          {tryout.highestScore ?? tryout.latestScore}
+                          {tryout.scoringMode === "RAW" ? "" : " / 100"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">

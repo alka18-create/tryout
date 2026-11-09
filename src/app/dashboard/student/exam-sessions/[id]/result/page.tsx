@@ -47,6 +47,7 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
   const isDiscussionAvailable =
     result.discussionVisibility === "ALWAYS" ||
     result.discussionVisibility === "AFTER_SUBMIT";
+  const isRaw = result.scoringMode === "RAW";
 
   return (
     <div className="max-w-5xl space-y-7 mx-auto pb-10">
@@ -74,7 +75,13 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
                 variant={result.isPassed ? "success" : "danger"}
                 className="text-xs sm:text-sm px-3.5 py-1 font-black rounded-xl"
               >
-                {result.isPassed ? "LULUS STANDAR KKM" : "DI BAWAH KKM"}
+                {result.isPassed
+                  ? isRaw
+                    ? "LULUS AMBANG BATAS"
+                    : "LULUS STANDAR KKM"
+                  : isRaw
+                  ? "BELUM LULUS AMBANG BATAS"
+                  : "DI BAWAH KKM"}
               </Badge>
               {result.isHighestScore && (
                 <Badge variant="success" className="text-xs sm:text-sm font-black px-3.5 py-1 rounded-xl">
@@ -104,7 +111,9 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
                 Skor Percobaan Ini
               </span>
               <span className="text-xs sm:text-sm font-semibold text-slate-400 block">
-                Standar KKM: {result.passingScore}
+                {isRaw
+                  ? `Ambang: TWK ${result.passingTwk ?? "-"} • TIU ${result.passingTiu ?? "-"} • TKP ${result.passingTkp ?? "-"}`
+                  : `Standar KKM: ${result.passingScore}`}
               </span>
               {!result.isHighestScore && (
                 <span className="text-xs sm:text-sm font-bold text-emerald-600 block mt-1">
@@ -179,37 +188,77 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
 
         {/* 4 Metrik Ringkas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-6 mt-6 border-t border-slate-100">
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-emerald-600 mb-1.5">
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-bold">Benar</span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.correctCount}</p>
-          </div>
+          {isRaw ? (
+            <>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-slate-600 mb-1.5">
+                  <FileText className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Total Soal</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.totalQuestions}</p>
+              </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-rose-600 mb-1.5">
-              <XCircle className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-bold">Salah</span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.wrongCount}</p>
-          </div>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-emerald-600 mb-1.5">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Dijawab</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">
+                  {result.correctCount + result.wrongCount}
+                </p>
+              </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-slate-500 mb-1.5">
-              <HelpCircle className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-bold">Kosong</span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.unansweredCount}</p>
-          </div>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-slate-500 mb-1.5">
+                  <HelpCircle className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Kosong</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.unansweredCount}</p>
+              </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-blue-600 mb-1.5">
-              <Clock className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-bold">Waktu</span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.durationSpentMinutes} Menit</p>
-          </div>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-blue-600 mb-1.5">
+                  <Clock className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Waktu</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.durationSpentMinutes} Menit</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-emerald-600 mb-1.5">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Benar</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.correctCount}</p>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-rose-600 mb-1.5">
+                  <XCircle className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Salah</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.wrongCount}</p>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-slate-500 mb-1.5">
+                  <HelpCircle className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Kosong</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.unansweredCount}</p>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-blue-600 mb-1.5">
+                  <Clock className="w-5 h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Waktu</span>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{result.durationSpentMinutes} Menit</p>
+              </div>
+            </>
+          )}
         </div>
       </Card>
 

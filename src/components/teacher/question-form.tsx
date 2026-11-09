@@ -16,7 +16,7 @@ import {
   type MatrixRowItem,
 } from "@/lib/matrix-question";
 
-type QuestionFormType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
+type QuestionFormType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX" | "WEIGHTED_CHOICE";
 
 const DEFAULT_MATRIX_COLUMNS = ["Sesuai", "Tidak Sesuai"];
 const MAX_MATRIX_COLUMNS = 5;
@@ -83,6 +83,7 @@ interface QuestionFormProps {
       content: string;
       imageUrl?: string | null;
       isCorrect: boolean;
+      score?: number | null;
     }>;
   };
   isEditing?: boolean;
@@ -106,12 +107,13 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
     options: initialData?.options?.map((opt) => ({
       ...opt,
       imageUrl: opt.imageUrl || "",
+      score: opt.score ?? null,
     })) || [
-      { label: "A", content: "", isCorrect: true, imageUrl: "" },
-      { label: "B", content: "", isCorrect: false, imageUrl: "" },
-      { label: "C", content: "", isCorrect: false, imageUrl: "" },
-      { label: "D", content: "", isCorrect: false, imageUrl: "" },
-      { label: "E", content: "", isCorrect: false, imageUrl: "" },
+      { label: "A", content: "", isCorrect: true, imageUrl: "", score: null },
+      { label: "B", content: "", isCorrect: false, imageUrl: "", score: null },
+      { label: "C", content: "", isCorrect: false, imageUrl: "", score: null },
+      { label: "D", content: "", isCorrect: false, imageUrl: "", score: null },
+      { label: "E", content: "", isCorrect: false, imageUrl: "", score: null },
     ],
   });
 
@@ -168,17 +170,17 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
 
     if (newType === "TRUE_FALSE") {
       newOptions = [
-        { label: "A", content: "Benar", isCorrect: true, imageUrl: "" },
-        { label: "B", content: "Salah", isCorrect: false, imageUrl: "" },
+        { label: "A", content: "Benar", isCorrect: true, imageUrl: "", score: null },
+        { label: "B", content: "Salah", isCorrect: false, imageUrl: "", score: null },
       ];
     } else if (newType === "SINGLE_CHOICE") {
       if (newOptions.length !== 5) {
         newOptions = [
-          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "" },
-          { label: "B", content: newOptions[1]?.content || "", isCorrect: false, imageUrl: newOptions[1]?.imageUrl || "" },
-          { label: "C", content: "", isCorrect: false, imageUrl: "" },
-          { label: "D", content: "", isCorrect: false, imageUrl: "" },
-          { label: "E", content: "", isCorrect: false, imageUrl: "" },
+          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "", score: null },
+          { label: "B", content: newOptions[1]?.content || "", isCorrect: false, imageUrl: newOptions[1]?.imageUrl || "", score: null },
+          { label: "C", content: "", isCorrect: false, imageUrl: "", score: null },
+          { label: "D", content: "", isCorrect: false, imageUrl: "", score: null },
+          { label: "E", content: "", isCorrect: false, imageUrl: "", score: null },
         ];
       } else {
         let found = false;
@@ -194,13 +196,22 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
     } else if (newType === "MULTIPLE_CHOICE") {
       if (newOptions.length !== 5) {
         newOptions = [
-          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "" },
-          { label: "B", content: newOptions[1]?.content || "", isCorrect: true, imageUrl: newOptions[1]?.imageUrl || "" },
-          { label: "C", content: "", isCorrect: false, imageUrl: "" },
-          { label: "D", content: "", isCorrect: false, imageUrl: "" },
-          { label: "E", content: "", isCorrect: false, imageUrl: "" },
+          { label: "A", content: newOptions[0]?.content || "", isCorrect: true, imageUrl: newOptions[0]?.imageUrl || "", score: null },
+          { label: "B", content: newOptions[1]?.content || "", isCorrect: true, imageUrl: newOptions[1]?.imageUrl || "", score: null },
+          { label: "C", content: "", isCorrect: false, imageUrl: "", score: null },
+          { label: "D", content: "", isCorrect: false, imageUrl: "", score: null },
+          { label: "E", content: "", isCorrect: false, imageUrl: "", score: null },
         ];
       }
+    } else if (newType === "WEIGHTED_CHOICE") {
+      // TKP: 5 opsi dengan skor awal 5-4-3-2-1 (dapat diubah guru).
+      newOptions = [
+        { label: "A", content: newOptions[0]?.content || "", isCorrect: false, imageUrl: newOptions[0]?.imageUrl || "", score: 5 },
+        { label: "B", content: newOptions[1]?.content || "", isCorrect: false, imageUrl: newOptions[1]?.imageUrl || "", score: 4 },
+        { label: "C", content: newOptions[2]?.content || "", isCorrect: false, imageUrl: newOptions[2]?.imageUrl || "", score: 3 },
+        { label: "D", content: newOptions[3]?.content || "", isCorrect: false, imageUrl: newOptions[3]?.imageUrl || "", score: 2 },
+        { label: "E", content: newOptions[4]?.content || "", isCorrect: false, imageUrl: newOptions[4]?.imageUrl || "", score: 1 },
+      ];
     } else if (newType === "MATRIX") {
       // Siapkan struktur awal matriks bila belum pernah diisi
       if (matrixColumns.length < 2) {
@@ -244,6 +255,12 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
   const handleOptionImageChange = (index: number, imageUrl: string) => {
     const newOptions = [...formData.options];
     newOptions[index].imageUrl = imageUrl;
+    setFormData({ ...formData, options: newOptions });
+  };
+
+  const handleOptionScoreChange = (index: number, score: number) => {
+    const newOptions = [...formData.options];
+    newOptions[index].score = Number.isNaN(score) ? null : score;
     setFormData({ ...formData, options: newOptions });
   };
 
@@ -369,6 +386,33 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         setFeedback({
           type: "error",
           text: "Pilihan ganda kompleks wajib memiliki minimal 2 kunci jawaban benar.",
+        });
+        return;
+      }
+    } else if (formData.type === "WEIGHTED_CHOICE") {
+      if (formData.options.length !== 5) {
+        setFeedback({
+          type: "error",
+          text: "Soal opsi berbobot (TKP) wajib memiliki tepat 5 opsi jawaban (A-E).",
+        });
+        return;
+      }
+      const scores = formData.options.map((opt) => opt.score);
+      if (
+        scores.some(
+          (s) => typeof s !== "number" || !Number.isInteger(s) || s < 1 || s > 5,
+        )
+      ) {
+        setFeedback({
+          type: "error",
+          text: "Setiap opsi wajib memiliki skor bilangan bulat 1 sampai 5.",
+        });
+        return;
+      }
+      if (new Set(scores).size !== formData.options.length) {
+        setFeedback({
+          type: "error",
+          text: "Skor antar opsi tidak boleh sama (harus unik 1-5).",
         });
         return;
       }
@@ -550,7 +594,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Tipe / Format Soal
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {[
                     {
                       val: "SINGLE_CHOICE",
@@ -571,6 +615,11 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       val: "MATRIX",
                       title: "Matriks / Tabel",
                       desc: "Beberapa Pernyataan & Kolom",
+                    },
+                    {
+                      val: "WEIGHTED_CHOICE",
+                      title: "Opsi Berbobot (TKP)",
+                      desc: "5 Opsi, Skor 1–5",
                     },
                   ].map((t) => (
                     <button
@@ -657,6 +706,8 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       ? "Pilihan Jawaban Kompleks (Centang Jawaban Benar)"
                       : formData.type === "MATRIX"
                       ? "Tabel Pernyataan & Kolom Jawaban"
+                      : formData.type === "WEIGHTED_CHOICE"
+                      ? "Pilihan Jawaban Berbobot (TKP)"
                       : "Pilihan Jawaban (A - E)"}
                   </CardTitle>
                   <CardDescription>
@@ -666,6 +717,8 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       ? "Pilih radio button untuk menentukan apakah pernyataan soal bernilai Benar atau Salah."
                       : formData.type === "MATRIX"
                       ? "Tambahkan kolom jawaban (mis. Sesuai / Tidak Sesuai), lalu isi pernyataan per baris dan tandai satu kolom kunci untuk setiap baris."
+                      : formData.type === "WEIGHTED_CHOICE"
+                      ? "Isi skor 1–5 pada setiap opsi (khas soal TKP). Skor antar opsi harus unik. Jawaban kosong bernilai 0."
                       : "Pilih radio button untuk menandai satu kunci jawaban yang benar."}
                   </CardDescription>
                 </div>
@@ -804,13 +857,29 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                 <div
                   key={opt.label}
                   className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
-                    opt.isCorrect
+                    formData.type !== "WEIGHTED_CHOICE" && opt.isCorrect
                       ? "border-emerald-400 bg-emerald-50/70 shadow-xs"
                       : "border-slate-200 bg-slate-50/50 hover:bg-slate-50"
                   }`}
                 >
-                  <div className="pt-2">
-                    {formData.type === "MULTIPLE_CHOICE" ? (
+                  <div className="pt-1.5">
+                    {formData.type === "WEIGHTED_CHOICE" ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <input
+                          type="number"
+                          min={1}
+                          max={5}
+                          required
+                          value={opt.score ?? ""}
+                          onChange={(e) =>
+                            handleOptionScoreChange(index, parseInt(e.target.value, 10))
+                          }
+                          className="w-14 px-2 py-1.5 text-center text-sm font-bold rounded-lg bg-white border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-600 shadow-xs"
+                          title="Skor opsi (1-5)"
+                        />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Skor</span>
+                      </div>
+                    ) : formData.type === "MULTIPLE_CHOICE" ? (
                       <input
                         type="checkbox"
                         checked={opt.isCorrect}
@@ -831,7 +900,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   </div>
 
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
-                    opt.isCorrect
+                    formData.type !== "WEIGHTED_CHOICE" && opt.isCorrect
                       ? "bg-emerald-600 text-white shadow-xs"
                       : "bg-white border border-slate-200 text-slate-700 shadow-xs"
                   }`}>
@@ -862,11 +931,15 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                     )}
                   </div>
 
-                  {opt.isCorrect && (
+                  {formData.type === "WEIGHTED_CHOICE" ? (
+                    <Badge variant="info" className="shrink-0 self-start mt-1">
+                      Skor {opt.score ?? "-"}
+                    </Badge>
+                  ) : opt.isCorrect ? (
                     <Badge variant={formData.type === "MULTIPLE_CHOICE" ? "info" : "success"} className="shrink-0 self-start mt-1">
                       Kunci Benar
                     </Badge>
-                  )}
+                  ) : null}
                 </div>
               ))
               )}
@@ -933,6 +1006,8 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       ? "Benar / Salah"
                       : formData.type === "MATRIX"
                       ? "Matriks / Tabel"
+                      : formData.type === "WEIGHTED_CHOICE"
+                      ? "Opsi Berbobot (TKP)"
                       : "Pilihan Ganda"}
                   </Badge>
                   <Badge variant={formData.difficulty === "HARD" ? "danger" : formData.difficulty === "MEDIUM" ? "warning" : "success"}>
@@ -999,6 +1074,11 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                       </div>
                       <div className="flex-1 space-y-1.5">
                         <span className="text-slate-800 block">{opt.content || `(Opsi ${opt.label})`}</span>
+                        {formData.type === "WEIGHTED_CHOICE" && (
+                          <span className="inline-block text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                            Skor {opt.score ?? "-"}
+                          </span>
+                        )}
                         {opt.imageUrl && (
                           <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs">
                             <img

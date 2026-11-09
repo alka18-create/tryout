@@ -40,13 +40,14 @@ interface Option {
   label: string;
   content: string;
   isCorrect: boolean;
+  score?: number | null;
 }
 
 interface Question {
   id: string;
   content: string;
   imageUrl?: string | null;
-  type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
+  type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX" | "WEIGHTED_CHOICE";
   difficulty: "EASY" | "MEDIUM" | "HARD";
   explanation?: string | null;
   topic: {
@@ -728,6 +729,11 @@ function TeacherQuestionsContent() {
                       <Badge variant="outline" className="text-xs">
                         {q.topic.name}
                       </Badge>
+                      {q.type === "WEIGHTED_CHOICE" && (
+                        <Badge variant="info" className="text-xs">
+                          Opsi Berbobot (TKP)
+                        </Badge>
+                      )}
                       <Badge
                         variant={
                           q.difficulty === "HARD"
@@ -796,28 +802,44 @@ function TeacherQuestionsContent() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                      {q.options.map((opt) => (
-                        <div
-                          key={opt.id}
-                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
-                            opt.isCorrect
-                              ? "border-emerald-300 bg-emerald-50/80 text-emerald-950 font-semibold"
-                              : "border-slate-200 bg-slate-50/60 text-slate-700"
-                          }`}
-                        >
-                          <span
-                            className={`min-w-5 h-5 px-1.5 rounded-md flex items-center justify-center text-[10px] font-bold whitespace-nowrap ${
-                              opt.isCorrect
-                                ? "bg-emerald-600 text-white"
-                                : "bg-slate-200 text-slate-700"
+                      {q.options.map((opt) => {
+                        const isWeighted = q.type === "WEIGHTED_CHOICE";
+                        const maxScore = isWeighted
+                          ? Math.max(0, ...q.options.map((o) => o.score ?? 0))
+                          : 0;
+                        const isHighlighted = isWeighted
+                          ? maxScore > 0 && (opt.score ?? 0) === maxScore
+                          : opt.isCorrect;
+
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
+                              isHighlighted
+                                ? "border-emerald-300 bg-emerald-50/80 text-emerald-950 font-semibold"
+                                : "border-slate-200 bg-slate-50/60 text-slate-700"
                             }`}
                           >
-                            {formatMatrixOptionLabel(opt.label)}
-                          </span>
-                          <span className="flex-1 truncate">{opt.content}</span>
-                          {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                        </div>
-                      ))}
+                            <span
+                              className={`min-w-5 h-5 px-1.5 rounded-md flex items-center justify-center text-[10px] font-bold whitespace-nowrap ${
+                                isHighlighted
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              {formatMatrixOptionLabel(opt.label)}
+                            </span>
+                            <span className="flex-1 truncate">{opt.content}</span>
+                            {isWeighted ? (
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded shrink-0">
+                                Skor {opt.score ?? "-"}
+                              </span>
+                            ) : isHighlighted ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

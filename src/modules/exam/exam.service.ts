@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { ExamSessionStatus, TryoutStatus, QuestionType } from "@/generated/prisma/client";
+import {
+  ExamSessionStatus,
+  TryoutStatus,
+  QuestionType,
+  ScoringMode,
+  SkdSection,
+} from "@/generated/prisma/client";
 import { SaveAnswerInput } from "./exam.schema";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 import { parseMatrixLabel, parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
@@ -114,6 +120,10 @@ export class ExamService {
         subject: t.subject,
         durationMinutes: t.durationMinutes,
         passingScore: t.passingScore,
+        scoringMode: t.scoringMode,
+        passingTwk: t.passingTwk,
+        passingTiu: t.passingTiu,
+        passingTkp: t.passingTkp,
         questionCount: t.questionCount
           ? Math.min(t.questionCount, t._count.tryoutQuestions)
           : t._count.tryoutQuestions,
@@ -258,6 +268,10 @@ export class ExamService {
       subject: tryout.subject,
       durationMinutes: tryout.durationMinutes,
       passingScore: tryout.passingScore,
+      scoringMode: tryout.scoringMode,
+      passingTwk: tryout.passingTwk,
+      passingTiu: tryout.passingTiu,
+      passingTkp: tryout.passingTkp,
       questionCount: tryout.questionCount
         ? Math.min(tryout.questionCount, tryout._count.tryoutQuestions)
         : tryout._count.tryoutQuestions,
@@ -336,6 +350,18 @@ export class ExamService {
 
     if (tryout.tryoutQuestions.length === 0) {
       throw new AppError("VALIDATION_ERROR", "Paket tryout belum memiliki butir soal.");
+    }
+
+    // Mode skor mentah (SKD) membutuhkan kategori subtes pada setiap soal
+    // agar skor per subtes dan ambang batas dapat dihitung.
+    if (tryout.scoringMode === ScoringMode.RAW) {
+      const missingSection = tryout.tryoutQuestions.some((tq) => !tq.section);
+      if (missingSection) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Paket tryout SKD belum lengkap: setiap soal wajib memiliki kategori subtes (TWK/TIU/TKP).",
+        );
+      }
     }
 
     const now = Date.now();
@@ -575,6 +601,7 @@ export class ExamService {
       attemptNumber: session.attemptNumber,
       maxAttempts: session.tryout.maxAttempts ?? 3,
       status: session.status,
+      scoringMode: session.tryout.scoringMode,
       durationMinutes: session.tryout.durationMinutes,
       startedAt: session.startedAt.toISOString(),
       expiresAt: session.expiresAt.toISOString(),
@@ -757,17 +784,22 @@ export class ExamService {
       };
     }
 
-    // 1. Buat map bobot soal berdasarkan tryoutQuestions
+    // 1. Buat map bobot & kategori subtes berdasarkan tryoutQuestions
     const weightMap = new Map<string, number>();
+    const sectionMap = new Map<string, SkdSection>();
     session.tryout.tryoutQuestions.forEach((tq) => {
       weightMap.set(tq.questionId, tq.weight);
+      if (tq.section) sectionMap.set(tq.questionId, tq.section);
     });
 
-    // Hitung total bobot maksimal HANYA dari butir soal yang diujikan dalam sesi ini (session.answers)
+    // Akumulator skor per subtes (TWK/TIU/TKP) untuk mode RAW / SKD
+    const sectionStats = new Map<
+      SkdSection,
+      { score: number; maxScore: number; totalCount: number; correctCount: number }
+    >();
+
+    // Total skor maksimum dihitung per butir (mendukung opsi berbobot).
     let totalMaxWeight = 0;
-    session.answers.forEach((ans) => {
-      totalMaxWeight += weightMap.get(ans.questionId) || 1.0;
-    });
 
     // 2. Evaluasi setiap butir jawaban
     let totalEarnedScore = 0;
@@ -789,8 +821,17 @@ export class ExamService {
 
     for (const ans of session.answers) {
       const qWeight = weightMap.get(ans.questionId) || 1.0;
+      const section = sectionMap.get(ans.questionId);
       const topicId = ans.question.topicId;
       const qType = ans.question.type;
+
+      // Skor maksimum butir: opsi berbobot memakai skor opsi tertinggi.
+      const qMax =
+        qType === QuestionType.WEIGHTED_CHOICE
+          ? Math.max(1, ...ans.question.options.map((o) => o.score ?? 0))
+          : qWeight;
+
+      totalMaxWeight += qMax;
 
       if (!topicStats.has(topicId)) {
         topicStats.set(topicId, { total: 0, correct: 0, wrong: 0 });
@@ -798,10 +839,27 @@ export class ExamService {
       const stat = topicStats.get(topicId)!;
       stat.total += 1;
 
+      if (section) {
+        if (!sectionStats.has(section)) {
+          sectionStats.set(section, {
+            score: 0,
+            maxScore: 0,
+            totalCount: 0,
+            correctCount: 0,
+          });
+        }
+        const sectionStat = sectionStats.get(section)!;
+        sectionStat.totalCount += 1;
+        sectionStat.maxScore += qMax;
+      }
+
       // Ambil opsi yang dipilih siswa (bisa dari selectedOptionIds atau fallback selectedOptionId)
-      const selectedIds = ans.selectedOptionIds && ans.selectedOptionIds.length > 0
-        ? ans.selectedOptionIds
-        : (ans.selectedOptionId ? [ans.selectedOptionId] : []);
+      const selectedIds =
+        ans.selectedOptionIds && ans.selectedOptionIds.length > 0
+          ? ans.selectedOptionIds
+          : ans.selectedOptionId
+            ? [ans.selectedOptionId]
+            : [];
 
       if (selectedIds.length === 0) {
         // Kosong / Tidak Dijawab
@@ -811,7 +869,13 @@ export class ExamService {
           isCorrect: false,
           score: 0,
         });
-      } else if (qType === QuestionType.MATRIX) {
+        continue;
+      }
+
+      let exactEarnedScore = 0;
+      let isFullyCorrect = false;
+
+      if (qType === QuestionType.MATRIX) {
         // Matriks: skor parsial proporsional per baris pernyataan.
         const parsedMatrix = parseMatrixQuestion(ans.question.options);
         const selectedSet = new Set(selectedIds);
@@ -826,30 +890,8 @@ export class ExamService {
 
         const totalRows = parsedMatrix.rows.length;
         const ratio = totalRows > 0 ? correctRows / totalRows : 0;
-        // Akumulasi skor total memakai nilai presisi penuh; pembulatan 2 desimal
-        // hanya untuk nilai per butir yang disimpan, agar skor akhir tidak
-        // kehilangan presisi (mis. 1 dari 3 baris benar tetap 33.3, bukan 33.0).
-        const exactEarnedScore = ratio * qWeight;
-        const earnedScore = Math.round(exactEarnedScore * 100) / 100;
-        totalEarnedScore += exactEarnedScore;
-
-        const isFullyCorrect = totalRows > 0 && correctRows === totalRows;
-        if (isFullyCorrect) {
-          correctCount++;
-          stat.correct += 1;
-        } else {
-          wrongCount++;
-          stat.wrong += 1;
-          if (ratio > 0) {
-            stat.correct += ratio;
-          }
-        }
-
-        answerUpdates.push({
-          id: ans.id,
-          isCorrect: isFullyCorrect,
-          score: earnedScore,
-        });
+        exactEarnedScore = ratio * qWeight;
+        isFullyCorrect = totalRows > 0 && correctRows === totalRows;
       } else if (qType === QuestionType.MULTIPLE_CHOICE) {
         // Pilihan Ganda Kompleks: Skor Parsial Proporsional
         const correctOptions = ans.question.options.filter((o) => o.isCorrect);
@@ -867,68 +909,99 @@ export class ExamService {
           }
         }
 
-        // Rasio proporsional dengan penalti opsi salah:
-        // rasio = max(0, (numCorrectChosen - numWrongChosen) / totalCorrectRequired)
-        const ratio = totalCorrectRequired > 0
-          ? Math.max(0, (numCorrectChosen - numWrongChosen) / totalCorrectRequired)
-          : 0;
+        // Rasio proporsional dengan penalti opsi salah.
+        const ratio =
+          totalCorrectRequired > 0
+            ? Math.max(0, (numCorrectChosen - numWrongChosen) / totalCorrectRequired)
+            : 0;
 
-        const earnedScore = Math.round(ratio * qWeight * 100) / 100;
-        totalEarnedScore += ratio * qWeight;
-
-        const isFullyCorrect = ratio === 1.0;
-        if (isFullyCorrect) {
-          correctCount++;
-          stat.correct += 1;
-        } else {
-          wrongCount++;
-          stat.wrong += 1;
-          // Akumulasi penguasaan materi proporsional
-          if (ratio > 0) {
-            stat.correct += ratio;
-          }
-        }
-
-        answerUpdates.push({
-          id: ans.id,
-          isCorrect: isFullyCorrect,
-          score: earnedScore,
-        });
+        exactEarnedScore = ratio * qWeight;
+        isFullyCorrect = ratio === 1.0;
+      } else if (qType === QuestionType.WEIGHTED_CHOICE) {
+        // Opsi berbobot (TKP): skor = skor opsi terpilih; kosong = 0.
+        const chosenOpt = ans.question.options.find((o) => o.id === selectedIds[0]);
+        exactEarnedScore = Math.max(0, Math.min(chosenOpt?.score ?? 0, qMax));
+        isFullyCorrect = exactEarnedScore >= qMax;
       } else {
         // SINGLE_CHOICE & TRUE_FALSE
         const chosenOpt = ans.question.options.find((o) => o.id === selectedIds[0]);
-        if (chosenOpt && chosenOpt.isCorrect) {
-          // Benar
-          correctCount++;
-          stat.correct += 1;
-          totalEarnedScore += qWeight;
-          answerUpdates.push({
-            id: ans.id,
-            isCorrect: true,
-            score: qWeight,
-          });
-        } else {
-          // Salah
-          wrongCount++;
-          stat.wrong += 1;
-          answerUpdates.push({
-            id: ans.id,
-            isCorrect: false,
-            score: 0,
-          });
+        if (chosenOpt?.isCorrect) {
+          exactEarnedScore = qWeight;
+          isFullyCorrect = true;
         }
       }
+
+      totalEarnedScore += exactEarnedScore;
+
+      if (isFullyCorrect) {
+        correctCount++;
+        stat.correct += 1;
+      } else {
+        wrongCount++;
+        stat.wrong += 1;
+        // Akumulasi penguasaan materi proporsional (termasuk skor parsial TKP).
+        if (exactEarnedScore > 0 && qMax > 0) {
+          stat.correct += exactEarnedScore / qMax;
+        }
+      }
+
+      if (section) {
+        const sectionStat = sectionStats.get(section)!;
+        sectionStat.score += exactEarnedScore;
+        if (isFullyCorrect) sectionStat.correctCount += 1;
+      }
+
+      answerUpdates.push({
+        id: ans.id,
+        isCorrect: isFullyCorrect,
+        score: Math.round(exactEarnedScore * 100) / 100,
+      });
     }
 
-    // Hitung total nilai (Skala 0 - 100)
-    const finalScore =
-      totalMaxWeight > 0 ? (totalEarnedScore / totalMaxWeight) * 100 : 0;
-    const roundedScore = Math.round(finalScore * 10) / 10;
-    const isPassed = roundedScore >= session.tryout.passingScore;
+    // 3. Hitung total nilai
+    // - NORMALIZED: skala 0-100 (perilaku lama)
+    // - RAW: skor mentah (mis. SKD CASN, total maksimum 550)
+    const isRawMode = session.tryout.scoringMode === ScoringMode.RAW;
+    const finalScore = isRawMode
+      ? totalEarnedScore
+      : totalMaxWeight > 0
+        ? (totalEarnedScore / totalMaxWeight) * 100
+        : 0;
+    const roundedScore = isRawMode
+      ? Math.round(finalScore * 100) / 100
+      : Math.round(finalScore * 10) / 10;
+
+    // Kelulusan: mode RAW memakai ambang batas per subtes (TWK/TIU/TKP).
+    let isPassed: boolean;
+    if (isRawMode) {
+      const thresholdChecks: boolean[] = [];
+      if (session.tryout.passingTwk !== null) {
+        thresholdChecks.push(
+          (sectionStats.get(SkdSection.TWK)?.score ?? 0) >= session.tryout.passingTwk,
+        );
+      }
+      if (session.tryout.passingTiu !== null) {
+        thresholdChecks.push(
+          (sectionStats.get(SkdSection.TIU)?.score ?? 0) >= session.tryout.passingTiu,
+        );
+      }
+      if (session.tryout.passingTkp !== null) {
+        thresholdChecks.push(
+          (sectionStats.get(SkdSection.TKP)?.score ?? 0) >= session.tryout.passingTkp,
+        );
+      }
+      isPassed =
+        thresholdChecks.length > 0
+          ? thresholdChecks.every(Boolean)
+          : roundedScore >= session.tryout.passingScore;
+    } else {
+      isPassed = roundedScore >= session.tryout.passingScore;
+    }
+
     const finalStatus = isAutoExpired ? ExamSessionStatus.EXPIRED : ExamSessionStatus.SUBMITTED;
     const submittedAt = new Date();
 
-    // 3. Simpan seluruh hasil dalam 1 transaksi
+    // 4. Simpan seluruh hasil dalam 1 transaksi
     await prisma.$transaction(async (tx) => {
       // Update skor setiap baris jawaban
       for (const update of answerUpdates) {
@@ -953,8 +1026,33 @@ export class ExamService {
             examSessionId: session.id,
             topicId: tId,
             totalCount: tStat.total,
-            correctCount: tStat.correct,
+            correctCount: Math.round(tStat.correct),
             percentage: Math.round(percentage * 10) / 10,
+          },
+        });
+      }
+
+      // Simpan skor per subtes (TWK/TIU/TKP) untuk mode RAW.
+      await tx.examSectionScore.deleteMany({
+        where: { examSessionId: session.id },
+      });
+
+      for (const [section, sStat] of sectionStats.entries()) {
+        const sectionThreshold =
+          section === SkdSection.TWK
+            ? session.tryout.passingTwk
+            : section === SkdSection.TIU
+              ? session.tryout.passingTiu
+              : session.tryout.passingTkp;
+        await tx.examSectionScore.create({
+          data: {
+            examSessionId: session.id,
+            section,
+            score: Math.round(sStat.score * 100) / 100,
+            maxScore: Math.round(sStat.maxScore * 100) / 100,
+            correctCount: sStat.correctCount,
+            totalCount: sStat.totalCount,
+            isPassed: sectionThreshold !== null ? sStat.score >= sectionThreshold : true,
           },
         });
       }

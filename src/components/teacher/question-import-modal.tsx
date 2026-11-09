@@ -160,7 +160,7 @@ export function QuestionImportModal({
                 Template Resmi Excel (.xlsx)
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Mendukung <strong>Pilihan Ganda</strong> (A–E), <strong>PG Kompleks</strong> (multi-kunci), dan <strong>Benar/Salah</strong> beserta daftar topik aktif.
+                Mendukung <strong>Pilihan Ganda</strong> (A–E), <strong>PG Kompleks</strong> (multi-kunci), <strong>Benar/Salah</strong>, dan <strong>TKP</strong> (opsi berbobot) beserta daftar topik aktif.
               </p>
             </div>
             <a
@@ -248,6 +248,7 @@ export function QuestionImportModal({
                   <li>Pastikan nama <strong>Mata Pelajaran</strong> dan <strong>Topik Materi</strong> sesuai dengan data yang terdaftar.</li>
                   <li>Tingkat kesulitan diisi dengan <strong>MUDAH</strong>, <strong>SEDANG</strong>, atau <strong>SULIT</strong>.</li>
                   <li>Kunci jawaban diisi dengan huruf kapital (<strong>A</strong>, <strong>B</strong>, <strong>C</strong>, <strong>D</strong>, atau <strong>E</strong>).</li>
+                  <li>Untuk soal <strong>TKP</strong>, isi kolom <strong>Skor A–E</strong> dengan bilangan bulat <strong>1–5</strong> yang unik; kolom Kunci Jawaban boleh dikosongkan.</li>
                 </ul>
               </div>
             </div>

@@ -230,6 +230,8 @@ export class QuestionBankService {
             content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
+            score:
+              input.type === QuestionType.WEIGHTED_CHOICE ? (opt.score ?? null) : null,
           })),
         },
       },
@@ -301,6 +303,8 @@ export class QuestionBankService {
             content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
+            score:
+              input.type === QuestionType.WEIGHTED_CHOICE ? (opt.score ?? null) : null,
           },
           create: {
             questionId,
@@ -308,6 +312,8 @@ export class QuestionBankService {
             content: (opt.content || "").trim(),
             imageUrl: opt.imageUrl || null,
             isCorrect: opt.isCorrect,
+            score:
+              input.type === QuestionType.WEIGHTED_CHOICE ? (opt.score ?? null) : null,
           },
         });
       }

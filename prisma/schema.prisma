@@ -53,6 +53,18 @@ enum QuestionType {
   MULTIPLE_CHOICE
   TRUE_FALSE
   MATRIX
+  WEIGHTED_CHOICE // Opsi berbobot (mis. TKP SKD): skor ditentukan per opsi (1-5)
+}
+
+enum ScoringMode {
+  NORMALIZED // Skor akhir dinormalisasi 0-100 (perilaku lama)
+  RAW // Skor mentah (mis. SKD CASN: total 0-550)
+}
+
+enum SkdSection {
+  TWK
+  TIU
+  TKP
 }
 
 // -----------------------------------------------------------------------------
@@ -69,14 +81,14 @@ model User {
   role          UserRole  @default(STUDENT)
   phone         String?
   schoolClass   String?   @map("school_class") // contoh: "X IPA 1"
-  
+
   // Relasi Sekolah (Opsional)
-  schoolId      String?   @map("school_id")
-  school        School?   @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  schoolId String? @map("school_id")
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
 
   // Auth Relations
-  accounts      Account[]
-  sessions      Session[]
+  accounts Account[]
+  sessions Session[]
 
   // Author Relations
   createdQuestions Question[]         @relation("TeacherQuestions")
@@ -84,10 +96,10 @@ model User {
   createdMaterials LearningMaterial[] @relation("TeacherMaterials")
 
   // Activity Relations
-  examSessions  ExamSession[]
+  examSessions ExamSession[]
 
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([email])
   @@index([role])
@@ -136,15 +148,15 @@ model VerificationToken {
 }
 
 model School {
-  id        String   @id @default(cuid())
-  name      String
-  npsn      String?  @unique
-  address   String?
-  city      String?
-  province  String?
-  isActive  Boolean  @default(true) @map("is_active")
+  id       String  @id @default(cuid())
+  name     String
+  npsn     String? @unique
+  address  String?
+  city     String?
+  province String?
+  isActive Boolean @default(true) @map("is_active")
 
-  users     User[]
+  users User[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -157,34 +169,34 @@ model School {
 // -----------------------------------------------------------------------------
 
 model Subject {
-  id          String   @id @default(cuid())
-  name        String   @unique // Contoh: "Sosiologi", "Matematika"
-  code        String?  @unique // Contoh: "SOS", "MAT"
+  id          String  @id @default(cuid())
+  name        String  @unique // Contoh: "Sosiologi", "Matematika"
+  code        String? @unique // Contoh: "SOS", "MAT"
   description String?
 
-  topics      Topic[]
-  tryouts     Tryout[]
-  materials   LearningMaterial[]
+  topics    Topic[]
+  tryouts   Tryout[]
+  materials LearningMaterial[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("subjects")
 }
 
 model Topic {
-  id          String   @id @default(cuid())
-  subjectId   String   @map("subject_id")
-  name        String   // Contoh: "Konflik Sosial", "Aljabar"
+  id          String  @id @default(cuid())
+  subjectId   String  @map("subject_id")
+  name        String // Contoh: "Konflik Sosial", "Aljabar"
   description String?
 
-  subject     Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject     Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   questions   Question[]
   topicScores ExamTopicScore[]
   materials   LearningMaterial[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([subjectId, name])
   @@index([subjectId])
@@ -204,14 +216,14 @@ model Question {
   isActive            Boolean         @default(true) @map("is_active")
 
   // Relasi
-  topic        Topic            @relation(fields: [topicId], references: [id], onDelete: Restrict)
-  author       User             @relation("TeacherQuestions", fields: [createdById], references: [id], onDelete: Restrict)
-  options      QuestionOption[]
-  inTryouts    TryoutQuestion[]
-  examAnswers  ExamAnswer[]
+  topic       Topic            @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  author      User             @relation("TeacherQuestions", fields: [createdById], references: [id], onDelete: Restrict)
+  options     QuestionOption[]
+  inTryouts   TryoutQuestion[]
+  examAnswers ExamAnswer[]
 
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([topicId])
   @@index([difficulty])
@@ -219,12 +231,13 @@ model Question {
 }
 
 model QuestionOption {
-  id           String       @id @default(cuid())
-  questionId   String       @map("question_id")
-  label        String       // "A", "B", "C", "D", "E"
-  content      String       @db.Text
-  imageUrl     String?      @map("image_url")
-  isCorrect    Boolean      @default(false) @map("is_correct") // Kunci jawaban
+  id         String  @id @default(cuid())
+  questionId String  @map("question_id")
+  label      String // "A", "B", "C", "D", "E"
+  content    String  @db.Text
+  imageUrl   String? @map("image_url")
+  isCorrect  Boolean @default(false) @map("is_correct") // Kunci jawaban
+  score      Float? // Skor opsi untuk soal WEIGHTED_CHOICE (mis. TKP 1-5)
 
   question     Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
   answersGiven ExamAnswer[]
@@ -246,23 +259,29 @@ model Tryout {
   createdById          String               @map("created_by_id")
   durationMinutes      Int                  @map("duration_minutes") // contoh: 60
   passingScore         Float                @default(75.0) @map("passing_score")
+  // Mode penilaian: NORMALIZED (0-100) atau RAW (skor mentah, mis. SKD CASN)
+  scoringMode          ScoringMode          @default(NORMALIZED) @map("scoring_mode")
+  // Ambang batas per subtes (dipakai saat scoringMode = RAW)
+  passingTwk           Float?               @map("passing_twk")
+  passingTiu           Float?               @map("passing_tiu")
+  passingTkp           Float?               @map("passing_tkp")
   maxAttempts          Int                  @default(3) @map("max_attempts") // batas percobaan tryout (default 3x)
   questionCount        Int?                 @map("question_count") // Jumlah butir soal yang ditampilkan ke siswa (opsional, jika kosong = semua soal)
   status               TryoutStatus         @default(DRAFT)
   discussionVisibility DiscussionVisibility @default(AFTER_SUBMIT) @map("discussion_visibility")
-  
+
   // Periode Akses (Opsional)
-  startDate            DateTime?            @map("start_date")
-  endDate              DateTime?            @map("end_date")
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
 
   // Relasi
-  subject              Subject              @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  author               User                 @relation("TeacherTryouts", fields: [createdById], references: [id], onDelete: Restrict)
-  tryoutQuestions      TryoutQuestion[]
-  examSessions         ExamSession[]
+  subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  author          User             @relation("TeacherTryouts", fields: [createdById], references: [id], onDelete: Restrict)
+  tryoutQuestions TryoutQuestion[]
+  examSessions    ExamSession[]
 
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([subjectId])
   @@index([status])
@@ -270,14 +289,15 @@ model Tryout {
 }
 
 model TryoutQuestion {
-  id          String   @id @default(cuid())
-  tryoutId    String   @map("tryout_id")
-  questionId  String   @map("question_id")
-  orderNumber Int      @map("order_number") // Nomor urut soal: 1, 2, 3..
-  weight      Float    @default(1.0)        // Bobot nilai soal (default 1)
+  id          String      @id @default(cuid())
+  tryoutId    String      @map("tryout_id")
+  questionId  String      @map("question_id")
+  orderNumber Int         @map("order_number") // Nomor urut soal: 1, 2, 3..
+  weight      Float       @default(1.0) // Bobot nilai soal (default 1)
+  section     SkdSection? // Kategori subtes SKD (TWK/TIU/TKP); null untuk tryout non-SKD
 
-  tryout      Tryout   @relation(fields: [tryoutId], references: [id], onDelete: Cascade)
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tryout   Tryout   @relation(fields: [tryoutId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([tryoutId, questionId])
   @@unique([tryoutId, orderNumber])
@@ -290,59 +310,60 @@ model TryoutQuestion {
 // -----------------------------------------------------------------------------
 
 model ExamSession {
-  id              String            @id @default(cuid())
-  userId          String            @map("user_id")
-  tryoutId        String            @map("tryout_id")
-  status          ExamSessionStatus @default(IN_PROGRESS)
-  attemptNumber   Int               @default(1) @map("attempt_number") // percobaan ke-1, 2, atau 3
-  
+  id            String            @id @default(cuid())
+  userId        String            @map("user_id")
+  tryoutId      String            @map("tryout_id")
+  status        ExamSessionStatus @default(IN_PROGRESS)
+  attemptNumber Int               @default(1) @map("attempt_number") // percobaan ke-1, 2, atau 3
+
   // Waktu Otoritas Server
-  startedAt       DateTime          @default(now()) @map("started_at")
-  expiresAt       DateTime          @map("expires_at") // startedAt + durationMinutes
-  submittedAt     DateTime?         @map("submitted_at")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  expiresAt   DateTime  @map("expires_at") // startedAt + durationMinutes
+  submittedAt DateTime? @map("submitted_at")
 
   // Hasil & Skor Akhir
-  totalScore      Float             @default(0.0) @map("total_score")
-  correctCount    Int               @default(0)   @map("correct_count")
-  wrongCount      Int               @default(0)   @map("wrong_count")
-  unansweredCount Int               @default(0)   @map("unanswered_count")
-  isPassed        Boolean           @default(false) @map("is_passed")
+  totalScore      Float   @default(0.0) @map("total_score")
+  correctCount    Int     @default(0) @map("correct_count")
+  wrongCount      Int     @default(0) @map("wrong_count")
+  unansweredCount Int     @default(0) @map("unanswered_count")
+  isPassed        Boolean @default(false) @map("is_passed")
 
   // Relasi
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tryout          Tryout            @relation(fields: [tryoutId], references: [id], onDelete: Cascade)
-  answers         ExamAnswer[]
-  topicScores     ExamTopicScore[]
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tryout        Tryout             @relation(fields: [tryoutId], references: [id], onDelete: Cascade)
+  answers       ExamAnswer[]
+  topicScores   ExamTopicScore[]
+  sectionScores ExamSectionScore[]
 
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([userId, tryoutId])
   @@unique([userId, tryoutId, attemptNumber])
+  @@index([userId, tryoutId])
   @@index([status])
   @@map("exam_sessions")
 }
 
 model ExamAnswer {
-  id                 String          @id @default(cuid())
-  examSessionId      String          @map("exam_session_id")
-  questionId         String          @map("question_id")
-  selectedOptionId   String?         @map("selected_option_id") // null jika belum dijawab
-  selectedOptionIds  String[]        @default([]) @map("selected_option_ids") // list opsi terpilih untuk multiple choice
-  isFlagged          Boolean         @default(false) @map("is_flagged") // Ragu-ragu
-  
+  id                String   @id @default(cuid())
+  examSessionId     String   @map("exam_session_id")
+  questionId        String   @map("question_id")
+  selectedOptionId  String?  @map("selected_option_id") // null jika belum dijawab
+  selectedOptionIds String[] @default([]) @map("selected_option_ids") // list opsi terpilih untuk multiple choice
+  isFlagged         Boolean  @default(false) @map("is_flagged") // Ragu-ragu
+
   // Evaluasi (Dihitung saat submit)
-  isCorrect          Boolean         @default(false) @map("is_correct")
-  scoreObtained      Float           @default(0.0) @map("score_obtained")
-  answeredAt         DateTime?       @map("answered_at")
+  isCorrect     Boolean   @default(false) @map("is_correct")
+  scoreObtained Float     @default(0.0) @map("score_obtained")
+  answeredAt    DateTime? @map("answered_at")
 
   // Relasi
-  examSession        ExamSession     @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
-  question           Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  selectedOption     QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+  examSession    ExamSession     @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
 
-  createdAt          DateTime        @default(now()) @map("created_at")
-  updatedAt          DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([examSessionId, questionId])
   @@index([examSessionId])
@@ -350,19 +371,37 @@ model ExamAnswer {
 }
 
 model ExamTopicScore {
-  id            String      @id @default(cuid())
-  examSessionId String      @map("exam_session_id")
-  topicId       String      @map("topic_id")
-  correctCount  Int         @default(0) @map("correct_count")
-  totalCount    Int         @default(0) @map("total_count")
-  percentage    Float       @default(0.0) // (correctCount / totalCount) * 100
+  id            String @id @default(cuid())
+  examSessionId String @map("exam_session_id")
+  topicId       String @map("topic_id")
+  correctCount  Int    @default(0) @map("correct_count")
+  totalCount    Int    @default(0) @map("total_count")
+  percentage    Float  @default(0.0) // (correctCount / totalCount) * 100
 
-  examSession   ExamSession @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
-  topic         Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  examSession ExamSession @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  topic       Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([examSessionId, topicId])
   @@index([examSessionId])
   @@map("exam_topic_scores")
+}
+
+// Skor per kategori/subtes (mis. TWK/TIU/TKP pada SKD CASN).
+model ExamSectionScore {
+  id            String     @id @default(cuid())
+  examSessionId String     @map("exam_session_id")
+  section       SkdSection
+  score         Float      @default(0.0) // Skor mentah yang diperoleh pada subtes ini
+  maxScore      Float      @default(0.0) @map("max_score") // Skor maksimum subtes
+  correctCount  Int        @default(0) @map("correct_count")
+  totalCount    Int        @default(0) @map("total_count")
+  isPassed      Boolean    @default(false) @map("is_passed")
+
+  examSession ExamSession @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([examSessionId, section])
+  @@index([examSessionId])
+  @@map("exam_section_scores")
 }
 
 // -----------------------------------------------------------------------------
@@ -370,25 +409,25 @@ model ExamTopicScore {
 // -----------------------------------------------------------------------------
 
 model LearningMaterial {
-  id          String   @id @default(cuid())
-  title       String   // Judul materi (misal: "Rangkuman Konflik Sosial", "Video Penjelasan Materi")
-  description String?  @db.Text
-  url         String   @db.Text // Tautan eksternal (Google Drive, Docs, YouTube, Notion, dll)
-  type        String   @default("LINK") // "YOUTUBE", "GOOGLE_DRIVE", "DOCUMENT", "ARTICLE", "OTHER"
+  id          String  @id @default(cuid())
+  title       String // Judul materi (misal: "Rangkuman Konflik Sosial", "Video Penjelasan Materi")
+  description String? @db.Text
+  url         String  @db.Text // Tautan eksternal (Google Drive, Docs, YouTube, Notion, dll)
+  type        String  @default("LINK") // "YOUTUBE", "GOOGLE_DRIVE", "DOCUMENT", "ARTICLE", "OTHER"
 
-  subjectId   String   @map("subject_id")
-  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String  @map("subject_id")
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
-  topicId     String?  @map("topic_id")
-  topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  topicId String? @map("topic_id")
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
 
-  createdById String   @map("created_by_id")
-  author      User     @relation("TeacherMaterials", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String @map("created_by_id")
+  author      User   @relation("TeacherMaterials", fields: [createdById], references: [id], onDelete: Cascade)
 
-  isActive    Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([subjectId])
   @@index([topicId])

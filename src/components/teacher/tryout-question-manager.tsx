@@ -29,14 +29,17 @@ interface QuestionOption {
   label: string;
   content: string;
   isCorrect: boolean;
+  score?: number | null;
   imageUrl?: string | null;
 }
+
+type SkdSectionValue = "TWK" | "TIU" | "TKP";
 
 interface Question {
   id: string;
   content: string;
   imageUrl?: string | null;
-  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX";
+  type?: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE" | "MATRIX" | "WEIGHTED_CHOICE";
   difficulty: "EASY" | "MEDIUM" | "HARD";
   topicId: string;
   topic: {
@@ -51,6 +54,7 @@ interface AttachedQuestion {
   questionId: string;
   orderNumber: number;
   weight: number;
+  section?: SkdSectionValue | null;
   question: Question;
 }
 
@@ -59,6 +63,10 @@ interface TryoutDetail {
   title: string;
   durationMinutes: number;
   passingScore: number;
+  scoringMode: "NORMALIZED" | "RAW";
+  passingTwk?: number | null;
+  passingTiu?: number | null;
+  passingTkp?: number | null;
   questionCount?: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   subjectId: string;
@@ -84,6 +92,8 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
   const [selectedTopic, setSelectedTopic] = useState<string>("ALL");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("ALL");
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  // Kategori subtes yang diterapkan saat menambahkan soal dari bank (mode RAW/SKD)
+  const [bankSection, setBankSection] = useState<SkdSectionValue>("TWK");
 
   // Preview modal state
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -171,15 +181,36 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     );
   };
 
+  // Change Section (kategori subtes SKD)
+  const updateSection = (questionId: string, section: SkdSectionValue) => {
+    if (tryout.isLocked) return;
+    setQuestions((prev) =>
+      prev.map((item) =>
+        item.questionId === questionId
+          ? {
+              ...item,
+              section,
+              // Bobot default SKD: TWK/TIU 5 poin per soal benar; TKP memakai skor opsi (1-5).
+              weight: section === "TKP" ? 1 : 5,
+            }
+          : item
+      )
+    );
+  };
+
   // Add Selected from Bank Soal
   const handleAddSelectedQuestions = () => {
     const toAdd = availableQuestions.filter((q) => selectedQuestionIds.has(q.id));
     const nextOrder = questions.length + 1;
+    const isRaw = tryout.scoringMode === "RAW";
+    const section = isRaw ? bankSection : null;
+    const defaultWeight = isRaw ? (section === "TKP" ? 1 : 5) : 1.0;
 
     const newAttached: AttachedQuestion[] = toAdd.map((q, idx) => ({
       questionId: q.id,
       orderNumber: nextOrder + idx,
-      weight: 1.0,
+      weight: defaultWeight,
+      section,
       question: q,
     }));
 
@@ -194,12 +225,26 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     setIsSaving(true);
     setFeedback(null);
 
+    // Mode RAW/SKD: setiap soal wajib punya kategori subtes.
+    if (tryout.scoringMode === "RAW") {
+      const missing = questions.find((q) => !q.section);
+      if (missing) {
+        setFeedback({
+          type: "error",
+          text: "Mode skor mentah (SKD) mewajibkan setiap soal memiliki kategori subtes (TWK/TIU/TKP).",
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     try {
       const payload = {
         questions: questions.map((q) => ({
           questionId: q.questionId,
           orderNumber: q.orderNumber,
           weight: q.weight,
+          section: q.section ?? null,
         })),
       };
 
@@ -231,6 +276,27 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
   };
 
   const totalWeight = questions.reduce((acc, cur) => acc + cur.weight, 0);
+  // Skor maksimum: TWK/TIU memakai bobot soal, TKP memakai skor opsi tertinggi.
+  const maxScore = questions.reduce(
+    (acc, cur) =>
+      acc +
+      (cur.question.type === "WEIGHTED_CHOICE"
+        ? Math.max(0, ...cur.question.options.map((o) => o.score ?? 0))
+        : cur.weight),
+    0,
+  );
+
+  const isRaw = tryout.scoringMode === "RAW";
+  const sectionCounts = {
+    TWK: questions.filter((q) => q.section === "TWK").length,
+    TIU: questions.filter((q) => q.section === "TIU").length,
+    TKP: questions.filter((q) => q.section === "TKP").length,
+  };
+  const skdTarget = { TWK: 30, TIU: 35, TKP: 45 };
+  const isSkdComposition =
+    sectionCounts.TWK === skdTarget.TWK &&
+    sectionCounts.TIU === skdTarget.TIU &&
+    sectionCounts.TKP === skdTarget.TKP;
 
   // Unique topics from available bank questions
   const availableTopics = Array.from(
@@ -375,8 +441,12 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
           </div>
         </Card>
         <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Total Bobot Nilai</span>
-          <div className="text-2xl font-extrabold text-blue-600 mt-1">{totalWeight} Poin</div>
+          <span className="text-xs text-slate-500 font-medium">
+            {isRaw ? "Skor Maksimum" : "Total Bobot Nilai"}
+          </span>
+          <div className="text-2xl font-extrabold text-blue-600 mt-1">
+            {isRaw ? `${maxScore} Poin` : `${totalWeight} Poin`}
+          </div>
         </Card>
         <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
           <span className="text-xs text-slate-500 font-medium">Durasi Ujian</span>
@@ -385,12 +455,73 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
           </div>
         </Card>
         <Card className="p-4 bg-white border-slate-200/90 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Standar KKM</span>
-          <div className="text-2xl font-extrabold text-amber-600 mt-1">
-            {tryout.passingScore} / 100
-          </div>
+          <span className="text-xs text-slate-500 font-medium">
+            {isRaw ? "Ambang Batas" : "Standar KKM"}
+          </span>
+          {isRaw ? (
+            <div className="mt-1 space-y-0.5 text-[11px] font-bold text-amber-700">
+              <div>TWK ≥ {tryout.passingTwk ?? "-"}</div>
+              <div>TIU ≥ {tryout.passingTiu ?? "-"}</div>
+              <div>TKP ≥ {tryout.passingTkp ?? "-"}</div>
+            </div>
+          ) : (
+            <div className="text-2xl font-extrabold text-amber-600 mt-1">
+              {tryout.passingScore} / 100
+            </div>
+          )}
         </Card>
       </div>
+
+      {/* Ringkasan Komposisi Subtes SKD */}
+      {isRaw && (
+        <div
+          className={`p-4 rounded-xl border ${
+            isSkdComposition
+              ? "bg-emerald-50 border-emerald-200"
+              : "bg-blue-50 border-blue-200"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4
+                className={`text-sm font-bold ${
+                  isSkdComposition ? "text-emerald-900" : "text-blue-900"
+                }`}
+              >
+                Komposisi Subtes SKD
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Target SKD: TWK 30 • TIU 35 • TKP 45 (total 110 soal).{" "}
+                {isSkdComposition
+                  ? "Komposisi sudah sesuai."
+                  : "Sesuaikan jumlah soal per subtes."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(["TWK", "TIU", "TKP"] as const).map((s) => (
+                <div
+                  key={s}
+                  className="text-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-xs"
+                >
+                  <div className="text-[10px] font-bold text-slate-500">{s}</div>
+                  <div
+                    className={`text-sm font-extrabold ${
+                      sectionCounts[s] === skdTarget[s]
+                        ? "text-emerald-600"
+                        : "text-amber-600"
+                    }`}
+                  >
+                    {sectionCounts[s]}
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      /{skdTarget[s]}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Warning banner jika soal kurang dari target tampil */}
       {tryout.questionCount && questions.length < tryout.questionCount && (
@@ -463,6 +594,20 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                       </div>
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
+                          {item.section && (
+                            <Badge
+                              variant={
+                                item.section === "TWK"
+                                  ? "info"
+                                  : item.section === "TIU"
+                                  ? "success"
+                                  : "warning"
+                              }
+                              className="text-[10px]"
+                            >
+                              {item.section}
+                            </Badge>
+                          )}
                           <Badge variant="default" className="text-[10px]">
                             {item.question.topic?.name || "Topik Umum"}
                           </Badge>
@@ -478,14 +623,18 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                           >
                             {item.question.difficulty}
                           </Badge>
-                          {correctOpt && (
+                          {item.question.type === "WEIGHTED_CHOICE" ? (
+                            <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              Skor opsi 1–5
+                            </span>
+                          ) : correctOpt ? (
                             <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                               Kunci:{" "}
                               {item.question.type === "MATRIX"
                                 ? "per baris"
                                 : formatMatrixOptionLabel(correctOpt.label)}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <p className="text-sm text-slate-800 line-clamp-2 leading-relaxed">
                           {item.question.content}
@@ -495,6 +644,28 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
 
                     {/* Weight Input & Actions */}
                     <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                      {/* Kategori Subtes (mode SKD) */}
+                      {isRaw && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500 font-medium">Subtes:</span>
+                          <select
+                            disabled={tryout.isLocked}
+                            value={item.section ?? ""}
+                            onChange={(e) =>
+                              updateSection(item.questionId, e.target.value as SkdSectionValue)
+                            }
+                            className="px-2 py-1 text-xs font-bold rounded-lg bg-white border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-600 shadow-xs disabled:opacity-50"
+                          >
+                            <option value="" disabled>
+                              Pilih
+                            </option>
+                            <option value="TWK">TWK</option>
+                            <option value="TIU">TIU</option>
+                            <option value="TKP">TKP</option>
+                          </select>
+                        </div>
+                      )}
+
                       {/* Bobot */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-slate-500 font-medium">Bobot:</span>
@@ -704,14 +875,18 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                           >
                             {q.difficulty}
                           </Badge>
-                          {correctOpt && (
+                          {q.type === "WEIGHTED_CHOICE" ? (
+                            <span className="text-[10px] text-blue-700 font-semibold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                              Skor opsi 1–5
+                            </span>
+                          ) : correctOpt ? (
                             <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                               Kunci:{" "}
                               {q.type === "MATRIX"
                                 ? "per baris"
                                 : formatMatrixOptionLabel(correctOpt.label)}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <p className="text-xs text-slate-800 line-clamp-2">{q.content}</p>
                       </div>
@@ -722,10 +897,27 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-xs text-slate-500">
-                Terpilih:{" "}
-                <span className="font-bold text-slate-900">{selectedQuestionIds.size}</span> butir soal
+            <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-xs text-slate-500">
+                  Terpilih:{" "}
+                  <span className="font-bold text-slate-900">{selectedQuestionIds.size}</span> butir soal
+                </div>
+                {isRaw && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500 font-medium">Subtes:</span>
+                    <select
+                      value={bankSection}
+                      onChange={(e) => setBankSection(e.target.value as SkdSectionValue)}
+                      className="px-2 py-1 text-xs font-bold rounded-lg bg-white border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-600 shadow-xs"
+                    >
+                      <option value="TWK">TWK</option>
+                      <option value="TIU">TIU</option>
+                      <option value="TKP">TKP</option>
+                    </select>
+                    <span className="text-[11px] text-slate-400">diterapkan ke soal terpilih</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -802,38 +994,51 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Pilihan Jawaban:
               </span>
-              {previewQuestion.options?.map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`p-3 rounded-xl border flex items-center gap-3 text-xs shadow-xs ${
-                    opt.isCorrect
-                      ? "bg-emerald-50/80 border-emerald-300 text-emerald-950 font-semibold"
-                      : "bg-slate-50 border-slate-200 text-slate-700"
-                  }`}
-                >
-                  <span
-                    className={`min-w-6 h-6 px-1.5 rounded-md flex items-center justify-center font-bold text-[10px] whitespace-nowrap ${
-                      opt.isCorrect
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-200 text-slate-700"
+              {previewQuestion.options?.map((opt) => {
+                const maxScore = Math.max(
+                  0,
+                  ...previewQuestion.options.map((o) => o.score ?? 0)
+                );
+                const isWeighted = previewQuestion.type === "WEIGHTED_CHOICE";
+                const isHighlighted = isWeighted ? opt.score === maxScore : opt.isCorrect;
+
+                return (
+                  <div
+                    key={opt.id}
+                    className={`p-3 rounded-xl border flex items-center gap-3 text-xs shadow-xs ${
+                      isHighlighted
+                        ? "bg-emerald-50/80 border-emerald-300 text-emerald-950 font-semibold"
+                        : "bg-slate-50 border-slate-200 text-slate-700"
                     }`}
                   >
-                    {formatMatrixOptionLabel(opt.label)}
-                  </span>
-                  <div className="flex-1 space-y-1">
-                    <span>{opt.content}</span>
-                    {opt.imageUrl && (
-                      <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs mt-1">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={opt.imageUrl} alt={`Opsi ${opt.label}`} className="max-h-24 object-contain" />
-                      </div>
-                    )}
+                    <span
+                      className={`min-w-6 h-6 px-1.5 rounded-md flex items-center justify-center font-bold text-[10px] whitespace-nowrap ${
+                        isHighlighted
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      {formatMatrixOptionLabel(opt.label)}
+                    </span>
+                    <div className="flex-1 space-y-1">
+                      <span>{opt.content}</span>
+                      {opt.imageUrl && (
+                        <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs mt-1">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={opt.imageUrl} alt={`Opsi ${opt.label}`} className="max-h-24 object-contain" />
+                        </div>
+                      )}
+                    </div>
+                    {isWeighted ? (
+                      <span className="ml-auto text-[10px] text-blue-800 font-bold bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
+                        SKOR {opt.score ?? "-"}
+                      </span>
+                    ) : opt.isCorrect ? (
+                      <span className="ml-auto text-[10px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">KUNCI</span>
+                    ) : null}
                   </div>
-                  {opt.isCorrect && (
-                    <span className="ml-auto text-[10px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">KUNCI</span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Explanation */}
@@ -883,7 +1088,9 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                     Soal Nomor {previewActiveIndex + 1} dari {questions.length}
                   </span>
                   <Badge variant="default" className="text-xs">
-                    Bobot: {questions[previewActiveIndex].weight} Poin
+                    {questions[previewActiveIndex].section
+                      ? `Subtes: ${questions[previewActiveIndex].section}`
+                      : `Bobot: ${questions[previewActiveIndex].weight} Poin`}
                   </Badge>
                 </div>
 
