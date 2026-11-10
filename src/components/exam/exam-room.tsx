@@ -432,37 +432,37 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col select-none">
       {/* 1. TOP HEADER (Sticky Focus Bar) */}
-      <header className="h-16 sm:h-18 px-4 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 sm:h-18 px-3 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center gap-2 sm:gap-4 justify-between sticky top-0 z-30">
         {/* Left: Info Paket */}
-        <div className="flex items-center gap-3.5">
-          <div>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Badge variant="info" className="text-xs hidden sm:inline-flex px-2.5 py-0.5">
                 {initialData.subjectName}
               </Badge>
-              <Badge variant="outline" className="text-xs font-semibold text-blue-700 bg-blue-50/70 border-blue-200 px-2.5 py-0.5">
+              <Badge variant="outline" className="text-xs font-semibold text-blue-700 bg-blue-50/70 border-blue-200 px-2.5 py-0.5 hidden sm:inline-flex shrink-0">
                 Percobaan {initialData.attemptNumber || 1}/{initialData.maxAttempts || 3}
               </Badge>
-              <h1 className="font-extrabold text-base sm:text-lg text-slate-900 line-clamp-1 max-w-[200px] sm:max-w-xl">
+              <h1 className="font-extrabold text-base sm:text-lg text-slate-900 truncate min-w-0">
                 {initialData.tryoutTitle}
               </h1>
             </div>
             {/* Status Simpan */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 mt-0.5 min-w-0 truncate">
               {saveStatus === "saving" ? (
                 <>
-                  <CloudUpload className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                  <span className="text-amber-600 font-medium">Menyimpan jawaban...</span>
+                  <CloudUpload className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                  <span className="text-amber-600 font-medium truncate">Menyimpan jawaban...</span>
                 </>
               ) : saveStatus === "saved" ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-slate-500">Jawaban tersimpan otomatis</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-slate-500 truncate">Jawaban tersimpan otomatis</span>
                 </>
               ) : saveStatus === "error" ? (
                 <>
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                  <span className="text-rose-600 font-medium">Gagal simpan (mencoba lagi)</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                  <span className="text-rose-600 font-medium truncate">Gagal simpan (mencoba lagi)</span>
                 </>
               ) : null}
             </div>
@@ -470,10 +470,10 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
         </div>
 
         {/* Right: Timer & Submit Trigger */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Countdown Clock */}
           <div
-            className={`flex items-center gap-2 px-4 py-2 rounded-2xl border font-mono font-black text-sm sm:text-base tracking-wider transition-colors shadow-xs ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl border font-mono font-black text-xs sm:text-base tracking-wider transition-colors shadow-xs shrink-0 ${
               isTimeCritical
                 ? "bg-rose-50 border-rose-300 text-rose-600 animate-pulse ring-2 ring-rose-200"
                 : "bg-blue-50/90 border-blue-200 text-blue-700"
@@ -487,7 +487,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
           <button
             type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer shrink-0 ${
               isSidebarOpen
                 ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100/70"
                 : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
@@ -522,15 +522,15 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
         <main className="flex-1 flex flex-col justify-between p-4 sm:p-8 space-y-6">
           <div className="space-y-6 max-w-4xl mx-auto w-full">
             {/* Question Header Bar */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-lg sm:text-2xl font-black text-slate-900">
                   Soal Nomor {currentQuestion.orderNumber}
                 </span>
                 <span className="text-sm text-slate-400 font-semibold">/ {questions.length}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" || currentQuestion.type === "MATRIX" || currentQuestion.type === "WEIGHTED_CHOICE" ? "info" : "outline"} className="text-xs sm:text-sm px-3 py-1 font-bold">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <Badge variant={currentQuestion.type === "MULTIPLE_CHOICE" || currentQuestion.type === "MATRIX" || currentQuestion.type === "WEIGHTED_CHOICE" ? "info" : "outline"} className="text-[11px] sm:text-sm px-2.5 sm:px-3 py-1 font-bold">
                   {currentQuestion.type === "MULTIPLE_CHOICE"
                     ? "PG Kompleks"
                     : currentQuestion.type === "TRUE_FALSE"
@@ -542,7 +542,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                     : "Pilihan Ganda"}
                 </Badge>
                 {currentQuestion.type !== "WEIGHTED_CHOICE" && (
-                  <Badge variant="default" className="text-xs sm:text-sm px-3 py-1 font-semibold">
+                  <Badge variant="default" className="text-[11px] sm:text-sm px-2.5 sm:px-3 py-1 font-semibold">
                     Bobot: {currentQuestion.weight} Poin
                   </Badge>
                 )}
@@ -763,7 +763,7 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
 
         {/* 3. SIDEBAR / DRAWER: Number Navigator Grid */}
         <aside
-          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-xl md:shadow-none p-6 flex flex-col justify-between transform transition-all duration-300 md:sticky md:top-16 sm:md:top-18 md:h-[calc(100vh-4rem)] sm:md:h-[calc(100vh-4.5rem)] md:self-start ${
+          className={`fixed inset-y-0 right-0 z-40 w-80 sm:w-88 bg-white border-l border-slate-200/90 shadow-xl md:shadow-none p-6 flex flex-col justify-between transform transition-all duration-300 md:sticky md:top-18 md:h-[calc(100vh-4.5rem)] md:self-start ${
             isSidebarOpen
               ? "translate-x-0 opacity-100 md:flex"
               : "translate-x-full opacity-0 pointer-events-none md:hidden"
