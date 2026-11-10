@@ -432,12 +432,12 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col select-none">
       {/* 1. TOP HEADER (Sticky Focus Bar) */}
-      <header className="h-16 sm:h-18 px-3 sm:px-8 bg-white border-b border-slate-200/90 shadow-xs flex items-center gap-2 sm:gap-4 justify-between sticky top-0 z-30">
-        {/* Left: Info Paket */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Badge variant="info" className="text-xs hidden sm:inline-flex px-2.5 py-0.5">
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200/90 shadow-xs">
+        <div className="px-3 sm:px-8 py-2 sm:py-2.5">
+          {/* Baris 1: Judul (kiri) + Timer & Navigasi (kanan) */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Badge variant="info" className="text-xs hidden sm:inline-flex px-2.5 py-0.5 shrink-0">
                 {initialData.subjectName}
               </Badge>
               <Badge variant="outline" className="text-xs font-semibold text-blue-700 bg-blue-50/70 border-blue-200 px-2.5 py-0.5 hidden sm:inline-flex shrink-0">
@@ -447,8 +447,63 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
                 {initialData.tryoutTitle}
               </h1>
             </div>
-            {/* Status Simpan */}
-            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 mt-0.5 min-w-0 truncate">
+
+            {/* Right: Timer & Submit Trigger */}
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+              {/* Countdown Clock */}
+              <div
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl border font-mono font-black text-xs sm:text-base tracking-wider transition-colors shadow-xs shrink-0 ${
+                  isTimeCritical
+                    ? "bg-rose-50 border-rose-300 text-rose-600 animate-pulse ring-2 ring-rose-200"
+                    : "bg-blue-50/90 border-blue-200 text-blue-700"
+                }`}
+              >
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                <span>{formatTime(remainingSeconds)}</span>
+              </div>
+
+              {/* Tombol Toggle Navigator Nomor Soal (Mobile & Desktop) */}
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer shrink-0 ${
+                  isSidebarOpen
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100/70"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+                }`}
+                title={isSidebarOpen ? "Sembunyikan Daftar Nomor Soal" : "Tampilkan Daftar Nomor Soal"}
+              >
+                <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="hidden sm:inline">
+                  {isSidebarOpen ? "Sembunyikan Soal" : "Daftar Soal"}
+                </span>
+                <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                  {currentIndex + 1}/{questions.length}
+                </span>
+              </button>
+
+              {/* Tombol Kumpulkan Ujian */}
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => setIsSubmitModalOpen(true)}
+                className="hidden sm:inline-flex gap-2 text-xs sm:text-sm font-bold shadow-xs px-4 py-2.5 rounded-2xl"
+              >
+                <Send className="w-4 h-4" />
+                <span>Selesai & Kumpulkan</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Baris 2: Badge mapel & percobaan (hanya mobile) + status simpan */}
+          <div className="mt-1.5 sm:mt-1 flex items-center gap-2 min-w-0">
+            <Badge variant="info" className="text-[10px] px-2 py-0.5 shrink-0 sm:hidden">
+              {initialData.subjectName}
+            </Badge>
+            <Badge variant="outline" className="text-[10px] font-semibold text-blue-700 bg-blue-50/70 border-blue-200 px-2 py-0.5 shrink-0 sm:hidden">
+              Percobaan {initialData.attemptNumber || 1}/{initialData.maxAttempts || 3}
+            </Badge>
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 min-w-0 truncate">
               {saveStatus === "saving" ? (
                 <>
                   <CloudUpload className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
@@ -467,52 +522,6 @@ export function ExamRoom({ initialData }: { initialData: ExamSheetData }) {
               ) : null}
             </div>
           </div>
-        </div>
-
-        {/* Right: Timer & Submit Trigger */}
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          {/* Countdown Clock */}
-          <div
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl border font-mono font-black text-xs sm:text-base tracking-wider transition-colors shadow-xs shrink-0 ${
-              isTimeCritical
-                ? "bg-rose-50 border-rose-300 text-rose-600 animate-pulse ring-2 ring-rose-200"
-                : "bg-blue-50/90 border-blue-200 text-blue-700"
-            }`}
-          >
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            <span>{formatTime(remainingSeconds)}</span>
-          </div>
-
-          {/* Tombol Toggle Navigator Nomor Soal (Mobile & Desktop) */}
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer shrink-0 ${
-              isSidebarOpen
-                ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100/70"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
-            }`}
-            title={isSidebarOpen ? "Sembunyikan Daftar Nomor Soal" : "Tampilkan Daftar Nomor Soal"}
-          >
-            <Layers className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="hidden sm:inline">
-              {isSidebarOpen ? "Sembunyikan Soal" : "Daftar Soal"}
-            </span>
-            <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-              {currentIndex + 1}/{questions.length}
-            </span>
-          </button>
-
-          {/* Tombol Kumpulkan Ujian */}
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setIsSubmitModalOpen(true)}
-            className="hidden sm:inline-flex gap-2 text-xs sm:text-sm font-bold shadow-xs px-4 py-2.5 rounded-2xl"
-          >
-            <Send className="w-4 h-4" />
-            <span>Selesai & Kumpulkan</span>
-          </Button>
         </div>
       </header>
 
