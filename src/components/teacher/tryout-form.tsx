@@ -297,6 +297,10 @@ export function TryoutForm({ initialData, isEditing = false }: TryoutFormProps) 
                   soal (maks 225). Total maksimum 550. Kategori tiap soal diatur di halaman{" "}
                   <b>Susun Soal</b>.
                 </p>
+                <p className="mt-0.5">
+                  Bank soal TKP/TIU/TWK boleh disimpan di mata pelajaran berbeda — saat menyusun
+                  soal, semua mata pelajaran akan ditampilkan dan kategori subtes ditetapkan per soal.
+                </p>
               </div>
             )}
 

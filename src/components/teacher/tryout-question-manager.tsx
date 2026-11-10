@@ -45,6 +45,10 @@ interface Question {
   topic: {
     id: string;
     name: string;
+    subject?: {
+      id: string;
+      name: string;
+    } | null;
   };
   explanation?: string | null;
   options: QuestionOption[];
@@ -94,6 +98,8 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
   // Kategori subtes yang diterapkan saat menambahkan soal dari bank (mode RAW/SKD)
   const [bankSection, setBankSection] = useState<SkdSectionValue>("TWK");
+  // Filter mata pelajaran pada modal bank soal (mode RAW/SKD: soal bisa berasal dari banyak mapel)
+  const [bankSubject, setBankSubject] = useState<string>("ALL");
 
   // Preview modal state
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -108,20 +114,50 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
   const openBankModal = async () => {
     setIsBankModalOpen(true);
     setIsFetchingBank(true);
+    setBankSubject("ALL");
+    setBankSearch("");
+    setSelectedTopic("ALL");
+    setSelectedDifficulty("ALL");
+    setSelectedQuestionIds(new Set());
     try {
-      const res = await fetch(`/api/teacher/questions?subjectId=${tryout.subjectId}&limit=200`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        // Filter out questions that are already in this tryout
-        const existingIds = new Set(questions.map((q) => q.questionId));
+      // Mode RAW/SKD: soal TKP/TIU/TWK bisa tersimpan di mata pelajaran berbeda,
+      // jadi tampilkan bank soal dari seluruh mata pelajaran (dan semua halaman).
+      // Mode NORMALIZED: tampilkan bank soal sesuai mata pelajaran paket.
+      const baseUrl =
+        tryout.scoringMode === "RAW"
+          ? "/api/teacher/questions"
+          : `/api/teacher/questions?subjectId=${tryout.subjectId}`;
+
+      const collected: Question[] = [];
+      let page = 1;
+      const pageSize = 500;
+      while (true) {
+        const url = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}page=${page}&limit=${pageSize}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          setFeedback({
+            type: "error",
+            text: (await res.json().catch(() => null))?.error?.message || "Gagal mengambil bank soal.",
+          });
+          return;
+        }
+        const json = await res.json();
+        if (!json.success) {
+          setFeedback({ type: "error", text: json.error?.message || "Gagal mengambil bank soal." });
+          return;
+        }
         const questionsList: Question[] = Array.isArray(json.data)
           ? json.data
-          : (json.data.questions || []);
-        const filtered = questionsList.filter((q) => !existingIds.has(q.id));
-        setAvailableQuestions(filtered);
-      } else {
-        setFeedback({ type: "error", text: json.error?.message || "Gagal mengambil bank soal." });
+          : (json.data?.questions || []);
+        collected.push(...questionsList);
+        const pagination = json.data?.pagination;
+        if (!pagination || page >= pagination.totalPages) break;
+        page += 1;
       }
+
+      // Filter out questions that are already in this tryout
+      const existingIds = new Set(questions.map((q) => q.questionId));
+      setAvailableQuestions(collected.filter((q) => !existingIds.has(q.id)));
     } catch {
       setFeedback({ type: "error", text: "Gagal mengambil bank soal." });
     } finally {
@@ -303,11 +339,23 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     new Set(availableQuestions.map((q) => q.topic?.name).filter(Boolean))
   );
 
+  // Unique mata pelajaran dari bank soal (mode RAW/SKD)
+  const availableSubjects = Array.from(
+    new Map(
+      availableQuestions
+        .map((q) => q.topic?.subject)
+        .filter((s): s is { id: string; name: string } => Boolean(s && s.name))
+        .map((s) => [s.id, s.name]),
+    ).entries(),
+  ).map(([id, name]) => ({ id, name }));
+
   const filteredBankQuestions = availableQuestions.filter((q) => {
     const matchesSearch = q.content.toLowerCase().includes(bankSearch.toLowerCase());
     const matchesTopic = selectedTopic === "ALL" || q.topic?.name === selectedTopic;
     const matchesDiff = selectedDifficulty === "ALL" || q.difficulty === selectedDifficulty;
-    return matchesSearch && matchesTopic && matchesDiff;
+    const matchesSubject =
+      bankSubject === "ALL" || q.topic?.subject?.id === bankSubject;
+    return matchesSearch && matchesTopic && matchesDiff && matchesSubject;
   });
 
   const handleSelectAllBank = () => {
@@ -568,8 +616,9 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                 Belum ada butir soal yang dipasang pada paket ini.
               </p>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Silakan klik tombol &quot;Ambil dari Bank Soal&quot; untuk memilih soal yang telah Anda buat di
-                mata pelajaran {tryout.subject.name}.
+                {isRaw
+                  ? "Silakan klik tombol \u201cAmbil dari Bank Soal\u201d untuk memilih soal dari seluruh mata pelajaran (TKP, TIU, dan TWK), lalu tetapkan kategori subtesnya."
+                  : `Silakan klik tombol \u201cAmbil dari Bank Soal\u201d untuk memilih soal yang telah Anda buat di mata pelajaran ${tryout.subject.name}.`}
               </p>
               {!tryout.isLocked && (
                 <Button variant="primary" size="sm" onClick={openBankModal} className="mt-2 gap-2 shadow-xs">
@@ -743,7 +792,9 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                   Pilih Soal dari Bank Soal
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Menampilkan soal aktif untuk mata pelajaran {tryout.subject.name}
+                  {isRaw
+                    ? "Menampilkan soal aktif dari seluruh mata pelajaran. Tetapkan kategori subtes (TWK/TIU/TKP) pada soal yang dipilih."
+                    : `Menampilkan soal aktif untuk mata pelajaran ${tryout.subject.name}`}
                 </p>
               </div>
               <Button
@@ -768,6 +819,21 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                   className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs"
                 />
               </div>
+
+              {isRaw && availableSubjects.length > 0 && (
+                <div className="w-full sm:w-auto min-w-[170px]">
+                  <CustomSelect
+                    value={bankSubject}
+                    onChange={(val) => setBankSubject(val)}
+                    placeholder="Semua Mata Pelajaran"
+                    options={[
+                      { value: "ALL", label: "Semua Mata Pelajaran" },
+                      ...availableSubjects.map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                    triggerClassName="py-1.5 text-xs"
+                  />
+                </div>
+              )}
 
               <div className="w-full sm:w-auto min-w-[160px]">
                 <CustomSelect
@@ -821,11 +887,15 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
               ) : filteredBankQuestions.length === 0 ? (
                 <div className="py-12 text-center text-slate-500 text-xs space-y-2">
                   <p className="font-semibold text-slate-700">
-                    Tidak ada soal yang tersedia untuk mata pelajaran &quot;{tryout.subject.name}&quot;.
+                    {isRaw
+                      ? "Tidak ada soal yang tersedia pada bank soal."
+                      : `Tidak ada soal yang tersedia untuk mata pelajaran "${tryout.subject.name}".`}
                   </p>
                   <p className="text-[11px] text-slate-400 max-w-md mx-auto">
                     {availableQuestions.length > 0
                       ? "Semua soal yang sesuai dengan filter pencarian ini telah dimasukkan ke dalam paket tryout."
+                      : isRaw
+                      ? "Pastikan Anda telah menambahkan soal di menu Bank Soal, atau periksa filter pencarian Anda."
                       : "Pastikan Anda telah menambahkan soal pada mata pelajaran ini di menu Bank Soal, atau periksa filter pencarian Anda."}
                   </p>
                 </div>
@@ -860,6 +930,11 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                       />
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2">
+                          {isRaw && q.topic?.subject?.name && (
+                            <Badge variant="info" className="text-[10px]">
+                              {q.topic.subject.name}
+                            </Badge>
+                          )}
                           <Badge variant="default" className="text-[10px]">
                             {q.topic?.name || "Topik Umum"}
                           </Badge>
