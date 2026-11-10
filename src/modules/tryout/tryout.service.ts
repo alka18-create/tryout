@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { UserRole, TryoutStatus, QuestionType, ScoringMode } from "@/generated/prisma/client";
+import { UserRole, TryoutStatus, QuestionType, ScoringMode, SkdSection } from "@/generated/prisma/client";
 import { sortMatrixOptions } from "@/lib/matrix-question";
 import type { CreateTryoutInput, SetTryoutQuestionsInput } from "./tryout.schema";
 
@@ -153,16 +153,30 @@ export class TryoutService {
         );
       }
 
-      // Mode RAW/SKD: seluruh soal wajib memiliki kategori subtes.
+      // Mode RAW/SKD: wajib memenuhi komposisi CASN (TWK 30, TIU 35, TKP 45).
       const targetScoringMode = input.scoringMode ?? tryout.scoringMode;
       if (targetScoringMode === ScoringMode.RAW) {
-        const missingSectionCount = await prisma.tryoutQuestion.count({
-          where: { tryoutId, section: null },
+        const sectionCounts = await prisma.tryoutQuestion.groupBy({
+          by: ["section"],
+          where: { tryoutId },
+          _count: { _all: true },
         });
-        if (missingSectionCount > 0) {
+        const countMap = new Map<SkdSection | null, number>();
+        sectionCounts.forEach((r) => countMap.set(r.section, r._count._all));
+
+        const needs: Array<{ section: SkdSection; need: number; label: string }> = [
+          { section: SkdSection.TWK, need: 30, label: "TWK" },
+          { section: SkdSection.TIU, need: 35, label: "TIU" },
+          { section: SkdSection.TKP, need: 45, label: "TKP" },
+        ];
+        const mismatches = needs.filter((n) => (countMap.get(n.section) ?? 0) !== n.need);
+        if (mismatches.length > 0) {
+          const detail = mismatches
+            .map((n) => `${n.label} ${countMap.get(n.section) ?? 0}/${n.need}`)
+            .join(", ");
           throw new AppError(
             "VALIDATION_ERROR",
-            `Paket tryout SKD belum dapat dipublikasikan: ${missingSectionCount} soal belum memiliki kategori subtes (TWK/TIU/TKP).`,
+            `Paket SKD belum dapat dipublikasikan: komposisi subtes tidak sesuai aturan CASN (${detail}). Wajib TWK 30, TIU 35, TKP 45.`,
           );
         }
       }
@@ -238,6 +252,22 @@ export class TryoutService {
           "Setiap soal pada tryout dengan mode skor mentah (SKD) wajib memiliki kategori subtes (TWK/TIU/TKP).",
         );
       }
+
+      // Urutan soal SKD selalu TWK → TIU → TKP (nomor 1-30, 31-65, 66-110).
+      // Urutan relatif antar anggota dalam satu subtes dipertahankan; nomor urut global ditetapkan ulang 1..N.
+      const sectionPriority: Record<SkdSection, number> = {
+        [SkdSection.TWK]: 0,
+        [SkdSection.TIU]: 1,
+        [SkdSection.TKP]: 2,
+      };
+      input.questions.sort((a, b) => {
+        const priorityA = sectionPriority[a.section!];
+        const priorityB = sectionPriority[b.section!];
+        return priorityA !== priorityB ? priorityA - priorityB : (a.orderNumber ?? 0) - (b.orderNumber ?? 0);
+      });
+      input.questions.forEach((q, idx) => {
+        q.orderNumber = idx + 1;
+      });
     }
 
     return prisma.$transaction(async (tx) => {

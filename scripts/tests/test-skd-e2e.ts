@@ -4,10 +4,12 @@
  * =============================================================================
  * Cakupan:
  *  - Penyimpanan soal WEIGHTED_CHOICE (TKP) dengan skor opsi 1-5
+ *  - Susunan SKD otomatis: TWK 30 (1-30) → TIU 35 (31-65) → TKP 45 (66-110)
+ *  - Urutan soal ujian SKD tidak diacak per siswa
+ *  - Publikasi SKD wajib tepat 30/35/45 (aturan CASN)
  *  - Sanitasi payload ujian (skor opsi & kunci tidak bocor ke client)
  *  - Penilaian mode RAW (skor mentah, bukan normalisasi 0-100)
- *  - Agregasi skor per subtes (TWK/TIU/TKP)
- *  - Kelulusan berdasarkan ambang batas per subtes
+ *  - Agregasi skor per subtes (TWK/TIU/TKP) & kelulusan ambang subtes
  *  - Pembahasan TKP menampilkan skor tiap opsi & status parsial
  *
  * Seluruh data uji dibuat sementara dan dihapus kembali di blok finally.
@@ -50,9 +52,56 @@ function assert(description: string, condition: boolean, details?: string) {
   }
 }
 
+const SKD_TARGET = { TWK: 30, TIU: 35, TKP: 45 } as const;
+
+type CreatedQuestion = Awaited<ReturnType<typeof QuestionBankService.createQuestion>>;
+
+async function createSkdQuestion(
+  teacherId: string,
+  topicId: string,
+  section: SkdSection,
+  index: number,
+): Promise<CreatedQuestion> {
+  if (section === SkdSection.TKP) {
+    return QuestionBankService.createQuestion(teacherId, {
+      topicId,
+      type: QuestionType.WEIGHTED_CHOICE,
+      difficulty: DifficultyLevel.MEDIUM,
+      content: `[TEMP SKD] Soal TKP #${index}: pilih opsi dengan skor terbaik.`,
+      imageUrl: null,
+      explanation: `Pembahasan TKP #${index}.`,
+      explanationImageUrl: null,
+      options: [
+        { label: "A", content: `Opsi skor 1 (#${index})`, isCorrect: false, score: 1, imageUrl: null },
+        { label: "B", content: `Opsi skor 2 (#${index})`, isCorrect: false, score: 2, imageUrl: null },
+        { label: "C", content: `Opsi skor 3 (#${index})`, isCorrect: false, score: 3, imageUrl: null },
+        { label: "D", content: `Opsi skor 4 (#${index})`, isCorrect: false, score: 4, imageUrl: null },
+        { label: "E", content: `Opsi skor 5 (#${index})`, isCorrect: false, score: 5, imageUrl: null },
+      ],
+    });
+  }
+
+  return QuestionBankService.createQuestion(teacherId, {
+    topicId,
+    type: QuestionType.SINGLE_CHOICE,
+    difficulty: DifficultyLevel.MEDIUM,
+    content: `[TEMP SKD] Soal ${section} #${index}: pilih jawaban A.`,
+    imageUrl: null,
+    explanation: `Pembahasan ${section} #${index}.`,
+    explanationImageUrl: null,
+    options: [
+      { label: "A", content: `Jawaban benar ${section} #${index}`, isCorrect: true, imageUrl: null },
+      { label: "B", content: `Pengecoh B ${section} #${index}`, isCorrect: false, imageUrl: null },
+      { label: "C", content: `Pengecoh C ${section} #${index}`, isCorrect: false, imageUrl: null },
+      { label: "D", content: `Pengecoh D ${section} #${index}`, isCorrect: false, imageUrl: null },
+      { label: "E", content: `Pengecoh E ${section} #${index}`, isCorrect: false, imageUrl: null },
+    ],
+  });
+}
+
 export async function runSkdE2ETests(): Promise<boolean> {
   console.log("\n==================================================");
-  console.log("▶ [E2E SKD] Alur SKD: Soal TKP → Ujian → Skor Mentah → Ambang Subtes");
+  console.log("▶ [E2E SKD] Alur SKD: Susunan 30/35/45 → Ujian → Skor Mentah → Ambang Subtes");
   console.log("==================================================");
 
   const topic = await prisma.topic.findFirst({ include: { subject: true } });
@@ -90,64 +139,24 @@ export async function runSkdE2ETests(): Promise<boolean> {
   const tryoutIds: string[] = [];
 
   try {
-    // 1. Soal TWK (pilihan ganda, kunci A)
-    const twkQuestion = await QuestionBankService.createQuestion(teacher.id, {
-      topicId: topic.id,
-      type: QuestionType.SINGLE_CHOICE,
-      difficulty: DifficultyLevel.MEDIUM,
-      content: "Soal TWK uji: pilih jawaban A.",
-      imageUrl: null,
-      explanation: "Pembahasan TWK.",
-      explanationImageUrl: null,
-      options: [
-        { label: "A", content: "Jawaban benar TWK", isCorrect: true, imageUrl: null },
-        { label: "B", content: "Jawaban salah TWK", isCorrect: false, imageUrl: null },
-        { label: "C", content: "Pengecoh C", isCorrect: false, imageUrl: null },
-        { label: "D", content: "Pengecoh D", isCorrect: false, imageUrl: null },
-        { label: "E", content: "Pengecoh E", isCorrect: false, imageUrl: null },
-      ],
-    });
-    questionIds.push(twkQuestion.id);
+    // 1. Siapkan bank soal SKD lengkap: TWK 30, TIU 35, TKP 45
+    console.log("  … menyiapkan 110 soal SKD (30 TWK / 35 TIU / 45 TKP)");
+    const twkQuestions: CreatedQuestion[] = [];
+    const tiuQuestions: CreatedQuestion[] = [];
+    const tkpQuestions: CreatedQuestion[] = [];
 
-    // 2. Soal TIU (pilihan ganda, kunci A)
-    const tiuQuestion = await QuestionBankService.createQuestion(teacher.id, {
-      topicId: topic.id,
-      type: QuestionType.SINGLE_CHOICE,
-      difficulty: DifficultyLevel.MEDIUM,
-      content: "Soal TIU uji: pilih jawaban A.",
-      imageUrl: null,
-      explanation: "Pembahasan TIU.",
-      explanationImageUrl: null,
-      options: [
-        { label: "A", content: "Jawaban benar TIU", isCorrect: true, imageUrl: null },
-        { label: "B", content: "Jawaban salah TIU", isCorrect: false, imageUrl: null },
-        { label: "C", content: "Pengecoh C", isCorrect: false, imageUrl: null },
-        { label: "D", content: "Pengecoh D", isCorrect: false, imageUrl: null },
-        { label: "E", content: "Pengecoh E", isCorrect: false, imageUrl: null },
-      ],
-    });
-    questionIds.push(tiuQuestion.id);
+    for (let i = 1; i <= SKD_TARGET.TWK; i++) {
+      twkQuestions.push(await createSkdQuestion(teacher.id, topic.id, SkdSection.TWK, i));
+    }
+    for (let i = 1; i <= SKD_TARGET.TIU; i++) {
+      tiuQuestions.push(await createSkdQuestion(teacher.id, topic.id, SkdSection.TIU, i));
+    }
+    for (let i = 1; i <= SKD_TARGET.TKP; i++) {
+      tkpQuestions.push(await createSkdQuestion(teacher.id, topic.id, SkdSection.TKP, i));
+    }
+    questionIds.push(...twkQuestions.map((q) => q.id), ...tiuQuestions.map((q) => q.id), ...tkpQuestions.map((q) => q.id));
 
-    // 3. Soal TKP (opsi berbobot, skor 1-5)
-    const tkpQuestion = await QuestionBankService.createQuestion(teacher.id, {
-      topicId: topic.id,
-      type: QuestionType.WEIGHTED_CHOICE,
-      difficulty: DifficultyLevel.MEDIUM,
-      content: "Soal TKP uji: pilih opsi dengan skor terbaik.",
-      imageUrl: null,
-      explanation: "Pembahasan TKP.",
-      explanationImageUrl: null,
-      options: [
-        { label: "A", content: "Opsi skor 1", isCorrect: false, score: 1, imageUrl: null },
-        { label: "B", content: "Opsi skor 2", isCorrect: false, score: 2, imageUrl: null },
-        { label: "C", content: "Opsi skor 3", isCorrect: false, score: 3, imageUrl: null },
-        { label: "D", content: "Opsi skor 4", isCorrect: false, score: 4, imageUrl: null },
-        { label: "E", content: "Opsi skor 5", isCorrect: false, score: 5, imageUrl: null },
-      ],
-    });
-    questionIds.push(tkpQuestion.id);
-
-    const storedScores = tkpQuestion.options
+    const storedScores = tkpQuestions[0].options
       .map((o) => o.score)
       .sort((a, b) => (a ?? 0) - (b ?? 0));
     assert(
@@ -156,7 +165,19 @@ export async function runSkdE2ETests(): Promise<boolean> {
       storedScores.join(","),
     );
 
-    // 4. Tryout SKD mode RAW dengan ambang batas resmi
+    // Susunan input sengaja diacak (TKP → TIU → TWK) untuk membuktikan server menata ulang.
+    const scrambled = [
+      ...tkpQuestions.map((q) => ({ q, section: SkdSection.TKP, weight: 1 })),
+      ...tiuQuestions.map((q) => ({ q, section: SkdSection.TIU, weight: 5 })),
+      ...twkQuestions.map((q) => ({ q, section: SkdSection.TWK, weight: 5 })),
+    ].map((item, idx) => ({
+      questionId: item.q.id,
+      orderNumber: idx + 1,
+      weight: item.weight,
+      section: item.section,
+    }));
+
+    // 2. Tryout SKD mode RAW dengan ambang batas resmi
     const tryout = await TryoutService.createTryout(teacher.id, {
       title: "[TEMP] Tryout SKD E2E",
       description: null,
@@ -177,53 +198,82 @@ export async function runSkdE2ETests(): Promise<boolean> {
     tryoutIds.push(tryout.id);
 
     await TryoutService.setTryoutQuestions(teacher.id, UserRole.TEACHER, tryout.id, {
-      questions: [
-        { questionId: twkQuestion.id, orderNumber: 1, weight: 5, section: SkdSection.TWK },
-        { questionId: tiuQuestion.id, orderNumber: 2, weight: 5, section: SkdSection.TIU },
-        { questionId: tkpQuestion.id, orderNumber: 3, weight: 1, section: SkdSection.TKP },
-      ],
+      questions: scrambled,
     });
+
+    // 3. Verifikasi penataan otomatis: TWK 1-30, TIU 31-65, TKP 66-110
+    const stored = await prisma.tryoutQuestion.findMany({
+      where: { tryoutId: tryout.id },
+      orderBy: { orderNumber: "asc" },
+      select: { questionId: true, section: true, orderNumber: true },
+    });
+    const expectedSections = [
+      ...Array.from({ length: SKD_TARGET.TWK }, () => SkdSection.TWK),
+      ...Array.from({ length: SKD_TARGET.TIU }, () => SkdSection.TIU),
+      ...Array.from({ length: SKD_TARGET.TKP }, () => SkdSection.TKP),
+    ];
+    assert(
+      "Susunan soal otomatis: TWK (1-30) → TIU (31-65) → TKP (66-110)",
+      stored.map((s) => s.section).join(",") === expectedSections.join(","),
+      `${stored.slice(0, 1)[0]?.section} … ${stored.slice(-1)[0]?.section}`,
+    );
+    assert(
+      "Nomor urut soal berurutan 1..110",
+      stored.length === 110 && stored.every((s, idx) => s.orderNumber === idx + 1),
+      `total=${stored.length}`,
+    );
+    assert(
+      "Urutan relatif dalam satu subtes dipertahankan",
+      stored[0].questionId === twkQuestions[0].id &&
+        stored[30].questionId === tiuQuestions[0].id &&
+        stored[65].questionId === tkpQuestions[0].id,
+    );
+
     await TryoutService.updateTryout(teacher.id, UserRole.TEACHER, tryout.id, {
       status: TryoutStatus.PUBLISHED,
     });
+    assert("Paket SKD lengkap 30/35/45 berhasil dipublikasikan", true);
 
-    // 5. Mulai sesi & verifikasi sanitasi payload
+    // 4. Mulai sesi & verifikasi sanitasi payload
     const start = await ExamService.startOrResumeExamSession(student.id, tryout.id);
     const sheet = await ExamService.getSanitizedExamSession(student.id, start.sessionId);
 
     assert(
       "Lembar ujian tidak membocorkan kunci/skor opsi",
-      sheet.questions.every((q) =>
-        q.options.every((o) => !("isCorrect" in o) && !("score" in o)),
-      ),
+      sheet.questions.every((q) => q.options.every((o) => !("isCorrect" in o) && !("score" in o))),
+    );
+    assert(
+      "Lembar ujian memuat seluruh 110 soal",
+      sheet.questions.length === 110,
+      String(sheet.questions.length),
+    );
+    assert(
+      "Urutan soal ujian SKD tidak diacak (sesuai paket)",
+      sheet.questions.map((q) => q.questionId).join(",") === stored.map((s) => s.questionId).join(","),
     );
 
-    const twkExam = sheet.questions.find((q) => q.questionId === twkQuestion.id)!;
-    const tiuExam = sheet.questions.find((q) => q.questionId === tiuQuestion.id)!;
-    const tkpExam = sheet.questions.find((q) => q.questionId === tkpQuestion.id)!;
+    const twkExam = sheet.questions.find((q) => q.questionId === twkQuestions[0].id)!;
+    const tiuExam = sheet.questions.find((q) => q.questionId === tiuQuestions[0].id)!;
+    const tkpExam = sheet.questions.find((q) => q.questionId === tkpQuestions[0].id)!;
 
-    // 6. Jawab: TWK benar (5), TIU salah (0), TKP skor 3 (3)
-    const twkCorrectId = twkExam.options.find((o) => o.content === "Jawaban benar TWK")!.id;
-    const tiuWrongId = tiuExam.options.find((o) => o.content === "Jawaban salah TIU")!.id;
-    const tkpScore3Id = tkpExam.options.find((o) => o.content === "Opsi skor 3")!.id;
-
+    // 5. Jawab: TWK benar (5), TIU salah (0), TKP skor 3 (3); sisanya kosong (0)
     await ExamService.saveAnswer(student.id, start.sessionId, {
       questionId: twkExam.questionId,
-      selectedOptionId: twkCorrectId,
+      selectedOptionId: twkExam.options.find((o) => o.content.startsWith("Jawaban benar"))!.id,
       isFlagged: false,
     });
     await ExamService.saveAnswer(student.id, start.sessionId, {
       questionId: tiuExam.questionId,
-      selectedOptionId: tiuWrongId,
+      selectedOptionId: tiuExam.options.find((o) => o.content.startsWith("Pengecoh B"))!.id,
       isFlagged: false,
     });
     await ExamService.saveAnswer(student.id, start.sessionId, {
       questionId: tkpExam.questionId,
-      selectedOptionId: tkpScore3Id,
+      selectedOptionId: tkpExam.options.find((o) => o.content === "Opsi skor 3 (#1)")!.id,
       isFlagged: false,
     });
 
-    // 7. Submit & verifikasi skor mentah
+    // 6. Submit & verifikasi skor mentah
     const result = await ExamService.submitExamSession(student.id, start.sessionId, false);
 
     assert(
@@ -231,10 +281,7 @@ export async function runSkdE2ETests(): Promise<boolean> {
       result.totalScore === 8,
       String(result.totalScore),
     );
-    assert(
-      "Kelulusan dihitung dari ambang per subtes (belum memenuhi)",
-      result.isPassed === false,
-    );
+    assert("Kelulusan dihitung dari ambang per subtes (belum memenuhi)", result.isPassed === false);
 
     const sectionScores = await prisma.examSectionScore.findMany({
       where: { examSessionId: start.sessionId },
@@ -242,21 +289,21 @@ export async function runSkdE2ETests(): Promise<boolean> {
     const bySection = new Map(sectionScores.map((s) => [s.section, s]));
 
     assert(
-      "Skor subtes TWK tersimpan = 5 / 5",
+      "Skor subtes TWK = 5 / 150",
       bySection.get(SkdSection.TWK)?.score === 5 &&
-        bySection.get(SkdSection.TWK)?.maxScore === 5,
+        bySection.get(SkdSection.TWK)?.maxScore === 150,
       JSON.stringify(bySection.get(SkdSection.TWK)),
     );
     assert(
-      "Skor subtes TIU tersimpan = 0 / 5",
+      "Skor subtes TIU = 0 / 175",
       bySection.get(SkdSection.TIU)?.score === 0 &&
-        bySection.get(SkdSection.TIU)?.maxScore === 5,
+        bySection.get(SkdSection.TIU)?.maxScore === 175,
       JSON.stringify(bySection.get(SkdSection.TIU)),
     );
     assert(
-      "Skor subtes TKP tersimpan = 3 / 5",
+      "Skor subtes TKP = 3 / 225",
       bySection.get(SkdSection.TKP)?.score === 3 &&
-        bySection.get(SkdSection.TKP)?.maxScore === 5,
+        bySection.get(SkdSection.TKP)?.maxScore === 225,
       JSON.stringify(bySection.get(SkdSection.TKP)),
     );
     assert(
@@ -265,9 +312,9 @@ export async function runSkdE2ETests(): Promise<boolean> {
       JSON.stringify(sectionScores.map((s) => ({ section: s.section, isPassed: s.isPassed }))),
     );
 
-    // 8. Pembahasan TKP: skor opsi & status parsial
+    // 7. Pembahasan TKP: skor opsi & status parsial
     const discussion = await ScoringService.getExamSessionDiscussion(student.id, start.sessionId);
-    const tkpDiscussion = discussion.questions.find((q) => q.questionId === tkpQuestion.id)!;
+    const tkpDiscussion = discussion.questions.find((q) => q.questionId === tkpQuestions[0].id)!;
 
     assert(
       "Pembahasan TKP memuat skor tiap opsi",
@@ -280,12 +327,11 @@ export async function runSkdE2ETests(): Promise<boolean> {
     );
     assert(
       "Label kunci TKP menampilkan skor opsi",
-      tkpDiscussion.correctLabel.includes("Skor opsi") &&
-        tkpDiscussion.correctLabel.includes("=5"),
+      tkpDiscussion.correctLabel.includes("Skor opsi") && tkpDiscussion.correctLabel.includes("=5"),
       tkpDiscussion.correctLabel,
     );
 
-    // 9. Tryout kedua dengan ambang rendah: semua terpenuhi => LULUS
+    // 8. Tryout kedua: semua jawaban benar => skor maksimum 550 dan LULUS
     const passingTryout = await TryoutService.createTryout(teacher.id, {
       title: "[TEMP] Tryout SKD Lulus E2E",
       description: null,
@@ -293,9 +339,9 @@ export async function runSkdE2ETests(): Promise<boolean> {
       durationMinutes: 100,
       passingScore: 75,
       scoringMode: ScoringMode.RAW,
-      passingTwk: 5,
-      passingTiu: 0,
-      passingTkp: 3,
+      passingTwk: 65,
+      passingTiu: 80,
+      passingTkp: 166,
       maxAttempts: 1,
       questionCount: null,
       status: TryoutStatus.DRAFT,
@@ -307,9 +353,24 @@ export async function runSkdE2ETests(): Promise<boolean> {
 
     await TryoutService.setTryoutQuestions(teacher.id, UserRole.TEACHER, passingTryout.id, {
       questions: [
-        { questionId: twkQuestion.id, orderNumber: 1, weight: 5, section: SkdSection.TWK },
-        { questionId: tiuQuestion.id, orderNumber: 2, weight: 5, section: SkdSection.TIU },
-        { questionId: tkpQuestion.id, orderNumber: 3, weight: 1, section: SkdSection.TKP },
+        ...twkQuestions.map((q, idx) => ({
+          questionId: q.id,
+          orderNumber: idx + 1,
+          weight: 5,
+          section: SkdSection.TWK,
+        })),
+        ...tiuQuestions.map((q, idx) => ({
+          questionId: q.id,
+          orderNumber: SKD_TARGET.TWK + idx + 1,
+          weight: 5,
+          section: SkdSection.TIU,
+        })),
+        ...tkpQuestions.map((q, idx) => ({
+          questionId: q.id,
+          orderNumber: SKD_TARGET.TWK + SKD_TARGET.TIU + idx + 1,
+          weight: 1,
+          section: SkdSection.TKP,
+        })),
       ],
     });
     await TryoutService.updateTryout(teacher.id, UserRole.TEACHER, passingTryout.id, {
@@ -319,35 +380,83 @@ export async function runSkdE2ETests(): Promise<boolean> {
     const start2 = await ExamService.startOrResumeExamSession(student.id, passingTryout.id);
     const sheet2 = await ExamService.getSanitizedExamSession(student.id, start2.sessionId);
 
-    const twk2 = sheet2.questions.find((q) => q.questionId === twkQuestion.id)!;
-    const tiu2 = sheet2.questions.find((q) => q.questionId === tiuQuestion.id)!;
-    const tkp2 = sheet2.questions.find((q) => q.questionId === tkpQuestion.id)!;
-
-    await ExamService.saveAnswer(student.id, start2.sessionId, {
-      questionId: twk2.questionId,
-      selectedOptionId: twk2.options.find((o) => o.content === "Jawaban benar TWK")!.id,
-      isFlagged: false,
-    });
-    await ExamService.saveAnswer(student.id, start2.sessionId, {
-      questionId: tiu2.questionId,
-      selectedOptionId: tiu2.options.find((o) => o.content === "Jawaban benar TIU")!.id,
-      isFlagged: false,
-    });
-    await ExamService.saveAnswer(student.id, start2.sessionId, {
-      questionId: tkp2.questionId,
-      selectedOptionId: tkp2.options.find((o) => o.content === "Opsi skor 5")!.id,
-      isFlagged: false,
-    });
+    const sectionByQuestion = new Map(stored.map((s) => [s.questionId, s.section]));
+    for (const examQuestion of sheet2.questions) {
+      const section = sectionByQuestion.get(examQuestion.questionId);
+      const correctOption =
+        section === SkdSection.TKP
+          ? examQuestion.options.find((o) => o.content.startsWith("Opsi skor 5"))
+          : examQuestion.options.find((o) => o.content.startsWith("Jawaban benar"));
+      if (!correctOption) {
+        throw new Error(`Opsi jawaban benar tidak ditemukan untuk soal ${examQuestion.questionId}`);
+      }
+      await ExamService.saveAnswer(student.id, start2.sessionId, {
+        questionId: examQuestion.questionId,
+        selectedOptionId: correctOption.id,
+        isFlagged: false,
+      });
+    }
 
     const result2 = await ExamService.submitExamSession(student.id, start2.sessionId, false);
     assert(
-      "Skor total percobaan kedua = 15 (5 + 5 + 5)",
-      result2.totalScore === 15,
+      "Skor total semua benar = 550 (TWK 150 + TIU 175 + TKP 225)",
+      result2.totalScore === 550,
       String(result2.totalScore),
     );
+    assert("Tryout lulus saat seluruh ambang subtes terpenuhi", result2.isPassed === true);
+
+    const sectionScores2 = await prisma.examSectionScore.findMany({
+      where: { examSessionId: start2.sessionId },
+    });
+    const bySection2 = new Map(sectionScores2.map((s) => [s.section, s]));
     assert(
-      "Tryout lulus saat seluruh ambang subtes terpenuhi",
-      result2.isPassed === true,
+      "Skor maksimum per subtes tercatat 150/175/225",
+      bySection2.get(SkdSection.TWK)?.maxScore === 150 &&
+        bySection2.get(SkdSection.TIU)?.maxScore === 175 &&
+        bySection2.get(SkdSection.TKP)?.maxScore === 225,
+    );
+
+    // 9. Publikasi diblokir bila komposisi tidak 30/35/45
+    const incompleteTryout = await TryoutService.createTryout(teacher.id, {
+      title: "[TEMP] Tryout SKD Tidak Lengkap E2E",
+      description: null,
+      subjectId: topic.subjectId,
+      durationMinutes: 100,
+      passingScore: 75,
+      scoringMode: ScoringMode.RAW,
+      passingTwk: 65,
+      passingTiu: 80,
+      passingTkp: 166,
+      maxAttempts: 1,
+      questionCount: null,
+      status: TryoutStatus.DRAFT,
+      discussionVisibility: DiscussionVisibility.AFTER_SUBMIT,
+      startDate: null,
+      endDate: null,
+    });
+    tryoutIds.push(incompleteTryout.id);
+
+    await TryoutService.setTryoutQuestions(teacher.id, UserRole.TEACHER, incompleteTryout.id, {
+      questions: [
+        { questionId: twkQuestions[0].id, orderNumber: 1, weight: 5, section: SkdSection.TWK },
+        { questionId: tiuQuestions[0].id, orderNumber: 2, weight: 5, section: SkdSection.TIU },
+        { questionId: tkpQuestions[0].id, orderNumber: 3, weight: 1, section: SkdSection.TKP },
+      ],
+    });
+
+    let publishError: { code?: string; message?: string } | null = null;
+    try {
+      await TryoutService.updateTryout(teacher.id, UserRole.TEACHER, incompleteTryout.id, {
+        status: TryoutStatus.PUBLISHED,
+      });
+    } catch (err) {
+      publishError = err as { code?: string; message?: string };
+    }
+    assert(
+      "Publikasi SKD diblokir bila komposisi bukan 30/35/45",
+      publishError?.code === "VALIDATION_ERROR" &&
+        (publishError?.message ?? "").includes("TWK"),
+      JSON.stringify(publishError),
     );
 
     const session = await prisma.examSession.findUnique({

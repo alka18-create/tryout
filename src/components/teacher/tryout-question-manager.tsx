@@ -84,8 +84,19 @@ interface TryoutDetail {
 
 export function TryoutQuestionManager({ initialTryout }: { initialTryout: TryoutDetail }) {
   const [tryout, setTryout] = useState<TryoutDetail>(initialTryout);
-  const [questions, setQuestions] = useState<AttachedQuestion[]>(
-    initialTryout.tryoutQuestions.sort((a, b) => a.orderNumber - b.orderNumber)
+
+  // Urutan & penomoran soal: mode SKD selalu TWK → TIU → TKP (nomor 1-30, 31-65, 66-110).
+  // Mode lain tetap mengikuti urutan penyusunan guru (section = prioritas akhir).
+  const applySkdOrder = (list: AttachedQuestion[]): AttachedQuestion[] => {
+    const priority = (s?: SkdSectionValue | null) =>
+      s === "TWK" ? 0 : s === "TIU" ? 1 : s === "TKP" ? 2 : 3;
+    return [...list]
+      .sort((a, b) => priority(a.section) - priority(b.section) || a.orderNumber - b.orderNumber)
+      .map((item, idx) => ({ ...item, orderNumber: idx + 1 }));
+  };
+
+  const [questions, setQuestions] = useState<AttachedQuestion[]>(() =>
+    applySkdOrder(initialTryout.tryoutQuestions)
   );
 
   // Bank Soal picker state
@@ -177,7 +188,7 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
       ...item,
       orderNumber: idx + 1,
     }));
-    setQuestions(reordered);
+    setQuestions(applySkdOrder(reordered));
   };
 
   // Move Question Down
@@ -192,19 +203,14 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
       ...item,
       orderNumber: idx + 1,
     }));
-    setQuestions(reordered);
+    setQuestions(applySkdOrder(reordered));
   };
 
   // Remove Question
   const removeQuestion = (questionId: string) => {
     if (tryout.isLocked) return;
-    const newItems = questions
-      .filter((q) => q.questionId !== questionId)
-      .map((item, idx) => ({
-        ...item,
-        orderNumber: idx + 1,
-      }));
-    setQuestions(newItems);
+    const newItems = questions.filter((q) => q.questionId !== questionId);
+    setQuestions(applySkdOrder(newItems));
   };
 
   // Change Weight
@@ -220,16 +226,18 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
   // Change Section (kategori subtes SKD)
   const updateSection = (questionId: string, section: SkdSectionValue) => {
     if (tryout.isLocked) return;
-    setQuestions((prev) =>
-      prev.map((item) =>
-        item.questionId === questionId
-          ? {
-              ...item,
-              section,
-              // Bobot default SKD: TWK/TIU 5 poin per soal benar; TKP memakai skor opsi (1-5).
-              weight: section === "TKP" ? 1 : 5,
-            }
-          : item
+    setQuestions(
+      applySkdOrder(
+        questions.map((item) =>
+          item.questionId === questionId
+            ? {
+                ...item,
+                section,
+                // Bobot default SKD: TWK/TIU 5 poin per soal benar; TKP memakai skor opsi (1-5).
+                weight: section === "TKP" ? 1 : 5,
+              }
+            : item
+        )
       )
     );
   };
@@ -250,7 +258,7 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
       question: q,
     }));
 
-    setQuestions([...questions, ...newAttached]);
+    setQuestions(applySkdOrder([...questions, ...newAttached]));
     setSelectedQuestionIds(new Set());
     setIsBankModalOpen(false);
   };
@@ -275,8 +283,10 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
     }
 
     try {
+      // Kirim susunan sesuai urutan final SKD (TWK → TIU → TKP) dengan nomor 1..N.
+      const orderedQuestions = applySkdOrder(questions);
       const payload = {
-        questions: questions.map((q) => ({
+        questions: orderedQuestions.map((q) => ({
           questionId: q.questionId,
           orderNumber: q.orderNumber,
           weight: q.weight,
@@ -300,9 +310,10 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
         return;
       }
 
+      setQuestions(orderedQuestions);
       setFeedback({
         type: "success",
-        text: `Susunan soal berhasil disimpan! Total: ${questions.length} butir soal.`,
+        text: `Susunan soal berhasil disimpan! Total: ${orderedQuestions.length} butir soal.`,
       });
       setIsSaving(false);
     } catch {
@@ -544,6 +555,10 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                   ? "Komposisi sudah sesuai."
                   : "Sesuaikan jumlah soal per subtes."}
               </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Urutan otomatis dan tidak dapat diubah manual: TWK nomor 1–30, TIU 31–65, TKP
+                66–110. Paket hanya bisa dipublikasikan bila komposisi tepat 30/35/45.
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {(["TWK", "TIU", "TKP"] as const).map((s) => (
@@ -590,7 +605,9 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
           <div>
             <CardTitle className="text-lg text-slate-900">Urutan Soal Tryout</CardTitle>
             <CardDescription className="text-slate-500">
-              Gunakan tombol panah untuk mengubah nomor urut pengerjaan soal peserta
+              {isRaw
+                ? "Urutan otomatis: TWK (1–30) → TIU (31–65) → TKP (66–110). Nomor mengikuti subtes."
+                : "Gunakan tombol panah untuk mengubah nomor urut pengerjaan soal peserta"}
             </CardDescription>
           </div>
           {!tryout.isLocked && (
@@ -740,27 +757,31 @@ export function TryoutQuestionManager({ initialTryout }: { initialTryout: Tryout
                         <Eye className="w-4 h-4" />
                       </Button>
 
-                      {/* Reorder Buttons */}
+                      {/* Reorder Buttons — mode SKD urutannya tetap (TWK → TIU → TKP) */}
                       {!tryout.isLocked && (
                         <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
-                          <button
-                            type="button"
-                            onClick={() => moveUp(index)}
-                            disabled={index === 0}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
-                            title="Pindah ke Atas"
-                          >
-                            <ArrowUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveDown(index)}
-                            disabled={index === questions.length - 1}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
-                            title="Pindah ke Bawah"
-                          >
-                            <ArrowDown className="w-4 h-4" />
-                          </button>
+                          {!isRaw && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => moveUp(index)}
+                                disabled={index === 0}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title="Pindah ke Atas"
+                              >
+                                <ArrowUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveDown(index)}
+                                disabled={index === questions.length - 1}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title="Pindah ke Bawah"
+                              >
+                                <ArrowDown className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                           <button
                             type="button"
                             onClick={() => removeQuestion(item.questionId)}

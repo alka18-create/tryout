@@ -445,9 +445,11 @@ export class ExamService {
           },
         });
 
-        // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa
+        // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa.
+        // Mode SKD (RAW) selalu menampilkan seluruh butir soal dan tidak diacak.
         let assignedQuestions = tryout.tryoutQuestions;
         if (
+          tryout.scoringMode !== ScoringMode.RAW &&
           tryout.questionCount &&
           tryout.questionCount > 0 &&
           tryout.questionCount < tryout.tryoutQuestions.length
@@ -555,13 +557,27 @@ export class ExamService {
       weightMap.set(tq.questionId, tq.weight);
     });
 
-    // 1. Acak urutan butir soal secara unik & konsisten untuk sesi ini (Seeded PRNG)
+    // Mode SKD (RAW): tampilkan soal sesuai urutan paket (TWK→TIU→TKP) tanpa diacak.
+    // Mode lain: acak urutan butir soal secara unik & konsisten untuk sesi ini (Seeded PRNG).
+    const isRawSkd = session.tryout.scoringMode === ScoringMode.RAW;
     const questionSeed = `${session.id}:questions`;
-    const shuffledAnswers = shuffleArrayWithSeed(session.answers, questionSeed);
 
-    // 2. Sanitasi payload & acak urutan opsi jawaban (A–E) secara unik untuk tiap butir soal
-    const sanitizedQuestions = shuffledAnswers.map((ans, index) => {
-      const weight = weightMap.get(ans.questionId) || 1.0;
+    const answersByQuestion = new Map(session.answers.map((a) => [a.questionId, a]));
+    const orderedEntries = isRawSkd
+      ? session.tryout.tryoutQuestions.map((tq) => ({
+          ans: answersByQuestion.get(tq.questionId),
+          weight: tq.weight,
+        }))
+      : shuffleArrayWithSeed(session.answers, questionSeed).map((ans) => ({
+          ans,
+          weight: weightMap.get(ans.questionId) || 1.0,
+        }));
+
+    // Sanitasi payload & acak urutan opsi jawaban (A–E) secara unik untuk tiap butir soal
+    const sanitizedQuestions = orderedEntries.map(({ ans, weight }, index) => {
+      if (!ans) {
+        throw new AppError("INTERNAL_ERROR", "Baris jawaban untuk butir soal ujian tidak ditemukan.");
+      }
       const optionSeed = `${session.id}:question:${ans.questionId}:options`;
 
       const rawOptions = ans.question.options.map((opt) => ({
@@ -579,7 +595,7 @@ export class ExamService {
           : shuffleQuestionOptions(rawOptions, optionSeed);
 
       return {
-        orderNumber: index + 1, // Nomor 1 .. N teracak untuk siswa ini
+        orderNumber: index + 1, // Urutan paket (SKD) / teracak unik per siswa (mode lain)
         weight,
         questionId: ans.questionId,
         type: ans.question.type,
