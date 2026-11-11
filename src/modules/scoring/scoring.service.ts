@@ -27,6 +27,7 @@ export class ScoringService {
             topic: true,
           },
         },
+        sectionScores: true,
       },
     });
 
@@ -93,6 +94,28 @@ export class ScoringService {
     const isEnded = session.tryout.endDate && new Date(session.tryout.endDate).getTime() < now;
     const canRetake = attemptsRemaining > 0 && isStarted && !isEnded;
 
+    // Rincian nilai per subtes SKD (TWK/TIU/TKP) beserta ambang batas paket.
+    const sectionOrder: Record<string, number> = { TWK: 0, TIU: 1, TKP: 2 };
+    const sectionScores = [...session.sectionScores]
+      .sort((a, b) => (sectionOrder[a.section] ?? 9) - (sectionOrder[b.section] ?? 9))
+      .map((s) => {
+        const threshold =
+          s.section === "TWK"
+            ? session.tryout.passingTwk
+            : s.section === "TIU"
+              ? session.tryout.passingTiu
+              : session.tryout.passingTkp;
+        return {
+          section: s.section,
+          score: s.score,
+          maxScore: s.maxScore,
+          threshold,
+          isPassed: s.isPassed,
+          correctCount: s.correctCount,
+          totalCount: s.totalCount,
+        };
+      });
+
     return {
       sessionId: session.id,
       tryoutId: session.tryoutId,
@@ -120,6 +143,7 @@ export class ScoringService {
       passingTiu: session.tryout.passingTiu,
       passingTkp: session.tryout.passingTkp,
       isPassed: session.isPassed,
+      sectionScores,
       correctCount: session.correctCount,
       wrongCount: session.wrongCount,
       unansweredCount: session.unansweredCount,

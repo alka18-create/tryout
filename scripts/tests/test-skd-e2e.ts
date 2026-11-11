@@ -467,6 +467,25 @@ export async function runSkdE2ETests(): Promise<boolean> {
       JSON.stringify(sectionScores.map((s) => ({ section: s.section, isPassed: s.isPassed }))),
     );
 
+    // 6b. Hasil ujian menampilkan rincian per subtes + ambang batas dari paket
+    const resultDetail = await ScoringService.getExamSessionResult(student.id, start.sessionId);
+    const resultSectionMap = new Map(resultDetail.sectionScores.map((s) => [s.section, s]));
+    assert(
+      "Hasil ujian memuat rincian TWK/TIU/TKP beserta ambang batas paket",
+      resultDetail.sectionScores.length === 3 &&
+        resultSectionMap.get(SkdSection.TWK)?.threshold === 65 &&
+        resultSectionMap.get(SkdSection.TIU)?.threshold === 80 &&
+        resultSectionMap.get(SkdSection.TKP)?.threshold === 166 &&
+        resultSectionMap.get(SkdSection.TWK)?.score === 5 &&
+        resultSectionMap.get(SkdSection.TIU)?.score === 0 &&
+        resultSectionMap.get(SkdSection.TKP)?.score === 3,
+      JSON.stringify(resultDetail.sectionScores),
+    );
+    assert(
+      "Kelulusan hasil ujian mengikuti ambang subtes, bukan KKM 75",
+      resultDetail.isPassed === false && resultDetail.sectionScores.every((s) => s.isPassed === false),
+    );
+
     // 7. Pembahasan TKP: skor opsi & status parsial
     const discussion = await ScoringService.getExamSessionDiscussion(student.id, start.sessionId);
     const tkpDiscussion = discussion.questions.find((q) => q.questionId === tkpQuestions[0].id)!;
@@ -575,6 +594,18 @@ export async function runSkdE2ETests(): Promise<boolean> {
       bySection2.get(SkdSection.TWK)?.maxScore === 150 &&
         bySection2.get(SkdSection.TIU)?.maxScore === 175 &&
         bySection2.get(SkdSection.TKP)?.maxScore === 225,
+    );
+
+    const result2Detail = await ScoringService.getExamSessionResult(student.id, start2.sessionId);
+    const result2SectionMap = new Map(result2Detail.sectionScores.map((s) => [s.section, s]));
+    assert(
+      "Hasil ujian semua benar: TWK/TIU/TKP memenuhi ambang & dinyatakan LULUS",
+      result2Detail.isPassed === true &&
+        result2Detail.sectionScores.every((s) => s.isPassed) &&
+        result2SectionMap.get(SkdSection.TWK)?.score === 150 &&
+        result2SectionMap.get(SkdSection.TIU)?.score === 175 &&
+        result2SectionMap.get(SkdSection.TKP)?.score === 225,
+      JSON.stringify(result2Detail.sectionScores),
     );
 
     // 9. Publikasi diblokir bila komposisi tidak 30/35/45

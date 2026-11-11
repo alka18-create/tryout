@@ -1035,9 +1035,16 @@ export class ExamService {
       ? Math.round(finalScore * 100) / 100
       : Math.round(finalScore * 10) / 10;
 
-    // Kelulusan: mode RAW memakai ambang batas per subtes (TWK/TIU/TKP).
+    // Kelulusan: jika paket menetapkan ambang batas per subtes (TWK/TIU/TKP),
+    // kelulusan ditentukan oleh ketiganya — bukan KKM/nilai umum.
+    const hasSectionThresholds =
+      session.tryout.passingTwk !== null ||
+      session.tryout.passingTiu !== null ||
+      session.tryout.passingTkp !== null;
+    const useSectionThresholds = hasSectionThresholds && sectionStats.size > 0;
+
     let isPassed: boolean;
-    if (isRawMode) {
+    if (useSectionThresholds) {
       const thresholdChecks: boolean[] = [];
       if (session.tryout.passingTwk !== null) {
         thresholdChecks.push(
@@ -1054,10 +1061,7 @@ export class ExamService {
           (sectionStats.get(SkdSection.TKP)?.score ?? 0) >= session.tryout.passingTkp,
         );
       }
-      isPassed =
-        thresholdChecks.length > 0
-          ? thresholdChecks.every(Boolean)
-          : roundedScore >= session.tryout.passingScore;
+      isPassed = thresholdChecks.every(Boolean);
     } else {
       isPassed = roundedScore >= session.tryout.passingScore;
     }

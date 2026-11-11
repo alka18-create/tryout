@@ -48,6 +48,9 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
     result.discussionVisibility === "ALWAYS" ||
     result.discussionVisibility === "AFTER_SUBMIT";
   const isRaw = result.scoringMode === "RAW";
+  const hasSectionThresholds =
+    result.passingTwk !== null || result.passingTiu !== null || result.passingTkp !== null;
+  const useSectionScoring = result.sectionScores.length > 0 && hasSectionThresholds;
 
   return (
     <div className="max-w-5xl space-y-7 mx-auto pb-10">
@@ -76,10 +79,10 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
                 className="text-xs sm:text-sm px-3.5 py-1 font-black rounded-xl"
               >
                 {result.isPassed
-                  ? isRaw
+                  ? useSectionScoring
                     ? "LULUS AMBANG BATAS"
                     : "LULUS STANDAR KKM"
-                  : isRaw
+                  : useSectionScoring
                   ? "BELUM LULUS AMBANG BATAS"
                   : "DI BAWAH KKM"}
               </Badge>
@@ -111,7 +114,7 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
                 Skor Percobaan Ini
               </span>
               <span className="text-xs sm:text-sm font-semibold text-slate-400 block">
-                {isRaw
+                {useSectionScoring
                   ? `Ambang: TWK ${result.passingTwk ?? "-"} • TIU ${result.passingTiu ?? "-"} • TKP ${result.passingTkp ?? "-"}`
                   : `Standar KKM: ${result.passingScore}`}
               </span>
@@ -261,6 +264,93 @@ export default async function ExamResultPage({ params }: ResultPageProps) {
           )}
         </div>
       </Card>
+
+      {/* 1b. RINCIAN NILAI PER SUBTES SKD (TWK / TIU / TKP) */}
+      {useSectionScoring && (
+        <Card className="bg-white border-slate-200/90 shadow-sm rounded-3xl">
+          <CardHeader className="border-b border-slate-100 p-6 sm:p-8">
+            <CardTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-black text-slate-900">
+              <Award className="w-6 h-6 text-blue-600" />
+              Rincian Nilai per Subtes
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base text-slate-500 mt-1">
+              Kelulusan ditentukan oleh ketiga ambang batas yang ditetapkan pada paket tryout ini,
+              bukan nilai KKM umum.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 sm:p-8 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {result.sectionScores.map((s) => {
+                const fullName =
+                  s.section === "TWK"
+                    ? "Tes Wawasan Kebangsaan"
+                    : s.section === "TIU"
+                      ? "Tes Inteligensi Umum"
+                      : "Tes Karakteristik Pribadi";
+                const pct =
+                  s.maxScore > 0 ? Math.min(100, (s.score / s.maxScore) * 100) : 0;
+
+                return (
+                  <div
+                    key={s.section}
+                    className={`p-5 rounded-2xl border ${
+                      s.isPassed
+                        ? "bg-emerald-50/70 border-emerald-200"
+                        : "bg-rose-50/70 border-rose-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base font-black text-slate-900">{s.section}</span>
+                      <Badge
+                        variant={s.isPassed ? "success" : "danger"}
+                        className="text-[10px] font-black px-2 py-0.5"
+                      >
+                        {s.isPassed ? "MEMENUHI" : "BELUM MEMENUHI"}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{fullName}</p>
+
+                    <div className="mt-3 flex items-end gap-1">
+                      <span className="text-3xl font-black text-slate-900">{s.score}</span>
+                      <span className="text-sm font-bold text-slate-400 mb-1">/ {s.maxScore}</span>
+                    </div>
+
+                    <div className="h-2.5 mt-2 rounded-full bg-white/80 border border-slate-200/60 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          s.isPassed ? "bg-emerald-500" : "bg-rose-500"
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-[11px] sm:text-xs text-slate-600">
+                      <span>
+                        Ambang batas: <strong>{s.threshold ?? "-"}</strong>
+                      </span>
+                      <span>
+                        {s.correctCount}/{s.totalCount} soal
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              className={`p-4 rounded-2xl border text-sm font-bold ${
+                result.isPassed
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : "bg-rose-50 border-rose-200 text-rose-800"
+              }`}
+            >
+              {result.isPassed
+                ? "Seluruh ambang batas subtes terpenuhi — dinyatakan LULUS."
+                : "Ada ambang batas subtes yang belum terpenuhi — dinyatakan BELUM LULUS."}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 2. DIAGNOSTIK PENGUASAAN MATERI (TOPIC MASTERY) */}
       <Card className="bg-white border-slate-200/90 shadow-sm rounded-3xl">
