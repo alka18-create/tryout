@@ -2,14 +2,18 @@
  * Helper untuk logika pembatasan akun demo pada TryoutKu
  */
 
+/**
+ * Daftar eksplisit akun demo siswa (sesuai prisma/seed.ts).
+ *
+ * Sengaja dicocokkan per-email, BUKAN per-domain, agar akun peserta resmi yang
+ * mendaftar memakai alamat @tryoutku.com tetap bisa mengerjakan semua paket.
+ * Pembatasan "1 paket tryout" hanya berlaku untuk akun demo publik.
+ */
+const DEMO_STUDENT_EMAILS = new Set(["ahmad@tryoutku.com", "citra@tryoutku.com"]);
+
 export function isDemoStudentEmail(email?: string | null): boolean {
   if (!email) return false;
-  const clean = email.toLowerCase().trim();
-  return (
-    clean === "ahmad@tryoutku.com" ||
-    clean === "citra@tryoutku.com" ||
-    clean.endsWith("@tryoutku.com")
-  );
+  return DEMO_STUDENT_EMAILS.has(email.toLowerCase().trim());
 }
 
 /**

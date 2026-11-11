@@ -14,6 +14,7 @@ import {
   parseMatrixQuestion,
 } from "../../src/lib/matrix-question";
 import { safeCallbackUrl } from "../../src/lib/safe-redirect";
+import { isDemoStudentEmail } from "../../src/lib/demo";
 
 interface Assertion {
   description: string;
@@ -439,6 +440,22 @@ Contoh: { "pikir": "analisis" }
   assert(
     "callbackUrl berisi karakter kontrol ditolak",
     safeCallbackUrl("/dashboard\nSet-Cookie: x=1") === "/dashboard",
+  );
+
+  // --- Batas akun demo (hanya akun demo eksplisit, bukan seluruh domain) ---
+  assert(
+    "Akun demo siswa terdeteksi (ahmad & citra)",
+    isDemoStudentEmail("ahmad@tryoutku.com") && isDemoStudentEmail("citra@tryoutku.com"),
+  );
+  assert(
+    "Akun peserta baru berdomain @tryoutku.com TIDAK dianggap demo",
+    isDemoStudentEmail("siswa.baru@tryoutku.com") === false,
+  );
+  assert(
+    "Email kosong / non-demo tidak dianggap demo",
+    isDemoStudentEmail(null) === false &&
+      isDemoStudentEmail("") === false &&
+      isDemoStudentEmail("siswa@gmail.com") === false,
   );
 
   const allPassed = results.every((r) => r.pass);
