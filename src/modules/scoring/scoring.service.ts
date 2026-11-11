@@ -1,8 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { ExamSessionStatus, DiscussionVisibility, QuestionType, ScoringMode, SkdSection } from "@/generated/prisma/client";
+import { ExamSessionStatus, DiscussionVisibility, QuestionType, ScoringMode } from "@/generated/prisma/client";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 import { parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
+import {
+  isSectionedSkdQuestions,
+  selectSkdQuestions,
+  SKD_SECTION_PRIORITY,
+} from "@/lib/skd";
 
 export class ScoringService {
   /**
@@ -197,24 +202,34 @@ export class ScoringService {
     }
 
     // 1. Tentukan urutan butir soal.
-    // Paket SKD (RAW / seluruh soal bertanda subtes): TWK → TIU → TKP sesuai nomor paket.
-    // Mode lain: acak dengan seed yang sama persis seperti saat ujian berlangsung.
+    // Paket SKD (RAW / seluruh soal bertanda subtes): hanya komposisi resmi
+    // TWK 30 → TIU 35 → TKP 45 sesuai nomor paket. Mode lain: acak dengan seed
+    // yang sama persis seperti saat ujian berlangsung.
     const questionSeed = `${session.id}:questions`;
-    const hasAllSections = session.tryout.tryoutQuestions.every((tq) => tq.section !== null);
-    const isFixedOrder = session.tryout.scoringMode === ScoringMode.RAW || hasAllSections;
-    const sectionPriority = (section: SkdSection | null) =>
-      section === SkdSection.TWK ? 0 : section === SkdSection.TIU ? 1 : section === SkdSection.TKP ? 2 : 3;
+    const isSectioned = isSectionedSkdQuestions(session.tryout.tryoutQuestions);
+    const isFixedOrder = session.tryout.scoringMode === ScoringMode.RAW || isSectioned;
 
-    const answersByQuestion = new Map(session.answers.map((a) => [a.questionId, a]));
-    const orderedAnswers = isFixedOrder
-      ? [...session.tryout.tryoutQuestions]
-          .sort(
-            (a, b) =>
-              sectionPriority(a.section) - sectionPriority(b.section) || a.orderNumber - b.orderNumber,
-          )
-          .map((tq) => answersByQuestion.get(tq.questionId))
-          .filter((ans): ans is NonNullable<typeof ans> => Boolean(ans))
-      : shuffleArrayWithSeed(session.answers, questionSeed);
+    const tryoutQuestionById = new Map(
+      session.tryout.tryoutQuestions.map((tq) => [tq.questionId, tq]),
+    );
+
+    const orderedAnswers = (() => {
+      if (!isFixedOrder) {
+        return shuffleArrayWithSeed(session.answers, questionSeed);
+      }
+      const selectedIds = new Set(
+        selectSkdQuestions(session.tryout.tryoutQuestions).map((tq) => tq.questionId),
+      );
+      return session.answers
+        .filter((ans) => selectedIds.has(ans.questionId))
+        .sort((a, b) => {
+          const ta = tryoutQuestionById.get(a.questionId);
+          const tb = tryoutQuestionById.get(b.questionId);
+          const priorityA = ta?.section ? SKD_SECTION_PRIORITY[ta.section] : 3;
+          const priorityB = tb?.section ? SKD_SECTION_PRIORITY[tb.section] : 3;
+          return priorityA - priorityB || (ta?.orderNumber ?? 0) - (tb?.orderNumber ?? 0);
+        });
+    })();
 
     const weightMap = new Map<string, number>();
     session.tryout.tryoutQuestions.forEach((tq) => {

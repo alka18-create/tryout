@@ -11,6 +11,12 @@ import { SaveAnswerInput } from "./exam.schema";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 import { parseMatrixLabel, parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
 import { isDemoStudentEmail, getDemoAllowedTryoutId } from "@/lib/demo";
+import {
+  countSkdSelection,
+  isSectionedSkdQuestions,
+  selectSkdQuestions,
+  SKD_SECTION_PRIORITY,
+} from "@/lib/skd";
 
 export class ExamService {
   /**
@@ -35,6 +41,9 @@ export class ExamService {
             name: true,
             code: true,
           },
+        },
+        tryoutQuestions: {
+          select: { section: true },
         },
         _count: {
           select: {
@@ -124,9 +133,11 @@ export class ExamService {
         passingTwk: t.passingTwk,
         passingTiu: t.passingTiu,
         passingTkp: t.passingTkp,
-        questionCount: t.questionCount
-          ? Math.min(t.questionCount, t._count.tryoutQuestions)
-          : t._count.tryoutQuestions,
+        questionCount: isSectionedSkdQuestions(t.tryoutQuestions)
+          ? countSkdSelection(t.tryoutQuestions)
+          : t.questionCount
+            ? Math.min(t.questionCount, t._count.tryoutQuestions)
+            : t._count.tryoutQuestions,
         maxAttempts,
         attemptsUsed,
         attemptsRemaining,
@@ -157,6 +168,9 @@ export class ExamService {
       where: { id: tryoutId },
       include: {
         subject: true,
+        tryoutQuestions: {
+          select: { section: true },
+        },
         _count: {
           select: { tryoutQuestions: true },
         },
@@ -272,9 +286,11 @@ export class ExamService {
       passingTwk: tryout.passingTwk,
       passingTiu: tryout.passingTiu,
       passingTkp: tryout.passingTkp,
-      questionCount: tryout.questionCount
-        ? Math.min(tryout.questionCount, tryout._count.tryoutQuestions)
-        : tryout._count.tryoutQuestions,
+      questionCount: isSectionedSkdQuestions(tryout.tryoutQuestions)
+        ? countSkdSelection(tryout.tryoutQuestions)
+        : tryout.questionCount
+          ? Math.min(tryout.questionCount, tryout._count.tryoutQuestions)
+          : tryout._count.tryoutQuestions,
       discussionVisibility: tryout.discussionVisibility,
       maxAttempts,
       attemptsUsed,
@@ -445,14 +461,15 @@ export class ExamService {
           },
         });
 
-        // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa.
-        // Paket SKD (semua soal punya subtes) selalu menampilkan seluruh butir soal
-        // sesuai urutan paket (TWK → TIU → TKP) dan tidak diacak.
-        const hasAllSections = tryout.tryoutQuestions.every((tq) => tq.section !== null);
+        // Paket SKD (RAW / semua soal bertanda subtes) selalu menampilkan komposisi resmi
+        // TWK 30 → TIU 35 → TKP 45 sesuai urutan paket, tanpa diacak dan tanpa soal berlebih.
+        // Paket non-SKD dengan kuota soal tetap memakai pengacakan seperti sebelumnya.
+        const isSectioned = isSectionedSkdQuestions(tryout.tryoutQuestions);
+        const isFixedOrder = tryout.scoringMode === ScoringMode.RAW || isSectioned;
         let assignedQuestions = tryout.tryoutQuestions;
-        if (
-          tryout.scoringMode !== ScoringMode.RAW &&
-          !hasAllSections &&
+        if (isFixedOrder) {
+          assignedQuestions = selectSkdQuestions(tryout.tryoutQuestions);
+        } else if (
           tryout.questionCount &&
           tryout.questionCount > 0 &&
           tryout.questionCount < tryout.tryoutQuestions.length
@@ -560,31 +577,37 @@ export class ExamService {
       weightMap.set(tq.questionId, tq.weight);
     });
 
-    // Paket SKD (RAW atau seluruh soal bertanda subtes): tampilkan soal sesuai urutan
-    // subtes TWK → TIU → TKP lalu nomor urut, tanpa diacak. Ini juga menormalkan data
-    // paket lama yang nomor urutnya masih bercampur antar subtes.
+    // Paket SKD (RAW / seluruh soal bertanda subtes): tampilkan hanya komposisi resmi
+    // TWK 30 → TIU 35 → TKP 45 sesuai urutan paket, tanpa diacak. Soal berlebih
+    // (data paket lama) tidak ditampilkan sehingga nomor tetap 1-110.
     // Mode lain: acak urutan butir soal secara unik & konsisten untuk sesi ini (Seeded PRNG).
-    const hasAllSections = session.tryout.tryoutQuestions.every((tq) => tq.section !== null);
-    const isFixedOrder =
-      session.tryout.scoringMode === ScoringMode.RAW || hasAllSections;
-    const sectionPriority = (section: SkdSection | null) =>
-      section === SkdSection.TWK ? 0 : section === SkdSection.TIU ? 1 : section === SkdSection.TKP ? 2 : 3;
-
-    const orderedTryoutQuestions = isFixedOrder
-      ? [...session.tryout.tryoutQuestions].sort(
-          (a, b) =>
-            sectionPriority(a.section) - sectionPriority(b.section) || a.orderNumber - b.orderNumber,
-        )
-      : session.tryout.tryoutQuestions;
-
+    const isSectioned = isSectionedSkdQuestions(session.tryout.tryoutQuestions);
+    const isFixedOrder = session.tryout.scoringMode === ScoringMode.RAW || isSectioned;
     const questionSeed = `${session.id}:questions`;
 
-    const answersByQuestion = new Map(session.answers.map((a) => [a.questionId, a]));
+    const tryoutQuestionById = new Map(
+      session.tryout.tryoutQuestions.map((tq) => [tq.questionId, tq]),
+    );
+
     const orderedEntries = isFixedOrder
-      ? orderedTryoutQuestions.map((tq) => ({
-          ans: answersByQuestion.get(tq.questionId),
-          weight: tq.weight,
-        }))
+      ? (() => {
+          const selectedIds = new Set(
+            selectSkdQuestions(session.tryout.tryoutQuestions).map((tq) => tq.questionId),
+          );
+          return session.answers
+            .filter((ans) => selectedIds.has(ans.questionId))
+            .sort((a, b) => {
+              const ta = tryoutQuestionById.get(a.questionId);
+              const tb = tryoutQuestionById.get(b.questionId);
+              const priorityA = ta?.section ? SKD_SECTION_PRIORITY[ta.section] : 3;
+              const priorityB = tb?.section ? SKD_SECTION_PRIORITY[tb.section] : 3;
+              return priorityA - priorityB || (ta?.orderNumber ?? 0) - (tb?.orderNumber ?? 0);
+            })
+            .map((ans) => ({
+              ans,
+              weight: tryoutQuestionById.get(ans.questionId)?.weight ?? 1.0,
+            }));
+        })()
       : shuffleArrayWithSeed(session.answers, questionSeed).map((ans) => ({
           ans,
           weight: weightMap.get(ans.questionId) || 1.0,
@@ -831,6 +854,13 @@ export class ExamService {
       { score: number; maxScore: number; totalCount: number; correctCount: number }
     >();
 
+    // Paket SKD: hanya soal dalam komposisi resmi yang dinilai. Soal berlebih pada
+    // data paket lama diabaikan agar skor maksimum tetap 150/175/225.
+    const isSectioned = isSectionedSkdQuestions(session.tryout.tryoutQuestions);
+    const selectedSkdIds = isSectioned
+      ? new Set(selectSkdQuestions(session.tryout.tryoutQuestions).map((tq) => tq.questionId))
+      : null;
+
     // Total skor maksimum dihitung per butir (mendukung opsi berbobot).
     let totalMaxWeight = 0;
 
@@ -853,6 +883,7 @@ export class ExamService {
     }> = [];
 
     for (const ans of session.answers) {
+      if (selectedSkdIds && !selectedSkdIds.has(ans.questionId)) continue;
       const qWeight = weightMap.get(ans.questionId) || 1.0;
       const section = sectionMap.get(ans.questionId);
       const topicId = ans.question.topicId;

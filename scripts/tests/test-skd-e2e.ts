@@ -156,6 +156,22 @@ export async function runSkdE2ETests(): Promise<boolean> {
     }
     questionIds.push(...twkQuestions.map((q) => q.id), ...tiuQuestions.map((q) => q.id), ...tkpQuestions.map((q) => q.id));
 
+    // Soal tambahan untuk mensimulasikan paket lama dengan jumlah melebihi kuota resmi.
+    const extraTwk = [
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TWK, 31),
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TWK, 32),
+    ];
+    const extraTiu = [
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TIU, 36),
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TIU, 37),
+    ];
+    const extraTkp = [
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TKP, 46),
+      await createSkdQuestion(teacher.id, topic.id, SkdSection.TKP, 47),
+    ];
+    const extraQuestionIds = [...extraTwk, ...extraTiu, ...extraTkp].map((q) => q.id);
+    questionIds.push(...extraQuestionIds);
+
     const storedScores = tkpQuestions[0].options
       .map((o) => o.score)
       .sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -307,6 +323,88 @@ export async function runSkdE2ETests(): Promise<boolean> {
         legacySheet.questions[65].questionId === tkpQuestions[0].id &&
         legacySheet.questions[109].questionId === tkpQuestions[44].id,
       `${legacySheet.questions[0]?.questionId} / ${legacySheet.questions[30]?.questionId}`,
+    );
+
+    // 4c. Paket lama dengan soal melebihi kuota: hanya 30 TWK + 35 TIU + 45 TKP yang tampil
+    const overfullTryout = await TryoutService.createTryout(teacher.id, {
+      title: "[TEMP] Tryout SKD Soal Berlebih E2E",
+      description: null,
+      subjectId: topic.subjectId,
+      durationMinutes: 100,
+      passingScore: 75,
+      scoringMode: ScoringMode.RAW,
+      passingTwk: 65,
+      passingTiu: 80,
+      passingTkp: 166,
+      maxAttempts: 1,
+      questionCount: null,
+      status: TryoutStatus.DRAFT,
+      discussionVisibility: DiscussionVisibility.AFTER_SUBMIT,
+      startDate: null,
+      endDate: null,
+    });
+    tryoutIds.push(overfullTryout.id);
+
+    const overfullRows = [
+      ...tkpQuestions.map((q) => ({ q, section: SkdSection.TKP, weight: 1 })),
+      ...extraTkp.map((q) => ({ q, section: SkdSection.TKP, weight: 1 })),
+      ...tiuQuestions.map((q) => ({ q, section: SkdSection.TIU, weight: 5 })),
+      ...extraTiu.map((q) => ({ q, section: SkdSection.TIU, weight: 5 })),
+      ...twkQuestions.map((q) => ({ q, section: SkdSection.TWK, weight: 5 })),
+      ...extraTwk.map((q) => ({ q, section: SkdSection.TWK, weight: 5 })),
+    ].map((row, idx) => ({
+      tryoutId: overfullTryout.id,
+      questionId: row.q.id,
+      orderNumber: idx + 1,
+      weight: row.weight,
+      section: row.section,
+    }));
+    await prisma.tryoutQuestion.createMany({ data: overfullRows });
+    // Simulasikan paket lama yang sudah terlanjur dipublikasikan sebelum validasi komposisi.
+    await prisma.tryout.update({
+      where: { id: overfullTryout.id },
+      data: { status: TryoutStatus.PUBLISHED },
+    });
+
+    const overfullStart = await ExamService.startOrResumeExamSession(student.id, overfullTryout.id);
+    const overfullSheet = await ExamService.getSanitizedExamSession(
+      student.id,
+      overfullStart.sessionId,
+    );
+    const extraIdSet = new Set(extraQuestionIds);
+    assert(
+      "Paket dengan 116 soal hanya menampilkan 110 soal (30/35/45)",
+      overfullSheet.questions.length === 110,
+      String(overfullSheet.questions.length),
+    );
+    assert(
+      "Soal melebihi kuota tidak ikut ditampilkan",
+      overfullSheet.questions.every((q) => !extraIdSet.has(q.questionId)),
+    );
+    assert(
+      "Nomor 1-30 TWK, 31-65 TIU, 66-110 TKP pada paket berlebih",
+      overfullSheet.questions[0].questionId === twkQuestions[0].id &&
+        overfullSheet.questions[29].questionId === twkQuestions[29].id &&
+        overfullSheet.questions[30].questionId === tiuQuestions[0].id &&
+        overfullSheet.questions[65].questionId === tkpQuestions[0].id &&
+        overfullSheet.questions[109].questionId === tkpQuestions[44].id,
+    );
+
+    const overfullResult = await ExamService.submitExamSession(
+      student.id,
+      overfullStart.sessionId,
+      false,
+    );
+    const overfullSections = await prisma.examSectionScore.findMany({
+      where: { examSessionId: overfullStart.sessionId },
+    });
+    const overfullBySection = new Map(overfullSections.map((s) => [s.section, s]));
+    assert(
+      "Skor maksimum paket berlebih tetap 150/175/225 (total 550)",
+      overfullResult.totalScore === 0 &&
+        overfullBySection.get(SkdSection.TWK)?.maxScore === 150 &&
+        overfullBySection.get(SkdSection.TIU)?.maxScore === 175 &&
+        overfullBySection.get(SkdSection.TKP)?.maxScore === 225,
     );
 
     const twkExam = sheet.questions.find((q) => q.questionId === twkQuestions[0].id)!;
