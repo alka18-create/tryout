@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
-import { ExamSessionStatus, DiscussionVisibility, QuestionType } from "@/generated/prisma/client";
+import { ExamSessionStatus, DiscussionVisibility, QuestionType, ScoringMode, SkdSection } from "@/generated/prisma/client";
 import { shuffleArrayWithSeed, shuffleQuestionOptions } from "@/lib/randomizer";
 import { parseMatrixQuestion, sortMatrixOptions } from "@/lib/matrix-question";
 
@@ -196,16 +196,32 @@ export class ScoringService {
       }
     }
 
-    // 1. Acak urutan butir soal dengan seed yang sama persis seperti saat ujian berlangsung
+    // 1. Tentukan urutan butir soal.
+    // Paket SKD (RAW / seluruh soal bertanda subtes): TWK → TIU → TKP sesuai nomor paket.
+    // Mode lain: acak dengan seed yang sama persis seperti saat ujian berlangsung.
     const questionSeed = `${session.id}:questions`;
-    const shuffledAnswers = shuffleArrayWithSeed(session.answers, questionSeed);
+    const hasAllSections = session.tryout.tryoutQuestions.every((tq) => tq.section !== null);
+    const isFixedOrder = session.tryout.scoringMode === ScoringMode.RAW || hasAllSections;
+    const sectionPriority = (section: SkdSection | null) =>
+      section === SkdSection.TWK ? 0 : section === SkdSection.TIU ? 1 : section === SkdSection.TKP ? 2 : 3;
+
+    const answersByQuestion = new Map(session.answers.map((a) => [a.questionId, a]));
+    const orderedAnswers = isFixedOrder
+      ? [...session.tryout.tryoutQuestions]
+          .sort(
+            (a, b) =>
+              sectionPriority(a.section) - sectionPriority(b.section) || a.orderNumber - b.orderNumber,
+          )
+          .map((tq) => answersByQuestion.get(tq.questionId))
+          .filter((ans): ans is NonNullable<typeof ans> => Boolean(ans))
+      : shuffleArrayWithSeed(session.answers, questionSeed);
 
     const weightMap = new Map<string, number>();
     session.tryout.tryoutQuestions.forEach((tq) => {
       weightMap.set(tq.questionId, tq.weight);
     });
 
-    const discussionQuestions = shuffledAnswers.map((ans, index) => {
+    const discussionQuestions = orderedAnswers.map((ans, index) => {
       const weight = weightMap.get(ans.questionId) || 1.0;
       const optionSeed = `${session.id}:question:${ans.questionId}:options`;
 

@@ -252,6 +252,63 @@ export async function runSkdE2ETests(): Promise<boolean> {
       sheet.questions.map((q) => q.questionId).join(",") === stored.map((s) => s.questionId).join(","),
     );
 
+    // 4b. Data paket lama: nomor urut tersimpan bercampur antar subtes tetap dinormalkan saat dibaca
+    const legacyTryout = await TryoutService.createTryout(teacher.id, {
+      title: "[TEMP] Tryout SKD Urutan Lama E2E",
+      description: null,
+      subjectId: topic.subjectId,
+      durationMinutes: 100,
+      passingScore: 75,
+      scoringMode: ScoringMode.RAW,
+      passingTwk: 65,
+      passingTiu: 80,
+      passingTkp: 166,
+      maxAttempts: 1,
+      questionCount: null,
+      status: TryoutStatus.DRAFT,
+      discussionVisibility: DiscussionVisibility.AFTER_SUBMIT,
+      startDate: null,
+      endDate: null,
+    });
+    tryoutIds.push(legacyTryout.id);
+
+    const legacyRows = [
+      ...tkpQuestions.map((q) => ({ questionId: q.id, section: SkdSection.TKP, weight: 1 })),
+      ...tiuQuestions.map((q) => ({ questionId: q.id, section: SkdSection.TIU, weight: 5 })),
+      ...twkQuestions.map((q) => ({ questionId: q.id, section: SkdSection.TWK, weight: 5 })),
+    ].map((row, idx) => ({
+      tryoutId: legacyTryout.id,
+      questionId: row.questionId,
+      orderNumber: idx + 1,
+      weight: row.weight,
+      section: row.section,
+    }));
+    await prisma.tryoutQuestion.createMany({ data: legacyRows });
+
+    const legacyStoredFirst = await prisma.tryoutQuestion.findFirst({
+      where: { tryoutId: legacyTryout.id },
+      orderBy: { orderNumber: "asc" },
+      select: { section: true },
+    });
+    assert(
+      "Data uji lama tersimpan mulai dari TKP (urutan bercampur)",
+      legacyStoredFirst?.section === SkdSection.TKP,
+    );
+
+    await TryoutService.updateTryout(teacher.id, UserRole.TEACHER, legacyTryout.id, {
+      status: TryoutStatus.PUBLISHED,
+    });
+    const legacyStart = await ExamService.startOrResumeExamSession(student.id, legacyTryout.id);
+    const legacySheet = await ExamService.getSanitizedExamSession(student.id, legacyStart.sessionId);
+    assert(
+      "Paket lama dengan nomor bercampur tetap tampil TWK (1-30) → TIU → TKP",
+      legacySheet.questions[0].questionId === twkQuestions[0].id &&
+        legacySheet.questions[30].questionId === tiuQuestions[0].id &&
+        legacySheet.questions[65].questionId === tkpQuestions[0].id &&
+        legacySheet.questions[109].questionId === tkpQuestions[44].id,
+      `${legacySheet.questions[0]?.questionId} / ${legacySheet.questions[30]?.questionId}`,
+    );
+
     const twkExam = sheet.questions.find((q) => q.questionId === twkQuestions[0].id)!;
     const tiuExam = sheet.questions.find((q) => q.questionId === tiuQuestions[0].id)!;
     const tkpExam = sheet.questions.find((q) => q.questionId === tkpQuestions[0].id)!;
@@ -329,6 +386,12 @@ export async function runSkdE2ETests(): Promise<boolean> {
       "Label kunci TKP menampilkan skor opsi",
       tkpDiscussion.correctLabel.includes("Skor opsi") && tkpDiscussion.correctLabel.includes("=5"),
       tkpDiscussion.correctLabel,
+    );
+    assert(
+      "Pembahasan SKD memakai urutan yang sama: TWK (1-30) → TIU → TKP",
+      discussion.questions[0].questionId === twkQuestions[0].id &&
+        discussion.questions[30].questionId === tiuQuestions[0].id &&
+        discussion.questions[65].questionId === tkpQuestions[0].id,
     );
 
     // 8. Tryout kedua: semua jawaban benar => skor maksimum 550 dan LULUS

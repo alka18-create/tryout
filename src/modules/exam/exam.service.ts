@@ -446,10 +446,13 @@ export class ExamService {
         });
 
         // Jika paket tryout memiliki batasan kuota soal (questionCount), acak sejumlah soal tersebut untuk sesi siswa.
-        // Mode SKD (RAW) selalu menampilkan seluruh butir soal dan tidak diacak.
+        // Paket SKD (semua soal punya subtes) selalu menampilkan seluruh butir soal
+        // sesuai urutan paket (TWK → TIU → TKP) dan tidak diacak.
+        const hasAllSections = tryout.tryoutQuestions.every((tq) => tq.section !== null);
         let assignedQuestions = tryout.tryoutQuestions;
         if (
           tryout.scoringMode !== ScoringMode.RAW &&
+          !hasAllSections &&
           tryout.questionCount &&
           tryout.questionCount > 0 &&
           tryout.questionCount < tryout.tryoutQuestions.length
@@ -557,14 +560,28 @@ export class ExamService {
       weightMap.set(tq.questionId, tq.weight);
     });
 
-    // Mode SKD (RAW): tampilkan soal sesuai urutan paket (TWK→TIU→TKP) tanpa diacak.
+    // Paket SKD (RAW atau seluruh soal bertanda subtes): tampilkan soal sesuai urutan
+    // subtes TWK → TIU → TKP lalu nomor urut, tanpa diacak. Ini juga menormalkan data
+    // paket lama yang nomor urutnya masih bercampur antar subtes.
     // Mode lain: acak urutan butir soal secara unik & konsisten untuk sesi ini (Seeded PRNG).
-    const isRawSkd = session.tryout.scoringMode === ScoringMode.RAW;
+    const hasAllSections = session.tryout.tryoutQuestions.every((tq) => tq.section !== null);
+    const isFixedOrder =
+      session.tryout.scoringMode === ScoringMode.RAW || hasAllSections;
+    const sectionPriority = (section: SkdSection | null) =>
+      section === SkdSection.TWK ? 0 : section === SkdSection.TIU ? 1 : section === SkdSection.TKP ? 2 : 3;
+
+    const orderedTryoutQuestions = isFixedOrder
+      ? [...session.tryout.tryoutQuestions].sort(
+          (a, b) =>
+            sectionPriority(a.section) - sectionPriority(b.section) || a.orderNumber - b.orderNumber,
+        )
+      : session.tryout.tryoutQuestions;
+
     const questionSeed = `${session.id}:questions`;
 
     const answersByQuestion = new Map(session.answers.map((a) => [a.questionId, a]));
-    const orderedEntries = isRawSkd
-      ? session.tryout.tryoutQuestions.map((tq) => ({
+    const orderedEntries = isFixedOrder
+      ? orderedTryoutQuestions.map((tq) => ({
           ans: answersByQuestion.get(tq.questionId),
           weight: tq.weight,
         }))
